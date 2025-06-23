@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -23,7 +24,7 @@
             margin: 0 auto;
             background: white;
             border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
             overflow: hidden;
         }
 
@@ -480,14 +481,14 @@
             max-width: 100%;
             max-height: 400px;
             border-radius: 15px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
             transition: all 0.3s ease;
             border: 3px solid #ffffff;
         }
 
         .result-image img:hover {
             transform: scale(1.02);
-            box-shadow: 0 20px 45px rgba(0,0,0,0.2);
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.2);
         }
 
         /* Badge de información del nodo */
@@ -529,7 +530,7 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
             transition: left 0.5s;
         }
 
@@ -611,8 +612,13 @@
         }
 
         @keyframes loading {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
         }
 
         /* Efecto de aparición suave para las imágenes */
@@ -645,14 +651,32 @@
         }
 
         @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-            40% { transform: translateY(-10px); }
-            60% { transform: translateY(-5px); }
+
+            0%,
+            20%,
+            50%,
+            80%,
+            100% {
+                transform: translateY(0);
+            }
+
+            40% {
+                transform: translateY(-10px);
+            }
+
+            60% {
+                transform: translateY(-5px);
+            }
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         .health-indicator {
@@ -682,20 +706,20 @@
                 margin: 10px;
                 border-radius: 15px;
             }
-            
+
             .main-content {
                 flex-direction: column;
             }
-            
+
             .left-panel {
                 border-right: none;
                 border-bottom: 2px solid #e0e0e0;
             }
-            
+
             .right-panel {
                 min-width: auto;
             }
-            
+
             .status-panel {
                 position: static;
                 max-height: none;
@@ -703,6 +727,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
@@ -726,39 +751,39 @@
 
                 <div class="workflow-section" id="workflowSection">
                     <h3>🎨 Seleccionar Workflow</h3>
-                    
+
                     <!-- Selección individual -->
                     <div class="workflow-mode">
                         <input type="radio" id="singleMode" name="workflowMode" value="single" checked>
                         <label for="singleMode">📝 Modo Individual</label>
                     </div>
-                    
+
                     <select id="workflowSelect" class="workflow-select">
                         <option value="default">Cargando workflows...</option>
                     </select>
-                    
+
                     <!-- Selección múltiple -->
                     <div class="workflow-mode">
                         <input type="radio" id="multipleMode" name="workflowMode" value="multiple">
                         <label for="multipleMode">🎯 Modo Múltiple</label>
                     </div>
-                    
+
                     <div id="multipleWorkflowSection" style="display: none;">
                         <div class="workflow-checkboxes" id="workflowCheckboxes">
                             <!-- Se llenarán dinámicamente -->
                         </div>
-                        
+
                         <div class="selected-count">
                             <span id="selectedCount">0 workflows seleccionados</span>
                         </div>
                     </div>
-                    
+
                     <!-- Selección por grupos (Bedroom por dimensiones) -->
                     <div class="workflow-mode">
                         <input type="radio" id="groupMode" name="workflowMode" value="group">
                         <label for="groupMode">🏠 Bedroom por Dimensiones</label>
                     </div>
-                    
+
                     <div id="groupWorkflowSection" style="display: none;">
                         <div class="workflow-groups" id="workflowGroups">
                             <!-- Se llenarán dinámicamente -->
@@ -789,12 +814,12 @@
                         <h3>🔄 Cola de Procesamiento</h3>
                         <div id="processingQueue" class="processing-queue"></div>
                     </div>
-                    
+
                     <div class="status-section" id="statusSection" style="display: none;">
                         <h3>📊 Estado del Procesamiento</h3>
                         <div id="statusMessages" class="status-messages"></div>
                     </div>
-                    
+
                     <div class="results-panel">
                         <div class="results-section" id="resultsSection" style="display: none;">
                             <h3>✨ Resultados</h3>
@@ -818,7 +843,7 @@
         let processCounter = 0;  // NUEVO: Contador para IDs únicos
 
         // Verificar salud de la API al cargar
-        window.onload = function() {
+        window.onload = function () {
             checkHealth();
             loadWorkflows();
             setupWorkflowModeHandlers();
@@ -828,16 +853,16 @@
             const singleMode = document.getElementById('singleMode');
             const multipleMode = document.getElementById('multipleMode');
             const groupMode = document.getElementById('groupMode');
-            
-            singleMode.addEventListener('change', function() {
+
+            singleMode.addEventListener('change', function () {
                 if (this.checked) {
                     document.getElementById('multipleWorkflowSection').style.display = 'none';
                     document.getElementById('groupWorkflowSection').style.display = 'none';
                     document.getElementById('workflowSelect').style.display = 'block';
                 }
             });
-            
-            multipleMode.addEventListener('change', function() {
+
+            multipleMode.addEventListener('change', function () {
                 if (this.checked) {
                     document.getElementById('multipleWorkflowSection').style.display = 'block';
                     document.getElementById('groupWorkflowSection').style.display = 'none';
@@ -845,8 +870,8 @@
                     loadWorkflowCheckboxes();
                 }
             });
-            
-            groupMode.addEventListener('change', function() {
+
+            groupMode.addEventListener('change', function () {
                 if (this.checked) {
                     document.getElementById('multipleWorkflowSection').style.display = 'none';
                     document.getElementById('groupWorkflowSection').style.display = 'block';
@@ -865,13 +890,13 @@
                 // Cargar workflows disponibles
                 const response = await fetch(`${API_BASE_URL}/workflows`);
                 const data = await response.json();
-                
+
                 const select = document.getElementById('workflowSelect');
                 select.innerHTML = '';
-                
+
                 if (data.available_workflows && data.available_workflows.length > 0) {
                     availableWorkflows = data.available_workflows;
-                    
+
                     // Usar todos los workflows disponibles
                     data.available_workflows.forEach(workflow => {
                         const option = document.createElement('option');
@@ -885,9 +910,9 @@
                     option.textContent = 'workflow cuadro bedroomV15x202';
                     select.appendChild(option);
                 }
-                
+
                 showStatus(`✅ ${data.available_workflows.length} workflows cargados`, 'success');
-                
+
                 // También cargar grupos de workflows
                 loadWorkflowGroups();
             } catch (error) {
@@ -902,57 +927,57 @@
             try {
                 const response = await fetch(`${API_BASE_URL}/workflow-groups`);
                 const data = await response.json();
-                
+
                 if (data.success && data.groups) {
                     const container = document.getElementById('workflowGroups');
                     container.innerHTML = '';
-                    
+
                     Object.entries(data.groups).forEach(([groupKey, group]) => {
                         const groupDiv = document.createElement('div');
                         groupDiv.className = 'workflow-group';
                         groupDiv.dataset.groupKey = groupKey;
-                        
+
                         // Header del grupo
                         const header = document.createElement('div');
                         header.className = 'workflow-group-header';
-                        
+
                         const title = document.createElement('h4');
                         title.className = 'workflow-group-title';
                         title.textContent = `🏠 ${group.name}`;
-                        
+
                         const count = document.createElement('span');
                         count.className = 'workflow-group-count';
                         count.textContent = `${group.workflows.length} estilos`;
-                        
+
                         header.appendChild(title);
                         header.appendChild(count);
-                        
+
                         // Lista de estilos
                         const styles = document.createElement('div');
                         styles.className = 'workflow-group-styles';
                         const styleNames = group.workflows.map(w => w.style).join(', ');
                         styles.textContent = `Estilos: ${styleNames}`;
-                        
+
                         groupDiv.appendChild(header);
                         groupDiv.appendChild(styles);
-                        
+
                         // Evento click para seleccionar grupo
                         groupDiv.addEventListener('click', () => {
                             // Deseleccionar otros grupos
                             container.querySelectorAll('.workflow-group').forEach(g => {
                                 g.classList.remove('selected');
                             });
-                            
+
                             // Seleccionar este grupo
                             groupDiv.classList.add('selected');
                             selectedWorkflowGroup = group;
-                            
+
                             showStatus(`📋 Grupo seleccionado: ${group.name} (${group.workflows.length} workflows)`, 'info');
                         });
-                        
+
                         container.appendChild(groupDiv);
                     });
-                    
+
                     console.log('✓ Grupos de workflows cargados:', Object.keys(data.groups));
                 }
             } catch (error) {
@@ -964,26 +989,26 @@
         function loadWorkflowCheckboxes() {
             const container = document.getElementById('workflowCheckboxes');
             container.innerHTML = '';
-            
+
             availableWorkflows.forEach(workflow => {
                 const div = document.createElement('div');
                 div.className = 'workflow-checkbox';
-                
+
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
                 checkbox.id = `workflow_${workflow.id}`;
                 checkbox.value = workflow.id;
                 checkbox.addEventListener('change', updateSelectedCount);
-                
+
                 const label = document.createElement('label');
                 label.htmlFor = `workflow_${workflow.id}`;
                 label.textContent = '🎨 ' + workflow.id.replace(/_/g, ' ');
-                
+
                 div.appendChild(checkbox);
                 div.appendChild(label);
                 container.appendChild(div);
             });
-            
+
             updateSelectedCount();
         }
 
@@ -995,7 +1020,7 @@
 
         // Configurar drag and drop
         const uploadSection = document.getElementById('uploadSection');
-        
+
         uploadSection.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadSection.classList.add('dragover');
@@ -1009,7 +1034,7 @@
         uploadSection.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadSection.classList.remove('dragover');
-            
+
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 handleFileSelect(files[0]);
@@ -1028,7 +1053,7 @@
             try {
                 const response = await fetch(`${API_BASE_URL}/health`);
                 const data = await response.json();
-                
+
                 if (data.status === 'ok' && data.comfyui_connection === 'ok') {
                     indicator.textContent = '✅ API Activa';
                     indicator.className = 'health-indicator health-ok';
@@ -1049,7 +1074,7 @@
             }
 
             selectedFile = file;
-            
+
             // Mostrar vista previa
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -1060,6 +1085,15 @@
 
             // Limpiar resultados anteriores
             clearResults();
+        }
+
+        function clearResults() {
+            // Limpiar solo cuando el usuario sube una nueva imagen
+            const resultImages = document.getElementById('resultImages');
+            if (resultImages) resultImages.innerHTML = '';
+            const resultsSection = document.getElementById('resultsSection');
+            if (resultsSection) resultsSection.style.display = 'none';
+            shownImages.clear(); // Limpiar el Set solo aquí
         }
 
         async function processImage() {
@@ -1093,10 +1127,10 @@
                 startTime: new Date(),
                 promptId: null
             };
-            
+
             processingQueue.push(queueItem);
             activeProcesses.set(processId, queueItem);
-            
+
             updateQueueDisplay();
             document.getElementById('queueSection').style.display = 'block';
         }
@@ -1104,7 +1138,7 @@
         function updateQueueDisplay() {
             const queueContainer = document.getElementById('processingQueue');
             queueContainer.innerHTML = '';
-            
+
             processingQueue.forEach(item => {
                 const queueElement = document.createElement('div');
                 queueElement.className = `queue-item ${item.status}`;
@@ -1126,7 +1160,7 @@
         }
 
         function getStatusText(status) {
-            switch(status) {
+            switch (status) {
                 case 'pending': return '⏳ Pendiente';
                 case 'processing': return '🔄 Procesando';
                 case 'completed': return '✅ Completado';
@@ -1137,38 +1171,38 @@
 
         async function processImageAsync(processId, file, workflow) {
             const queueItem = activeProcesses.get(processId);
-            
+
             try {
                 // Actualizar estado a procesando
                 queueItem.status = 'processing';
                 updateQueueDisplay();
-                
+
                 // Crear FormData
                 const formData = new FormData();
                 formData.append('image', file);
                 formData.append('workflow', workflow);
-                
+
                 // Enviar petición
                 const response = await fetch(`${API_BASE_URL}/process-image`, {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success) {
                     // Actualizar con prompt_id
                     queueItem.promptId = data.prompt_id;
                     queueItem.status = 'completed';
                     updateQueueDisplay();
-                    
+
                     // Mostrar resultados
                     displayResults(data, processId);
                     showStatus(`✅ Proceso #${processId} completado exitosamente`, 'success');
                 } else {
                     throw new Error(data.error || 'Error desconocido');
                 }
-                
+
             } catch (error) {
                 queueItem.status = 'error';
                 queueItem.error = error.message;
@@ -1180,66 +1214,66 @@
         function displayResults(data, processId = null) {
             const resultsSection = document.getElementById('resultsSection');
             const resultImages = document.getElementById('resultImages');
-            
+
             if (data.output_images && data.output_images.length > 0) {
                 // Filtrar solo la imagen final (nodo 143 - ImageCompositeMasked)
-                const finalImages = data.output_images.filter(imageInfo => 
+                const finalImages = data.output_images.filter(imageInfo =>
                     imageInfo.is_final === true || imageInfo.node_id === '143'
                 );
-                
+
                 if (finalImages.length === 0) {
                     // Si no hay imagen final marcada, mostrar mensaje
                     showStatus('⚠️ No se encontró la imagen final en los resultados', 'warning');
                     return;
                 }
-                
+
                 // Mostrar solo la(s) imagen(es) final(es)
                 finalImages.forEach((imageInfo, index) => {
                     const imageContainer = document.createElement('div');
                     imageContainer.className = 'result-image-container';
-                    
+
                     const title = document.createElement('h4');
-                    title.textContent = processId ? 
-                        `✨ Resultado Final #${processId}` : 
+                    title.textContent = processId ?
+                        `✨ Resultado Final #${processId}` :
                         `✨ Imagen Final Generada`;
-                    
+
                     const imageWrapper = document.createElement('div');
                     imageWrapper.className = 'result-image';
-                    
+
                     const img = document.createElement('img');
                     img.src = `${API_BASE_URL}/get-image/${imageInfo.filename}?subfolder=${imageInfo.subfolder}&type=${imageInfo.type}`;
                     img.alt = `Resultado Final`;
                     img.loading = 'lazy';
-                    
+
                     // Añadir efecto de carga
                     const loadingDiv = document.createElement('div');
                     loadingDiv.className = 'image-loading';
                     loadingDiv.textContent = '🎨 Cargando imagen final...';
                     imageWrapper.appendChild(loadingDiv);
-                    
+
                     img.onload = () => {
                         loadingDiv.remove();
                         img.classList.add('loaded');
                         imageWrapper.appendChild(img);
                     };
-                    
+
                     img.onerror = () => {
                         loadingDiv.textContent = '❌ Error al cargar imagen';
                         loadingDiv.style.background = '#ffebee';
                         loadingDiv.style.color = '#c62828';
                     };
-                    
+
                     // Añadir información del nodo (badge)
                     const nodeInfo = document.createElement('span');
                     nodeInfo.className = 'node-info';
                     nodeInfo.textContent = `📸 Nodo ${imageInfo.node_id} - ImageCompositeMasked`;
-                    
+
                     const downloadBtn = document.createElement('a');
                     downloadBtn.textContent = '⬇️ Descargar Imagen Final';
                     downloadBtn.className = 'download-btn';
                     downloadBtn.href = img.src;
                     downloadBtn.download = `final_${imageInfo.filename}`;
-                    
+
                     imageWrapper.appendChild(img);
                     imageContainer.appendChild(title);
                     imageContainer.appendChild(imageWrapper);
@@ -1247,10 +1281,10 @@
                     imageContainer.appendChild(downloadBtn);
                     resultImages.appendChild(imageContainer);
                 });
-                
+
                 resultsSection.style.display = 'block';
                 showStatus(`✨ ¡Imagen final generada exitosamente! (nodo 143 - ImageCompositeMasked)`, 'success');
-                
+
                 // Scroll suave hacia los resultados
                 setTimeout(() => {
                     resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1270,7 +1304,7 @@
             }
             results.forEach((result, idx) => {
                 // Filtrar solo la imagen final (nodo 143 - ImageCompositeMasked)
-                const finalImages = (result.output_images || []).filter(imageInfo => 
+                const finalImages = (result.output_images || []).filter(imageInfo =>
                     imageInfo.is_final === true || imageInfo.node_id === '143'
                 );
                 if (finalImages.length === 0) return;
@@ -1345,7 +1379,7 @@
         async function processImageSingle() {
             // Obtener workflow seleccionado
             const selectedWorkflow = document.getElementById('workflowSelect').value;
-            
+
             showStatus(`📤 Enviando imagen con workflow: ${selectedWorkflow}...`, 'info');
             showStatus(`⏱️ NOTA: El procesamiento puede tardar varios minutos`, 'info');
             document.getElementById('statusSection').style.display = 'block';
@@ -1359,14 +1393,14 @@
                 // Aumentar timeout para el fetch (15 minutos)
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 900000); // 15 minutos
-                
+
                 // Enviar petición
                 const response = await fetch(`${API_BASE_URL}/process-image`, {
                     method: 'POST',
                     body: formData,
                     signal: controller.signal
                 });
-                
+
                 clearTimeout(timeoutId);
                 const data = await response.json();
 
@@ -1375,10 +1409,10 @@
                     if (data.prompt_id) {
                         currentPromptIds.push(data.prompt_id);
                     }
-                    
+
                     showStatus(`✅ Procesamiento completado! Prompt ID: ${data.prompt_id}`, 'success');
                     showStatus(`🎨 Workflow usado: ${data.workflow_used}`, 'info');
-                    
+
                     if (data.output_images && data.output_images.length > 0) {
                         showStatus(`🖼️ Se generaron ${data.output_images.length} imagen(es)`, 'success');
                         displayResults(data, data.workflow_used);
@@ -1386,13 +1420,13 @@
                 } else {
                     showStatus(`❌ Error: ${data.error || 'Error desconocido'}`, 'error');
                 }
-                
+
             } catch (error) {
                 if (!isProcessing) {
                     // Procesamiento fue cancelado
                     throw new Error('CANCELLED');
                 }
-                
+
                 if (error.name === 'AbortError') {
                     showStatus(`⏰ Timeout del navegador (15 min). El procesamiento puede continuar en el servidor.`, 'error');
                 } else {
@@ -1405,17 +1439,17 @@
             // Obtener workflows seleccionados
             const checkedBoxes = document.querySelectorAll('#workflowCheckboxes input[type="checkbox"]:checked');
             const selectedWorkflows = Array.from(checkedBoxes).map(cb => cb.value);
-            
+
             if (selectedWorkflows.length === 0) {
                 showStatus('Por favor selecciona al menos un workflow', 'error');
                 return;
             }
-            
+
             if (selectedWorkflows.length > 5) {
                 showStatus('Máximo 5 workflows permitidos por procesamiento', 'error');
                 return;
             }
-            
+
             showStatus(`📤 Enviando imagen para procesar con ${selectedWorkflows.length} workflows...`, 'info');
             showStatus(`⏱️ NOTA: Cada workflow puede tardar varios minutos. Total estimado: ${selectedWorkflows.length * 2}-${selectedWorkflows.length * 10} minutos`, 'info');
             showStatus(`🔄 Workflows seleccionados: ${selectedWorkflows.join(', ')}`, 'info');
@@ -1431,14 +1465,14 @@
                 // Aumentar timeout para el fetch (20 minutos)
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 1200000); // 20 minutos
-                
+
                 // Enviar petición al endpoint múltiple
                 const response = await fetch(`${API_BASE_URL}/process-image-multiple`, {
                     method: 'POST',
                     body: formData,
                     signal: controller.signal
                 });
-                
+
                 clearTimeout(timeoutId);
                 const data = await response.json();
 
@@ -1451,24 +1485,24 @@
                             }
                         });
                     }
-                    
+
                     if (data.processing_mode === 'queued') {
                         showStatus(`✅ ${data.successful_workflows} workflows enviados a la cola de ComfyUI!`, 'success');
                         showStatus(`🔄 Los workflows se están procesando en segundo plano`, 'info');
                         showStatus(`📋 Prompt IDs: ${currentPromptIds.join(', ')}`, 'info');
-                        
+
                         // Iniciar polling para verificar resultados
                         startMultipleResultsPolling(currentPromptIds);
                     } else {
                         // Modo original de procesamiento completo
                         showStatus(`✅ Procesamiento múltiple completado!`, 'success');
                         showStatus(`🎯 ${data.successful_workflows}/${data.total_workflows_requested} workflows exitosos`, 'success');
-                        
+
                         if (data.results && data.results.length > 0) {
                             displayMultipleResults(data.results);
                         }
                     }
-                    
+
                     if (data.errors && data.errors.length > 0) {
                         data.errors.forEach(error => {
                             showStatus(`⚠️ Error en ${error.workflow_name}: ${error.error}`, 'error');
@@ -1545,12 +1579,12 @@
                         const data = await response.json();
                         if (data.success && data.output_images && data.output_images.length > 0) {
                             // Mostrar resultado individual
-                            displayMultipleResults([{...data, workflow_name: workflowName}]);
+                            displayMultipleResults([{ ...data, workflow_name: workflowName }]);
                             showStatus(`✅ Resultado listo para workflow: ${workflowName}`, 'success');
                             return;
                         }
                     }
-                } catch (e) {}
+                } catch (e) { }
                 if (intentos < maxIntentos) {
                     setTimeout(poll, 5000);
                 } else {
@@ -1561,4 +1595,5 @@
         }
     </script>
 </body>
+
 </html>
