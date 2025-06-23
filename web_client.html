@@ -151,41 +151,6 @@
             cursor: pointer;
         }
 
-        .workflow-groups {
-            margin: 15px 0;
-        }
-
-        .workflow-groups h4 {
-            color: #333;
-            margin: 15px 0 8px 0;
-            font-size: 1em;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 5px;
-            width: 100%;
-        }
-
-        .workflow-groups > div {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-bottom: 10px;
-        }
-
-        .group-btn {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.9em;
-            transition: transform 0.2s ease;
-        }
-
-        .group-btn:hover {
-            transform: translateY(-1px);
-        }
-
         .workflow-checkboxes {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -282,23 +247,83 @@
 
         .cancel-btn:hover {
             transform: translateY(-2px);
-            background: linear-gradient(45deg, #ff5252, #d32f2f);
         }
 
-        .buttons-container {
-            text-align: center;
-            margin: 20px 0;
+        /* Estilos para la cola de procesamiento */
+        .queue-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
         }
 
-        .preview-section {
-            margin: 20px 0;
+        .processing-queue {
+            max-height: 400px;
+            overflow-y: auto;
         }
 
-        .image-preview {
-            max-width: 100%;
-            max-height: 300px;
+        .queue-item {
+            background: white;
             border-radius: 10px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #4ecdc4;
+            transition: all 0.3s ease;
+        }
+
+        .queue-item.processing {
+            border-left-color: #ff9f43;
+            background: #fff9f0;
+        }
+
+        .queue-item.completed {
+            border-left-color: #2ed573;
+            background: #f0fff4;
+        }
+
+        .queue-item.error {
+            border-left-color: #ff3838;
+            background: #fff0f0;
+        }
+
+        .queue-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .queue-item-title {
+            font-weight: bold;
+            color: #2d3436;
+        }
+
+        .queue-item-status {
+            font-size: 0.9em;
+            padding: 5px 10px;
+            border-radius: 20px;
+            color: white;
+        }
+
+        .queue-item-status.pending {
+            background: #74b9ff;
+        }
+
+        .queue-item-status.processing {
+            background: #fdcb6e;
+        }
+
+        .queue-item-status.completed {
+            background: #00b894;
+        }
+
+        .queue-item-status.error {
+            background: #e17055;
+        }
+
+        .queue-item-details {
+            font-size: 0.9em;
+            color: #636e72;
         }
 
         .status-section {
@@ -449,7 +474,7 @@
                 </div>
 
                 <div class="workflow-section" id="workflowSection">
-                    <h3>🎨 Seleccionar Estilo/Workflow</h3>
+                    <h3>🎨 Seleccionar Workflow</h3>
                     
                     <!-- Selección individual -->
                     <div class="workflow-mode">
@@ -467,21 +492,6 @@
                         <label for="multipleMode">🎯 Modo Múltiple</label>
                     </div>
                          <div id="multipleWorkflowSection" style="display: none;">
-                    <div class="workflow-groups">
-                        <h4>🎨 Por Estilo:</h4>
-                        <div>
-                            <button type="button" class="group-btn" onclick="selectWorkflowGroup('bedroom')">
-                                🛏️ Todos Bedroom
-                            </button>
-                            <button type="button" class="group-btn" onclick="selectWorkflowGroup('salon')">
-                                🛋️ Todos Salón
-                            </button>
-                            <button type="button" class="group-btn" onclick="selectWorkflowGroup('cuadro')">
-                                🖼️ Todos Cuadro
-                            </button>
-                        </div>
-                    </div>
-                    
                     <div class="workflow-checkboxes" id="workflowCheckboxes">
                         <!-- Se llenarán dinámicamente -->
                     </div>
@@ -499,7 +509,8 @@
                         <button class="process-btn" id="processBtn" onclick="processImage()">
                             🚀 Procesar Imagen
                         </button>
-                        <button class="cancel-btn" id="cancelBtn" onclick="cancelProcessing()">
+                        <!-- Botón de cancelar oculto ya que el procesamiento es no bloqueante -->
+                        <button class="cancel-btn" id="cancelBtn" onclick="cancelProcessing()" style="display: none;">
                             ❌ Cancelar
                         </button>
                     </div>
@@ -509,6 +520,12 @@
             <!-- Panel Derecho: Estado y Resultados -->
             <div class="right-panel">
                 <div class="status-panel">
+                    <!-- Cola de procesamientos -->
+                    <div class="queue-section" id="queueSection" style="display: none;">
+                        <h3>🔄 Cola de Procesamiento</h3>
+                        <div id="processingQueue" class="processing-queue"></div>
+                    </div>
+                    
                     <div class="status-section" id="statusSection" style="display: none;">
                         <h3>📊 Estado del Procesamiento</h3>
                         <div id="statusMessages" class="status-messages"></div>
@@ -531,9 +548,9 @@
         let selectedFile = null;
         let availableWorkflows = [];
         let workflowGroups = {};
-        let isProcessing = false;
-        let currentPromptIds = [];
-        let pollingIntervals = [];
+        let processingQueue = [];  // NUEVO: Cola de procesamientos
+        let activeProcesses = new Map();  // NUEVO: Procesos activos
+        let processCounter = 0;  // NUEVO: Contador para IDs únicos
 
         // Verificar salud de la API al cargar
         window.onload = function() {
@@ -623,34 +640,6 @@
             updateSelectedCount();
         }
 
-        function selectWorkflowGroup(groupName) {
-            const checkboxes = document.querySelectorAll('#workflowCheckboxes input[type="checkbox"]');
-            checkboxes.forEach(cb => cb.checked = false);
-            
-            // Seleccionar workflows por nombre (simplificado)
-            if (groupName === 'bedroom') {
-                checkboxes.forEach(cb => {
-                    if (cb.value.includes('bedroom')) {
-                        cb.checked = true;
-                    }
-                });
-            } else if (groupName === 'salon') {
-                checkboxes.forEach(cb => {
-                    if (cb.value.includes('salon')) {
-                        cb.checked = true;
-                    }
-                });
-            } else if (groupName === 'cuadro') {
-                checkboxes.forEach(cb => {
-                    if (cb.value.includes('cuadro')) {
-                        cb.checked = true;
-                    }
-                });
-            }
-            
-            updateSelectedCount();
-        }
-
         function updateSelectedCount() {
             const checkedBoxes = document.querySelectorAll('#workflowCheckboxes input[type="checkbox"]:checked');
             const count = checkedBoxes.length;
@@ -732,46 +721,148 @@
                 return;
             }
 
-            const processBtn = document.getElementById('processBtn');
-            const cancelBtn = document.getElementById('cancelBtn');
-            const originalText = processBtn.innerHTML;
+            // Crear nuevo proceso
+            const processId = ++processCounter;
+            const selectedWorkflow = document.getElementById('workflowSelect').value;
+            
+            // Agregar a la cola
+            addToQueue(processId, selectedFile.name, selectedWorkflow);
+            
+            // Iniciar procesamiento asíncrono (no bloqueante)
+            processImageAsync(processId, selectedFile, selectedWorkflow);
+            
+            showStatus(`📤 Imagen añadida a la cola de procesamiento (#${processId})`, 'info');
+        }
+
+        function addToQueue(processId, fileName, workflow) {
+            const queueItem = {
+                id: processId,
+                fileName: fileName,
+                workflow: workflow,
+                status: 'pending',
+                startTime: new Date(),
+                promptId: null
+            };
+            
+            processingQueue.push(queueItem);
+            activeProcesses.set(processId, queueItem);
+            
+            updateQueueDisplay();
+            document.getElementById('queueSection').style.display = 'block';
+        }
+
+        function updateQueueDisplay() {
+            const queueContainer = document.getElementById('processingQueue');
+            queueContainer.innerHTML = '';
+            
+            processingQueue.forEach(item => {
+                const queueElement = document.createElement('div');
+                queueElement.className = `queue-item ${item.status}`;
+                queueElement.innerHTML = `
+                    <div class="queue-item-header">
+                        <div class="queue-item-title">#${item.id} - ${item.fileName}</div>
+                        <div class="queue-item-status ${item.status}">
+                            ${getStatusText(item.status)}
+                        </div>
+                    </div>
+                    <div class="queue-item-details">
+                        Workflow: ${item.workflow}
+                        ${item.promptId ? `| Prompt ID: ${item.promptId}` : ''}
+                        ${item.error ? `| Error: ${item.error}` : ''}
+                    </div>
+                `;
+                queueContainer.appendChild(queueElement);
+            });
+        }
+
+        function getStatusText(status) {
+            switch(status) {
+                case 'pending': return '⏳ Pendiente';
+                case 'processing': return '🔄 Procesando';
+                case 'completed': return '✅ Completado';
+                case 'error': return '❌ Error';
+                default: return status;
+            }
+        }
+
+        async function processImageAsync(processId, file, workflow) {
+            const queueItem = activeProcesses.get(processId);
             
             try {
-                // Iniciar procesamiento
-                isProcessing = true;
-                currentPromptIds = [];
-                pollingIntervals = [];
+                // Actualizar estado a procesando
+                queueItem.status = 'processing';
+                updateQueueDisplay();
                 
-                // Deshabilitar botón y mostrar loading
-                processBtn.disabled = true;
-                processBtn.innerHTML = '<div class="loading"></div> Procesando...';
+                // Crear FormData
+                const formData = new FormData();
+                formData.append('image', file);
+                formData.append('workflow', workflow);
                 
-                // Mostrar botón de cancelar
-                cancelBtn.style.display = 'inline-block';
+                // Enviar petición
+                const response = await fetch(`${API_BASE_URL}/process-image`, {
+                    method: 'POST',
+                    body: formData
+                });
                 
-                // Determinar modo de procesamiento
-                const isMultipleMode = document.getElementById('multipleMode').checked;
+                const data = await response.json();
                 
-                if (isMultipleMode) {
-                    await processImageMultiple();
+                if (data.success) {
+                    // Actualizar con prompt_id
+                    queueItem.promptId = data.prompt_id;
+                    queueItem.status = 'completed';
+                    updateQueueDisplay();
+                    
+                    // Mostrar resultados
+                    displayResults(data, processId);
+                    showStatus(`✅ Proceso #${processId} completado exitosamente`, 'success');
                 } else {
-                    await processImageSingle();
+                    throw new Error(data.error || 'Error desconocido');
                 }
-
-            } catch (error) {
-                if (error.message !== 'CANCELLED') {
-                    showStatus(`❌ Error de conexión: ${error.message}`, 'error');
-                }
-            } finally {
-                // Restaurar estado
-                isProcessing = false;
-                processBtn.disabled = false;
-                processBtn.innerHTML = originalText;
-                cancelBtn.style.display = 'none';
                 
-                // Limpiar intervalos de polling
-                pollingIntervals.forEach(interval => clearInterval(interval));
-                pollingIntervals = [];
+            } catch (error) {
+                queueItem.status = 'error';
+                queueItem.error = error.message;
+                updateQueueDisplay();
+                showStatus(`❌ Error en proceso #${processId}: ${error.message}`, 'error');
+            }
+        }
+
+        function displayResults(data, processId = null) {
+            const resultsSection = document.getElementById('resultsSection');
+            const resultImages = document.getElementById('resultImages');
+            
+            if (data.output_images && data.output_images.length > 0) {
+                data.output_images.forEach((imageInfo, index) => {
+                    const imageContainer = document.createElement('div');
+                    imageContainer.className = 'result-image-container';
+                    
+                    const title = document.createElement('h4');
+                    title.textContent = processId ? 
+                        `Resultado #${processId} - Imagen ${index + 1}` : 
+                        `Imagen ${index + 1}`;
+                    
+                    const img = document.createElement('img');
+                    img.src = `${API_BASE_URL}/get-image/${imageInfo.filename}?subfolder=${imageInfo.subfolder}&type=${imageInfo.type}`;
+                    img.alt = `Resultado ${index + 1}`;
+                    img.className = 'result-image';
+                    
+                    const downloadBtn = document.createElement('button');
+                    downloadBtn.textContent = 'Descargar';
+                    downloadBtn.className = 'download-btn';
+                    downloadBtn.onclick = () => {
+                        const link = document.createElement('a');
+                        link.href = img.src;
+                        link.download = imageInfo.filename;
+                        link.click();
+                    };
+                    
+                    imageContainer.appendChild(title);
+                    imageContainer.appendChild(img);
+                    imageContainer.appendChild(downloadBtn);
+                    resultImages.appendChild(imageContainer);
+                });
+                
+                resultsSection.style.display = 'block';
             }
         }
 
@@ -779,7 +870,7 @@
             // Obtener workflow seleccionado
             const selectedWorkflow = document.getElementById('workflowSelect').value;
             
-            showStatus(`📤 Enviando imagen al servidor con workflow: ${selectedWorkflow}...`, 'info');
+            showStatus(`📤 Enviando imagen con workflow: ${selectedWorkflow}...`, 'info');
             showStatus(`⏱️ NOTA: El procesamiento puede tardar varios minutos`, 'info');
             document.getElementById('statusSection').style.display = 'block';
 
@@ -941,6 +1032,19 @@
             statusMessages.scrollTop = statusMessages.scrollHeight;
         }
 
+        function clearResults() {
+            const resultImages = document.getElementById('resultImages');
+            resultImages.innerHTML = '';
+            document.getElementById('resultsSection').style.display = 'none';
+        }
+
+        function clearQueue() {
+            processingQueue = [];
+            activeProcesses.clear();
+            updateQueueDisplay();
+            document.getElementById('queueSection').style.display = 'none';
+        }
+
         function displayResults(outputImages, workflowName = '') {
             const resultsSection = document.getElementById('resultsSection');
             const resultImages = document.getElementById('resultImages');
@@ -1039,13 +1143,6 @@
             });
             
             resultsSection.style.display = 'block';
-        }
-
-        function clearResults() {
-            document.getElementById('resultsSection').style.display = 'none';
-            document.getElementById('statusSection').style.display = 'none';
-            document.getElementById('statusMessages').innerHTML = '';
-            document.getElementById('resultImages').innerHTML = '';
         }
 
         function cancelProcessing() {

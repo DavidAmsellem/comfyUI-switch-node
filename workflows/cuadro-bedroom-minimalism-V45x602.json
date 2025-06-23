@@ -260,7 +260,7 @@
   },
   "77": {
     "inputs": {
-      "weight": 1,
+      "weight": 1.0000000000000002,
       "ipadapter": [
         "80",
         0
@@ -281,7 +281,7 @@
   },
   "78": {
     "inputs": {
-      "weight": 1,
+      "weight": 1.0000000000000002,
       "weight_type": "linear",
       "start_at": 0,
       "end_at": 1,
@@ -718,7 +718,7 @@
   },
   "157": {
     "inputs": {
-      "weight": 1,
+      "weight": 1.0000000000000002,
       "ipadapter": [
         "161",
         0
@@ -739,7 +739,7 @@
   },
   "158": {
     "inputs": {
-      "weight": 1,
+      "weight": 1.0000000000000002,
       "ipadapter": [
         "161",
         0
@@ -933,7 +933,7 @@
   },
   "175": {
     "inputs": {
-      "seed": 378433632798110,
+      "seed": 747918338617074,
       "steps": 26,
       "cfg": 6.4,
       "sampler_name": "dpmpp_2m",
@@ -986,7 +986,7 @@
   "344": {
     "inputs": {
       "frame_width": 30,
-      "seed": 1100799474,
+      "seed": 2433914003,
       "image": [
         "97",
         0
@@ -1034,8 +1034,8 @@
   "356": {
     "inputs": {
       "categories": "window, mirror, bookcase, wall patterns, wallpaper, wall decals, wall art, wall decorations, wall graphics, wall ornaments, wall motifs, bed",
-      "confidence_threshold": 0.1,
-      "iou_threshold": 0.1,
+      "confidence_threshold": 0.10000000000000002,
+      "iou_threshold": 0.10000000000000002,
       "box_thickness": 2,
       "text_thickness": 2,
       "text_scale": 1,
@@ -1079,18 +1079,6 @@
     "inputs": {
       "images": [
         "356",
-        0
-      ]
-    },
-    "class_type": "PreviewImage",
-    "_meta": {
-      "title": "Preview Image"
-    }
-  },
-  "370": {
-    "inputs": {
-      "images": [
-        "344",
         0
       ]
     },

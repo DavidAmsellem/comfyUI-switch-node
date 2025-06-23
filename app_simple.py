@@ -104,21 +104,22 @@ def load_workflow(workflow_name):
     with open(workflow_path, 'r', encoding='utf-8') as f:
         return json.load(f)
 
-def update_workflow_image_and_seeds(workflow, image_filename):
-    """Actualiza el nodo 97 con la nueva imagen y randomiza seeds"""
+def update_workflow_for_processing(workflow, image_filename):
+    """Actualiza el workflow con la imagen y randomiza seeds"""
     import copy
+    
     workflow_copy = copy.deepcopy(workflow)
     
-    # Actualizar nodo 97 con la nueva imagen
+    print(f"🔄 Actualizando workflow para procesamiento")
+    
+    # Actualizar nodo 97 (imagen)
     if "97" in workflow_copy:
         if 'inputs' not in workflow_copy["97"]:
             workflow_copy["97"]['inputs'] = {}
         workflow_copy["97"]['inputs']['image'] = image_filename
         print(f"✓ Actualizado nodo 97 con imagen: {image_filename}")
-    else:
-        raise ValueError("No se encontró el nodo 97 en el workflow")
     
-    # Randomizar seeds para generar imágenes diferentes
+    # Randomizar todos los seeds para mayor variabilidad
     for node_id, node_data in workflow_copy.items():
         if isinstance(node_data, dict) and 'inputs' in node_data:
             inputs = node_data['inputs']
@@ -203,7 +204,7 @@ def extract_output_images(outputs):
 
 @app.route('/process-image', methods=['POST'])
 def process_image():
-    """Procesa una imagen usando un workflow"""
+    """Procesa una imagen usando un workflow con estilo específico"""
     try:
         # Verificar que se envió un archivo
         if 'image' not in request.files:
@@ -222,8 +223,8 @@ def process_image():
         workflow = load_workflow(workflow_name)
         print(f"✓ Workflow cargado: {len(workflow)} nodos")
         
-        # Actualizar workflow con nueva imagen y seeds aleatorios
-        updated_workflow = update_workflow_image_and_seeds(workflow, image_filename)
+        # Actualizar workflow (incluye imagen y seeds aleatorios)
+        updated_workflow = update_workflow_for_processing(workflow, image_filename)
         
         # Enviar a ComfyUI
         prompt_id = submit_to_comfyui(updated_workflow)
@@ -246,7 +247,7 @@ def process_image():
             "prompt_id": prompt_id,
             "workflow_used": workflow_name,
             "output_images": output_images,
-            "message": f"Imagen procesada exitosamente con {len(output_images)} resultados"
+            "message": f"Imagen procesada exitosamente - {len(output_images)} resultados"
         })
         
     except Exception as e:
@@ -292,7 +293,7 @@ def process_image_multiple():
                 workflow = load_workflow(workflow_name)
                 
                 # Actualizar workflow
-                updated_workflow = update_workflow_image_and_seeds(workflow, image_filename)
+                updated_workflow = update_workflow_for_processing(workflow, image_filename)
                 
                 # Enviar a ComfyUI
                 prompt_id = submit_to_comfyui(updated_workflow)
