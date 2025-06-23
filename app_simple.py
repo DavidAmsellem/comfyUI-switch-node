@@ -327,7 +327,7 @@ def process_image_multiple():
                 # Cargar workflow
                 workflow = load_workflow(workflow_name)
                 
-                # Actualizar workflow
+                # Actualizar workflow (incluye imagen y seeds aleatorios)
                 updated_workflow = update_workflow_for_processing(workflow, image_filename)
                 
                 # Enviar a ComfyUI
@@ -414,13 +414,300 @@ def serve_client():
     """Sirve el cliente web"""
     return send_file('web_client.html')
 
+@app.route('/workflow-groups', methods=['GET'])
+def get_workflow_groups():
+    """Obtiene workflows agrupados por dimensiones y tipo"""
+    try:
+        groups = {}
+        
+        # Buscar en carpeta workflows
+        if os.path.exists(WORKFLOWS_FOLDER):
+            for filename in os.listdir(WORKFLOWS_FOLDER):
+                if filename.endswith('.json'):
+                    # Extraer información del nombre del archivo
+                    if 'bedroom' in filename.lower():
+                        # Extraer dimensiones del nombre
+                        import re
+                        dimension_match = re.search(r'V?(\d+x\d+)', filename)
+                        if dimension_match:
+                            dimension = dimension_match.group(1)
+                            group_key = f"bedroom-{dimension}"
+                            
+                            if group_key not in groups:
+                                groups[group_key] = {
+                                    'name': f'Bedroom {dimension}',
+                                    'dimension': dimension,
+                                    'type': 'bedroom',
+                                    'workflows': []
+                                }
+                            
+                            # Extraer estilo del nombre
+                            style = 'default'
+                            if 'artistic' in filename.lower():
+                                style = 'artistic'
+                            elif 'classic' in filename.lower():
+                                style = 'classic'
+                            elif 'minimalism' in filename.lower():
+                                style = 'minimalism'
+                            elif 'scandinavian' in filename.lower():
+                                style = 'scandinavian'
+                            elif 'arquitecture' in filename.lower():
+                                style = 'arquitecture'
+                            elif 'minimalamp' in filename.lower():
+                                style = 'minimalamp'
+                            elif 'student' in filename.lower():
+                                style = 'student'
+                            elif 'wood' in filename.lower():
+                                style = 'wood'
+                            
+                            groups[group_key]['workflows'].append({
+                                'filename': filename.replace('.json', ''),
+                                'style': style,
+                                'display_name': f'Bedroom {style.title()} {dimension}'
+                            })
+        
+        # Buscar en subcarpetas
+        for subdir in os.listdir(WORKFLOWS_FOLDER):
+            subdir_path = os.path.join(WORKFLOWS_FOLDER, subdir)
+            if os.path.isdir(subdir_path):
+                for filename in os.listdir(subdir_path):
+                    if filename.endswith('.json') and 'bedroom' in filename.lower():
+                        # Extraer dimensiones del nombre de carpeta o archivo
+                        import re
+                        dimension_match = re.search(r'(\d+x\d+)', subdir)
+                        if not dimension_match:
+                            dimension_match = re.search(r'V?(\d+x\d+)', filename)
+                        
+                        if dimension_match:
+                            dimension = dimension_match.group(1)
+                            group_key = f"bedroom-{dimension}"
+                            
+                            if group_key not in groups:
+                                groups[group_key] = {
+                                    'name': f'Bedroom {dimension}',
+                                    'dimension': dimension,
+                                    'type': 'bedroom',
+                                    'workflows': []
+                                }
+                            
+                            # Extraer estilo del nombre
+                            style = 'default'
+                            if 'artistic' in filename.lower():
+                                style = 'artistic'
+                            elif 'classic' in filename.lower():
+                                style = 'classic'
+                            elif 'minimalism' in filename.lower():
+                                style = 'minimalism'
+                            elif 'scandinavian' in filename.lower():
+                                style = 'scandinavian'
+                            elif 'arquitecture' in filename.lower():
+                                style = 'arquitecture'
+                            elif 'minimalamp' in filename.lower():
+                                style = 'minimalamp'
+                            elif 'student' in filename.lower():
+                                style = 'student'
+                            elif 'wood' in filename.lower():
+                                style = 'wood'
+                            
+                            workflow_path = f"{subdir}/{filename.replace('.json', '')}"
+                            groups[group_key]['workflows'].append({
+                                'filename': workflow_path,
+                                'style': style,
+                                'display_name': f'Bedroom {style.title()} {dimension}'
+                            })
+        
+        print(f"✓ Grupos de workflows encontrados: {list(groups.keys())}")
+        return jsonify({"success": True, "groups": groups})
+        
+    except Exception as e:
+        print(f"❌ Error obteniendo grupos: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/process-multiple-workflows', methods=['POST'])
+def process_multiple_workflows():
+    """Procesa una imagen con múltiples workflows en cola"""
+    try:
+        # Verificar que se envió un archivo
+        if 'image' not in request.files:
+            return jsonify({"error": "No se proporcionó ninguna imagen"}), 400
+        
+        file = request.files['image']
+        workflows_param = request.form.get('workflows', '')
+        
+        if not workflows_param:
+            return jsonify({"error": "No se especificaron workflows"}), 400
+        
+        # Parsear lista de workflows
+        try:
+            import json
+            workflows = json.loads(workflows_param)
+        except:
+            workflows = workflows_param.split(',')
+        
+        print(f"🔄 Procesando imagen con {len(workflows)} workflows: {workflows}")
+        
+        # Guardar imagen una sola vez
+        image_filename = save_image_to_comfyui(file)
+        print(f"✓ Imagen guardada: {image_filename}")
+        
+        results = []
+        failed_workflows = []
+        
+        for i, workflow_name in enumerate(workflows):
+            try:
+                print(f"🔄 Procesando workflow {i+1}/{len(workflows)}: {workflow_name}")
+                
+                # Cargar workflow
+                workflow = load_workflow(workflow_name)
+                print(f"✓ Workflow cargado: {len(workflow)} nodos")
+                
+                # Actualizar workflow con la imagen y randomizar seeds
+                workflow = update_workflow_for_processing(workflow, image_filename)
+                
+                print(f"Enviando workflow a ComfyUI...")
+                
+                # Enviar a ComfyUI
+                response = requests.post(f"{COMFYUI_URL}/prompt", json={"prompt": workflow})
+                
+                if response.status_code != 200:
+                    error_msg = f"Error enviando a ComfyUI: {response.status_code} - {response.text}"
+                    print(f"❌ {error_msg}")
+                    failed_workflows.append({
+                        'workflow': workflow_name,
+                        'error': error_msg
+                    })
+                    continue
+                
+                result = response.json()
+                prompt_id = result['prompt_id']
+                print(f"✓ Prompt enviado con ID: {prompt_id}")
+                
+                # Esperar resultados
+                print("⏳ Esperando procesamiento...")
+                outputs = wait_for_completion(prompt_id)
+                
+                if outputs:
+                    output_images = extract_output_images(outputs)
+                    print(f"✓ Workflow {workflow_name} completado: {len(output_images)} imágenes")
+                    
+                    results.append({
+                        "workflow_name": workflow_name,
+                        "prompt_id": prompt_id,
+                        "output_images": output_images,
+                        "success": True,
+                        "order": i + 1
+                    })
+                else:
+                    error_msg = f"Timeout o error en procesamiento"
+                    print(f"❌ {error_msg}")
+                    failed_workflows.append({
+                        'workflow': workflow_name,
+                        'error': error_msg
+                    })
+                
+            except Exception as e:
+                error_msg = f"Error procesando {workflow_name}: {str(e)}"
+                print(f"❌ {error_msg}")
+                failed_workflows.append({
+                    'workflow': workflow_name,
+                    'error': error_msg
+                })
+        
+        # Limpiar imagen temporal
+        cleanup_temp_image(image_filename)
+        
+        response_data = {
+            "success": len(results) > 0,
+            "total_workflows": len(workflows),
+            "successful": len(results),
+            "failed": len(failed_workflows),
+            "results": results,
+            "failed_workflows": failed_workflows,
+            "message": f"Procesados {len(results)}/{len(workflows)} workflows exitosamente"
+        }
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        print(f"❌ Error general: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/process-multiple-workflows-async', methods=['POST'])
+def process_multiple_workflows_async():
+    """Procesa una imagen con múltiples workflows en modo asíncrono (solo envía, no espera resultados)"""
+    try:
+        if 'image' not in request.files:
+            return jsonify({"error": "No se proporcionó ninguna imagen"}), 400
+        file = request.files['image']
+        workflows_param = request.form.get('workflows', '')
+        if not workflows_param:
+            return jsonify({"error": "No se especificaron workflows"}), 400
+        try:
+            import json
+            workflows = json.loads(workflows_param)
+        except:
+            workflows = workflows_param.split(',')
+        print(f"🔄 Procesando imagen con {len(workflows)} workflows (async): {workflows}")
+        image_filename = save_image_to_comfyui(file)
+        print(f"✓ Imagen guardada: {image_filename}")
+        prompt_ids = []
+        workflow_names = []
+        for i, workflow_name in enumerate(workflows):
+            try:
+                print(f"🔄 Enviando workflow {i+1}/{len(workflows)}: {workflow_name}")
+                workflow = load_workflow(workflow_name)
+                workflow = update_workflow_for_processing(workflow, image_filename)
+                response = requests.post(f"{COMFYUI_URL}/prompt", json={"prompt": workflow})
+                if response.status_code != 200:
+                    print(f"❌ Error enviando a ComfyUI: {response.status_code} - {response.text}")
+                    continue
+                result = response.json()
+                prompt_id = result['prompt_id']
+                prompt_ids.append(prompt_id)
+                workflow_names.append(workflow_name)
+                print(f"✓ Prompt enviado con ID: {prompt_id}")
+            except Exception as e:
+                print(f"❌ Error procesando {workflow_name}: {str(e)}")
+                continue
+        cleanup_temp_image(image_filename)
+        response_data = {
+            "success": len(prompt_ids) > 0,
+            "prompt_ids": prompt_ids,
+            "workflow_names": workflow_names,
+            "message": f"{len(prompt_ids)}/{len(workflows)} workflows enviados a la cola de ComfyUI",
+            "processing_mode": "queued"
+        }
+        return jsonify(response_data)
+    except Exception as e:
+        print(f"❌ Error general: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/get-result/<prompt_id>', methods=['GET'])
+def get_result(prompt_id):
+    """Devuelve el resultado de un prompt_id si está listo"""
+    try:
+        outputs = wait_for_completion(prompt_id, timeout=1)  # timeout corto para polling
+        if outputs:
+            output_images = extract_output_images(outputs)
+            return jsonify({
+                "success": True,
+                "output_images": output_images,
+                "prompt_id": prompt_id
+            })
+        else:
+            return jsonify({"success": False, "message": "Aún no disponible"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+def cleanup_temp_image(image_filename):
+    """Elimina la imagen temporal del directorio de uploads si existe"""
+    try:
+        path = os.path.join(UPLOAD_FOLDER, image_filename)
+        if os.path.exists(path):
+            os.remove(path)
+            print(f"🧹 Imagen temporal eliminada: {path}")
+    except Exception as e:
+        print(f"⚠️ Error eliminando imagen temporal: {e}")
+
 if __name__ == '__main__':
-    print("🚀 Iniciando API REST simplificada para ComfyUI")
-    print(f"ComfyUI URL: {COMFYUI_URL}")
-    print(f"Workflows folder: {WORKFLOWS_FOLDER}")
-    
-    app.run(
-        host='0.0.0.0',
-        port=int(os.getenv('API_PORT', '5000')),
-        debug=True
-    )
+    app.run(host='0.0.0.0', port=5000, debug=True)
