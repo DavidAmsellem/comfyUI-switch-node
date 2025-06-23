@@ -186,10 +186,33 @@ def wait_for_completion(prompt_id, timeout=300):
     raise Exception(f"Timeout esperando completion después de {timeout} segundos")
 
 def extract_output_images(outputs):
-    """Extrae las imágenes de salida"""
+    """Extrae las imágenes de salida, priorizando el nodo 143 (imagen final)"""
     output_images = []
+    final_image = None
     
+    # Primero buscar el nodo 143 (imagen final)
+    if '143' in outputs and 'images' in outputs['143']:
+        for image_info in outputs['143']['images']:
+            if 'filename' in image_info:
+                final_image = {
+                    'filename': image_info['filename'],
+                    'subfolder': image_info.get('subfolder', ''),
+                    'type': image_info.get('type', 'output'),
+                    'node_id': '143',
+                    'is_final': True
+                }
+                break
+    
+    # Si encontramos la imagen final, la ponemos primera
+    if final_image:
+        output_images.append(final_image)
+        print(f"✓ Imagen final encontrada en nodo 143: {final_image['filename']}")
+    
+    # Luego agregar otras imágenes (excluyendo nodo 143 para evitar duplicados)
     for node_id, node_output in outputs.items():
+        if node_id == '143':  # Ya procesamos este nodo
+            continue
+            
         if 'images' in node_output:
             for image_info in node_output['images']:
                 if 'filename' in image_info:
@@ -197,9 +220,11 @@ def extract_output_images(outputs):
                         'filename': image_info['filename'],
                         'subfolder': image_info.get('subfolder', ''),
                         'type': image_info.get('type', 'output'),
-                        'node_id': node_id
+                        'node_id': node_id,
+                        'is_final': False
                     })
     
+    print(f"✓ Total de imágenes extraídas: {len(output_images)} (final: {'Sí' if final_image else 'No'})")
     return output_images
 
 @app.route('/process-image', methods=['POST'])
@@ -242,13 +267,23 @@ def process_image():
         
         print(f"✅ Procesamiento completado! {len(output_images)} imágenes generadas")
         
-        return jsonify({
+        # Identificar imagen final
+        final_image = next((img for img in output_images if img.get('is_final')), None)
+        
+        response_data = {
             "success": True,
             "prompt_id": prompt_id,
             "workflow_used": workflow_name,
             "output_images": output_images,
+            "total_images": len(output_images),
             "message": f"Imagen procesada exitosamente - {len(output_images)} resultados"
-        })
+        }
+        
+        if final_image:
+            response_data["final_image"] = final_image
+            response_data["message"] += f" (imagen final: {final_image['filename']})"
+        
+        return jsonify(response_data)
         
     except Exception as e:
         print(f"❌ Error: {str(e)}")

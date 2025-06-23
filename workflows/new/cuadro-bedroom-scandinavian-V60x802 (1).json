@@ -1,7 +1,7 @@
 {
   "1": {
     "inputs": {
-      "text": "modern colorful bedroom interior front view, colorful patterned floor rugs, vibrant bedding and pillows on bed, potted plants on floor, wooden nightstand with books and decor, bright hardwood flooring, colorful floor cushions, smooth plain colorful walls, clean empty walls, frontal perspective, natural lighting, contemporary design, floor-level colorful elements only, cozy atmosphere, high quality, photorealistic",
+      "text": "scandinavian minimalist bedroom interior front view, neutral-toned bedding with soft textures, light wood furniture with clean lines, white or pale grey smooth walls, uncluttered space, large window with sheer curtains, cozy wool or jute rug on light hardwood floor, one or two well-placed green plants, simple bedside table with minimal decor, warm natural lighting, soft shadows, airy and peaceful atmosphere, high quality, photorealistic, frontal perspective, clean lines, modern nordic design",
       "clip": [
         "4",
         1
@@ -50,7 +50,7 @@
   },
   "9": {
     "inputs": {
-      "text": "side view, profile view, angled view, wall decorations, wall art, framed pictures, wall shelves, wall-mounted items, wall hangings, wallpaper, wall patterns, wall textures, textured walls, patterned walls, busy walls, cluttered walls, posters on walls, dark lighting, low quality, blurry",
+      "text": "side view, profile view, angled view, dark heavy furniture, vibrant patterns, busy rugs, wall decorations, wall art, posters, framed pictures, wall-mounted items, shelves with clutter, bold wallpaper, colorful walls, textured or patterned walls, excessive decor, neon lighting, artificial light, low lighting, messy space, low quality, blurry\n\n",
       "clip": [
         "4",
         1
@@ -65,10 +65,6 @@
     "inputs": {
       "method": "average",
       "embed1": [
-        "76",
-        0
-      ],
-      "embed2": [
         "112",
         0
       ]
@@ -76,69 +72,6 @@
     "class_type": "IPAdapterCombineEmbeds",
     "_meta": {
       "title": "IPAdapter Combine Embeds"
-    }
-  },
-  "69": {
-    "inputs": {
-      "image": "Captura de pantalla 2025-06-18 094722.png"
-    },
-    "class_type": "LoadImage",
-    "_meta": {
-      "title": "Load Image"
-    }
-  },
-  "70": {
-    "inputs": {
-      "width": 512,
-      "height": 512,
-      "interpolation": "nearest",
-      "method": "stretch",
-      "condition": "always",
-      "multiple_of": 0,
-      "image": [
-        "69",
-        0
-      ]
-    },
-    "class_type": "ImageResize+",
-    "_meta": {
-      "title": "🔧 Image Resize"
-    }
-  },
-  "71": {
-    "inputs": {
-      "interpolation": "LANCZOS",
-      "crop_position": "top",
-      "sharpening": 0,
-      "image": [
-        "70",
-        0
-      ]
-    },
-    "class_type": "PrepImageForClipVision",
-    "_meta": {
-      "title": "Prep Image For ClipVision"
-    }
-  },
-  "76": {
-    "inputs": {
-      "weight": 0.2700000000000001,
-      "ipadapter": [
-        "80",
-        0
-      ],
-      "image": [
-        "71",
-        0
-      ],
-      "clip_vision": [
-        "81",
-        0
-      ]
-    },
-    "class_type": "IPAdapterEncoder",
-    "_meta": {
-      "title": "IPAdapter Encoder"
     }
   },
   "78": {
@@ -388,7 +321,7 @@
   },
   "175": {
     "inputs": {
-      "seed": 206754446037530,
+      "seed": 735854456124272,
       "steps": 30,
       "cfg": 5.3,
       "sampler_name": "dpmpp_2m",
@@ -418,7 +351,7 @@
   },
   "244": {
     "inputs": {
-      "image": "vertical-20-25.png"
+      "image": "60x80-top-high.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -441,7 +374,7 @@
   "344": {
     "inputs": {
       "frame_width": 30,
-      "seed": 547628610,
+      "seed": 4014106556,
       "image": [
         "97",
         0

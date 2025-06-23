@@ -1,7 +1,7 @@
 {
   "1": {
     "inputs": {
-      "text": "modern colorful bedroom interior front view, colorful patterned floor rugs, vibrant bedding and pillows on bed, potted plants on floor, wooden nightstand with books and decor, bright hardwood flooring, colorful floor cushions, smooth plain colorful walls, clean empty walls, frontal perspective, natural lighting, contemporary design, floor-level colorful elements only, cozy atmosphere, high quality, photorealistic",
+      "text": "minimalist colorful architectural interior front view, clean geometric lines, open space with high ceilings, smooth white or neutral-toned walls, large floor-to-ceiling windows, polished concrete or light wood flooring, minimal furniture with modern design, hidden lighting or indirect natural light, balanced proportions, structural elegance, subtle material contrasts (glass, steel, wood), empty walls, no clutter, spacious and harmonious composition, frontal perspective, architectural focus, high quality, photorealistic,",
       "clip": [
         "4",
         1
@@ -50,7 +50,7 @@
   },
   "9": {
     "inputs": {
-      "text": "side view, profile view, angled view, wall decorations, wall art, framed pictures, wall shelves, wall-mounted items, wall hangings, wallpaper, wall patterns, wall textures, textured walls, patterned walls, busy walls, cluttered walls, posters on walls, dark lighting, low quality, blurry",
+      "text": "angled view, side view, cluttered furniture, decorative art, posters, framed pictures, wall-mounted items, wallpaper, busy textures, colorful or patterned walls, excessive decor, small windows, warm cluttered lighting, carpets or rugs, messy layouts, low ceilings, low lighting, plastic furniture, low quality, blurry",
       "clip": [
         "4",
         1
@@ -80,7 +80,7 @@
   },
   "69": {
     "inputs": {
-      "image": "Captura de pantalla 2025-06-18 094722.png"
+      "image": "Captura de pantalla de 2025-06-23 14-46-33.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -122,7 +122,7 @@
   },
   "76": {
     "inputs": {
-      "weight": 0.2700000000000001,
+      "weight": 0.23000000000000004,
       "ipadapter": [
         "80",
         0
@@ -236,7 +236,7 @@
   },
   "104": {
     "inputs": {
-      "image": "Captura de pantalla 2025-06-18 094702.png"
+      "image": "Captura de pantalla de 2025-06-23 14-46-12.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -278,7 +278,7 @@
   },
   "112": {
     "inputs": {
-      "weight": 0.38000000000000006,
+      "weight": 0.5400000000000001,
       "ipadapter": [
         "80",
         0
@@ -388,9 +388,9 @@
   },
   "175": {
     "inputs": {
-      "seed": 206754446037530,
+      "seed": 546095055658911,
       "steps": 30,
-      "cfg": 5.3,
+      "cfg": 6.5,
       "sampler_name": "dpmpp_2m",
       "scheduler": "karras",
       "denoise": 1,
@@ -418,7 +418,7 @@
   },
   "244": {
     "inputs": {
-      "image": "vertical-20-25.png"
+      "image": "60x80-m.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -441,7 +441,7 @@
   "344": {
     "inputs": {
       "frame_width": 30,
-      "seed": 547628610,
+      "seed": 3997841513,
       "image": [
         "97",
         0

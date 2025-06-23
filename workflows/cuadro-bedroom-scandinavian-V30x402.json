@@ -65,10 +65,14 @@
     "inputs": {
       "method": "average",
       "embed1": [
-        "76",
+        "167",
         0
       ],
       "embed2": [
+        "76",
+        0
+      ],
+      "embed3": [
         "112",
         0
       ]
@@ -122,7 +126,7 @@
   },
   "76": {
     "inputs": {
-      "weight": 0.2700000000000001,
+      "weight": 0.5000000000000001,
       "ipadapter": [
         "80",
         0
@@ -278,7 +282,7 @@
   },
   "112": {
     "inputs": {
-      "weight": 0.38000000000000006,
+      "weight": 0.5000000000000001,
       "ipadapter": [
         "80",
         0
@@ -368,6 +372,30 @@
       "title": "Preview Image"
     }
   },
+  "151": {
+    "inputs": {
+      "interpolation": "LANCZOS",
+      "crop_position": "top",
+      "sharpening": 0,
+      "image": [
+        "169",
+        0
+      ]
+    },
+    "class_type": "PrepImageForClipVision",
+    "_meta": {
+      "title": "Prep Image For ClipVision"
+    }
+  },
+  "155": {
+    "inputs": {
+      "image": "Captura de pantalla 2025-06-18 094711.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
   "161": {
     "inputs": {
       "ipadapter_file": "ip-adapter-plus_sd15.safetensors"
@@ -386,9 +414,48 @@
       "title": "Load CLIP Vision"
     }
   },
+  "167": {
+    "inputs": {
+      "weight": 0.22000000000000003,
+      "ipadapter": [
+        "161",
+        0
+      ],
+      "image": [
+        "151",
+        0
+      ],
+      "clip_vision": [
+        "162",
+        0
+      ]
+    },
+    "class_type": "IPAdapterEncoder",
+    "_meta": {
+      "title": "IPAdapter Encoder"
+    }
+  },
+  "169": {
+    "inputs": {
+      "width": 512,
+      "height": 512,
+      "interpolation": "nearest",
+      "method": "stretch",
+      "condition": "always",
+      "multiple_of": 0,
+      "image": [
+        "155",
+        0
+      ]
+    },
+    "class_type": "ImageResize+",
+    "_meta": {
+      "title": "🔧 Image Resize"
+    }
+  },
   "175": {
     "inputs": {
-      "seed": 206754446037530,
+      "seed": 551918711622049,
       "steps": 30,
       "cfg": 5.3,
       "sampler_name": "dpmpp_2m",
@@ -441,7 +508,7 @@
   "344": {
     "inputs": {
       "frame_width": 30,
-      "seed": 547628610,
+      "seed": 246410454,
       "image": [
         "97",
         0
