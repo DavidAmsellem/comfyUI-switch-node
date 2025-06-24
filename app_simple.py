@@ -42,7 +42,7 @@ def allowed_file(filename):
 @app.route('/health', methods=['GET'])
 def health_check():
     try:
-        response = requests.get(f"{COMFYUI_URL}/system_stats", timeout=5)
+        response = requests.get(f"{COMFYUI_URL}/system_stats", timeout=10)
         if response.status_code == 200:
             return jsonify({"status": "ok", "comfyui_connection": "ok", "version": "1.0.0"})
         else:
@@ -141,7 +141,7 @@ def submit_to_comfyui(workflow):
     }
     
     print(f"Enviando workflow a ComfyUI...")
-    response = requests.post(f"{COMFYUI_URL}/prompt", json=prompt_data, timeout=30)
+    response = requests.post(f"{COMFYUI_URL}/prompt", json=prompt_data, timeout=60)
     
     if response.status_code != 200:
         raise Exception(f"Error enviando a ComfyUI: {response.status_code} - {response.text}")
@@ -154,13 +154,13 @@ def submit_to_comfyui(workflow):
     print(f"✓ Workflow enviado, prompt_id: {prompt_id}")
     return prompt_id
 
-def wait_for_completion(prompt_id, timeout=300):
+def wait_for_completion(prompt_id, timeout=1200):
     """Espera a que ComfyUI complete el procesamiento"""
     print(f"Esperando completion para prompt_id: {prompt_id}")
     
     for i in range(timeout):
         try:
-            response = requests.get(f"{COMFYUI_URL}/history/{prompt_id}", timeout=10)
+            response = requests.get(f"{COMFYUI_URL}/history/{prompt_id}", timeout=30)
             
             if response.status_code == 200:
                 history = response.json()
@@ -820,7 +820,7 @@ def process_multiple_workflows_async():
 def get_result(prompt_id):
     """Devuelve el resultado de un prompt_id si está listo"""
     try:
-        outputs = wait_for_completion(prompt_id, timeout=1)  # timeout corto para polling
+        outputs = wait_for_completion(prompt_id, timeout=30)  # timeout más largo para polling en desarrollo
         if outputs:
             output_images = extract_output_images(outputs)
             return jsonify({
