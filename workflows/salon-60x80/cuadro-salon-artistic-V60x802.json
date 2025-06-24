@@ -1,7 +1,7 @@
 {
   "1": {
     "inputs": {
-      "text": "scandinavian minimalist bedroom interior front view, neutral-toned bedding with soft textures, light wood furniture with clean lines, white or pale grey smooth walls, uncluttered space, large window with sheer curtains, cozy wool or jute rug on light hardwood floor, one or two well-placed green plants, simple bedside table with minimal decor, warm natural lighting, soft shadows, airy and peaceful atmosphere, high quality, photorealistic, frontal perspective, clean lines, modern nordic design",
+      "text": "architectural minimalist living room interior front view, clean open space with geometric lines, smooth white or pale gray walls, built-in furniture with sharp edges, floor-to-ceiling windows with natural lighting, polished concrete or light wood flooring, low-profile modular sofa in neutral tones, single sculptural chair or table in white or black, hidden lighting integrated into ceiling or walls, large empty wall space, strong architectural shadows, balanced proportions, clean symmetry, frontal perspective, photorealistic, high quality, museum-like atmosphere",
       "clip": [
         "4",
         1
@@ -50,7 +50,7 @@
   },
   "9": {
     "inputs": {
-      "text": "side view, profile view, angled view, dark heavy furniture, vibrant patterns, busy rugs, wall decorations, wall art, posters, framed pictures, wall-mounted items, shelves with clutter, bold wallpaper, colorful walls, textured or patterned walls, excessive decor, neon lighting, artificial light, low lighting, messy space, low quality, blurry\n\n",
+      "text": "side view, angled view, cluttered decor, vibrant colors, patterned rugs, wall art, framed pictures, decorative objects, curtains, cushions, traditional furniture, rustic elements, wall-mounted TVs, busy textures, neon lights, shadows too soft, low lighting, low quality, blurry",
       "clip": [
         "4",
         1
@@ -136,7 +136,7 @@
   },
   "97": {
     "inputs": {
-      "image": "example.png"
+      "image": "f14a484a35c7415cafd1622c27582bca.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -158,7 +158,7 @@
       "condition": "always",
       "multiple_of": 0,
       "image": [
-        "344",
+        "361",
         0
       ]
     },
@@ -169,7 +169,7 @@
   },
   "104": {
     "inputs": {
-      "image": "Captura de pantalla 2025-06-18 094702.png"
+      "image": "Captura de pantalla de 2025-06-24 09-30-38.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -321,7 +321,7 @@
   },
   "175": {
     "inputs": {
-      "seed": 735854456124272,
+      "seed": 1050934428161122,
       "steps": 30,
       "cfg": 5.3,
       "sampler_name": "dpmpp_2m",
@@ -351,7 +351,7 @@
   },
   "244": {
     "inputs": {
-      "image": "60x80-top-high.png"
+      "image": "60x80-top-high-i.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -369,24 +369,6 @@
     "class_type": "Image To Mask",
     "_meta": {
       "title": "Image To Mask"
-    }
-  },
-  "344": {
-    "inputs": {
-      "frame_width": 30,
-      "seed": 4014106556,
-      "image": [
-        "97",
-        0
-      ],
-      "background_reference": [
-        "7",
-        0
-      ]
-    },
-    "class_type": "SimpleFrameGenerator",
-    "_meta": {
-      "title": "Simple Frame Generator"
     }
   },
   "345": {
@@ -473,6 +455,20 @@
     "class_type": "PreviewImage",
     "_meta": {
       "title": "Preview Image"
+    }
+  },
+  "361": {
+    "inputs": {
+      "preset": "charcoal",
+      "frame_width": 20,
+      "image": [
+        "97",
+        0
+      ]
+    },
+    "class_type": "DynamicFrameNode",
+    "_meta": {
+      "title": "Dynamic Frame Generator"
     }
   }
 }

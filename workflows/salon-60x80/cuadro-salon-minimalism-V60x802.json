@@ -1,7 +1,7 @@
 {
   "1": {
     "inputs": {
-      "text": "minimalist colorful architectural interior front view, clean geometric lines, open space with high ceilings, smooth white or neutral-toned walls, large floor-to-ceiling windows, polished concrete or light wood flooring, minimal furniture with modern design, hidden lighting or indirect natural light, balanced proportions, structural elegance, subtle material contrasts (glass, steel, wood), empty walls, no clutter, spacious and harmonious composition, frontal perspective, architectural focus, high quality, photorealistic,",
+      "text": "architectural minimalist living room interior front view, clean open space with geometric lines, smooth white or pale gray walls, built-in furniture with sharp edges, floor-to-ceiling windows with natural lighting, polished concrete or light wood flooring, low-profile modular sofa in neutral tones, single sculptural chair or table in white or black, hidden lighting integrated into ceiling or walls, large empty wall space, strong architectural shadows, balanced proportions, clean symmetry, frontal perspective, photorealistic, high quality, museum-like atmosphere",
       "clip": [
         "4",
         1
@@ -50,7 +50,7 @@
   },
   "9": {
     "inputs": {
-      "text": "angled view, side view, cluttered furniture, decorative art, posters, framed pictures, wall-mounted items, wallpaper, busy textures, colorful or patterned walls, excessive decor, small windows, warm cluttered lighting, carpets or rugs, messy layouts, low ceilings, low lighting, plastic furniture, low quality, blurry",
+      "text": "side view, angled view, cluttered decor, vibrant colors, patterned rugs, wall art, framed pictures, decorative objects, curtains, cushions, traditional furniture, rustic elements, wall-mounted TVs, busy textures, neon lights, shadows too soft, low lighting, low quality, blurry",
       "clip": [
         "4",
         1
@@ -65,10 +65,6 @@
     "inputs": {
       "method": "average",
       "embed1": [
-        "76",
-        0
-      ],
-      "embed2": [
         "112",
         0
       ]
@@ -76,69 +72,6 @@
     "class_type": "IPAdapterCombineEmbeds",
     "_meta": {
       "title": "IPAdapter Combine Embeds"
-    }
-  },
-  "69": {
-    "inputs": {
-      "image": "Captura de pantalla de 2025-06-23 14-46-33.png"
-    },
-    "class_type": "LoadImage",
-    "_meta": {
-      "title": "Load Image"
-    }
-  },
-  "70": {
-    "inputs": {
-      "width": 512,
-      "height": 512,
-      "interpolation": "nearest",
-      "method": "stretch",
-      "condition": "always",
-      "multiple_of": 0,
-      "image": [
-        "69",
-        0
-      ]
-    },
-    "class_type": "ImageResize+",
-    "_meta": {
-      "title": "🔧 Image Resize"
-    }
-  },
-  "71": {
-    "inputs": {
-      "interpolation": "LANCZOS",
-      "crop_position": "top",
-      "sharpening": 0,
-      "image": [
-        "70",
-        0
-      ]
-    },
-    "class_type": "PrepImageForClipVision",
-    "_meta": {
-      "title": "Prep Image For ClipVision"
-    }
-  },
-  "76": {
-    "inputs": {
-      "weight": 0.23000000000000004,
-      "ipadapter": [
-        "80",
-        0
-      ],
-      "image": [
-        "71",
-        0
-      ],
-      "clip_vision": [
-        "81",
-        0
-      ]
-    },
-    "class_type": "IPAdapterEncoder",
-    "_meta": {
-      "title": "IPAdapter Encoder"
     }
   },
   "78": {
@@ -203,7 +136,7 @@
   },
   "97": {
     "inputs": {
-      "image": "example.png"
+      "image": "f14a484a35c7415cafd1622c27582bca.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -225,7 +158,7 @@
       "condition": "always",
       "multiple_of": 0,
       "image": [
-        "344",
+        "361",
         0
       ]
     },
@@ -236,7 +169,7 @@
   },
   "104": {
     "inputs": {
-      "image": "Captura de pantalla de 2025-06-23 14-46-12.png"
+      "image": "Captura de pantalla de 2025-06-24 09-25-30.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -278,7 +211,7 @@
   },
   "112": {
     "inputs": {
-      "weight": 0.5400000000000001,
+      "weight": 0.38000000000000006,
       "ipadapter": [
         "80",
         0
@@ -388,9 +321,9 @@
   },
   "175": {
     "inputs": {
-      "seed": 546095055658911,
+      "seed": 10134100417430,
       "steps": 30,
-      "cfg": 6.5,
+      "cfg": 5.3,
       "sampler_name": "dpmpp_2m",
       "scheduler": "karras",
       "denoise": 1,
@@ -418,7 +351,7 @@
   },
   "244": {
     "inputs": {
-      "image": "60x80-m.png"
+      "image": "60x80-mid-d.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -436,24 +369,6 @@
     "class_type": "Image To Mask",
     "_meta": {
       "title": "Image To Mask"
-    }
-  },
-  "344": {
-    "inputs": {
-      "frame_width": 30,
-      "seed": 3997841513,
-      "image": [
-        "97",
-        0
-      ],
-      "background_reference": [
-        "7",
-        0
-      ]
-    },
-    "class_type": "SimpleFrameGenerator",
-    "_meta": {
-      "title": "Simple Frame Generator"
     }
   },
   "345": {
@@ -540,6 +455,20 @@
     "class_type": "PreviewImage",
     "_meta": {
       "title": "Preview Image"
+    }
+  },
+  "361": {
+    "inputs": {
+      "preset": "charcoal",
+      "frame_width": 20,
+      "image": [
+        "97",
+        0
+      ]
+    },
+    "class_type": "DynamicFrameNode",
+    "_meta": {
+      "title": "Dynamic Frame Generator"
     }
   }
 }

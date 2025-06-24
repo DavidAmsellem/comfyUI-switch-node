@@ -1,7 +1,7 @@
 {
   "1": {
     "inputs": {
-      "text": "artistic colorful interior front view, bold color-blocked walls, abstract shapes and creative geometry, statement furniture in vibrant tones (red, yellow, blue, green), sculptural decor elements, large art-inspired rug on smooth neutral flooring, curated design objects with playful forms, natural lighting from large windows, clean composition with visual balance, empty ceiling and floor edges, gallery-style layout, frontal perspective, high quality, photorealistic, modern art-inspired design",
+      "text": "coastal modern living room interior front view, bright and airy space with soft natural sunlight, large windows or open doors with view of the sea or beach outside, light neutral walls (white, soft beige or pale blue), linen sofa in white or sand tones, wooden or rattan coffee table, coastal decor with subtle nautical or natural elements (shells, driftwood, woven baskets), sheer white curtains blowing gently, indoor plant or palm in ceramic pot, smooth light wood or stone flooring, clean relaxed composition, frontal perspective, photorealistic, high quality, serene summer atmosphere",
       "clip": [
         "4",
         1
@@ -50,7 +50,7 @@
   },
   "9": {
     "inputs": {
-      "text": "angled view, side view, cluttered space, random decorative objects, traditional furniture, realistic wall art, framed pictures, family photos, wall-mounted items, shelving units, busy textures, floral wallpaper, rustic elements, messy color mixing, poor lighting, dark ambiance, low quality, blurry",
+      "text": "angled view, heavy furniture, dark tones, synthetic materials, cluttered decor, closed windows, curtains blocking light, wall-mounted electronics, abstract or urban art, bold modern patterns, artificial lighting, low quality, blurry",
       "clip": [
         "4",
         1
@@ -65,76 +65,13 @@
     "inputs": {
       "method": "average",
       "embed1": [
-        "76",
+        "112",
         0
       ]
     },
     "class_type": "IPAdapterCombineEmbeds",
     "_meta": {
       "title": "IPAdapter Combine Embeds"
-    }
-  },
-  "69": {
-    "inputs": {
-      "image": "Captura de pantalla de 2025-06-23 14-46-33.png"
-    },
-    "class_type": "LoadImage",
-    "_meta": {
-      "title": "Load Image"
-    }
-  },
-  "70": {
-    "inputs": {
-      "width": 512,
-      "height": 512,
-      "interpolation": "nearest",
-      "method": "stretch",
-      "condition": "always",
-      "multiple_of": 0,
-      "image": [
-        "69",
-        0
-      ]
-    },
-    "class_type": "ImageResize+",
-    "_meta": {
-      "title": "🔧 Image Resize"
-    }
-  },
-  "71": {
-    "inputs": {
-      "interpolation": "LANCZOS",
-      "crop_position": "top",
-      "sharpening": 0,
-      "image": [
-        "70",
-        0
-      ]
-    },
-    "class_type": "PrepImageForClipVision",
-    "_meta": {
-      "title": "Prep Image For ClipVision"
-    }
-  },
-  "76": {
-    "inputs": {
-      "weight": 0.23000000000000004,
-      "ipadapter": [
-        "80",
-        0
-      ],
-      "image": [
-        "71",
-        0
-      ],
-      "clip_vision": [
-        "81",
-        0
-      ]
-    },
-    "class_type": "IPAdapterEncoder",
-    "_meta": {
-      "title": "IPAdapter Encoder"
     }
   },
   "78": {
@@ -199,7 +136,7 @@
   },
   "97": {
     "inputs": {
-      "image": "example.png"
+      "image": "f14a484a35c7415cafd1622c27582bca.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -221,13 +158,76 @@
       "condition": "always",
       "multiple_of": 0,
       "image": [
-        "344",
+        "361",
         0
       ]
     },
     "class_type": "ImageResize+",
     "_meta": {
       "title": "🔧 Image Resize"
+    }
+  },
+  "104": {
+    "inputs": {
+      "image": "Captura de pantalla de 2025-06-24 10-23-57.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "107": {
+    "inputs": {
+      "width": 512,
+      "height": 512,
+      "interpolation": "nearest",
+      "method": "stretch",
+      "condition": "always",
+      "multiple_of": 0,
+      "image": [
+        "104",
+        0
+      ]
+    },
+    "class_type": "ImageResize+",
+    "_meta": {
+      "title": "🔧 Image Resize"
+    }
+  },
+  "110": {
+    "inputs": {
+      "interpolation": "LANCZOS",
+      "crop_position": "top",
+      "sharpening": 0,
+      "image": [
+        "107",
+        0
+      ]
+    },
+    "class_type": "PrepImageForClipVision",
+    "_meta": {
+      "title": "Prep Image For ClipVision"
+    }
+  },
+  "112": {
+    "inputs": {
+      "weight": 0.38000000000000006,
+      "ipadapter": [
+        "80",
+        0
+      ],
+      "image": [
+        "110",
+        0
+      ],
+      "clip_vision": [
+        "81",
+        0
+      ]
+    },
+    "class_type": "IPAdapterEncoder",
+    "_meta": {
+      "title": "IPAdapter Encoder"
     }
   },
   "115": {
@@ -321,9 +321,9 @@
   },
   "175": {
     "inputs": {
-      "seed": 546095055658911,
+      "seed": 377538696679044,
       "steps": 30,
-      "cfg": 6.5,
+      "cfg": 5.3,
       "sampler_name": "dpmpp_2m",
       "scheduler": "karras",
       "denoise": 1,
@@ -351,7 +351,7 @@
   },
   "244": {
     "inputs": {
-      "image": "60x80-m.png"
+      "image": "60x80-high (1).png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -369,24 +369,6 @@
     "class_type": "Image To Mask",
     "_meta": {
       "title": "Image To Mask"
-    }
-  },
-  "344": {
-    "inputs": {
-      "frame_width": 30,
-      "seed": 3997841513,
-      "image": [
-        "97",
-        0
-      ],
-      "background_reference": [
-        "7",
-        0
-      ]
-    },
-    "class_type": "SimpleFrameGenerator",
-    "_meta": {
-      "title": "Simple Frame Generator"
     }
   },
   "345": {
@@ -473,6 +455,20 @@
     "class_type": "PreviewImage",
     "_meta": {
       "title": "Preview Image"
+    }
+  },
+  "361": {
+    "inputs": {
+      "preset": "charcoal",
+      "frame_width": 20,
+      "image": [
+        "97",
+        0
+      ]
+    },
+    "class_type": "DynamicFrameNode",
+    "_meta": {
+      "title": "Dynamic Frame Generator"
     }
   }
 }
