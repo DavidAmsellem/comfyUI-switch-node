@@ -560,8 +560,96 @@ def get_workflow_groups():
                                 'style': style,
                                 'display_name': f'Salon {style.title()} {dimension}'
                             })
-        # --- FILTRAR SOLO bedroom-60x80 y salon-60x80 ---
-        filtered_groups = {k: v for k, v in groups.items() if k in ['bedroom-60x80', 'salon-60x80']}
+        # --- AGREGAR GRUPOS DE BATHROOM 60x80 ---
+        for subdir in os.listdir(WORKFLOWS_FOLDER):
+            subdir_path = os.path.join(WORKFLOWS_FOLDER, subdir)
+            if os.path.isdir(subdir_path) and 'bathroom' in subdir.lower() and '60x80' in subdir:
+                for filename in os.listdir(subdir_path):
+                    if filename.endswith('.json') and 'bathroom' in filename.lower():
+                        import re
+                        dimension_match = re.search(r'(60x80)', subdir)
+                        if not dimension_match:
+                            dimension_match = re.search(r'V?(60x80)', filename)
+                        if dimension_match:
+                            dimension = dimension_match.group(1)
+                            group_key = f'bathroom-{dimension}'
+                            if group_key not in groups:
+                                groups[group_key] = {
+                                    'name': f'Bathroom {dimension}',
+                                    'dimension': dimension,
+                                    'type': 'bathroom',
+                                    'workflows': []
+                                }
+                            # Extraer estilo del nombre
+                            style = 'default'
+                            if 'artistic' in filename.lower():
+                                style = 'artistic'
+                            elif 'classic' in filename.lower():
+                                style = 'classic'
+                            elif 'minimalism' in filename.lower():
+                                style = 'minimalism'
+                            elif 'scandinavian' in filename.lower():
+                                style = 'scandinavian'
+                            elif 'modern' in filename.lower():
+                                style = 'modern'
+                            elif 'beach' in filename.lower():
+                                style = 'beach'
+                            elif 'close' in filename.lower():
+                                style = 'close'
+                            elif 'student' in filename.lower():
+                                style = 'student'
+                            workflow_path = f"{subdir}/{filename.replace('.json', '')}"
+                            groups[group_key]['workflows'].append({
+                                'filename': workflow_path,
+                                'style': style,
+                                'display_name': f'Bathroom {style.title()} {dimension}'
+                            })
+        # --- AGREGAR GRUPOS DE OFFICE 60x80 ---
+        for subdir in os.listdir(WORKFLOWS_FOLDER):
+            subdir_path = os.path.join(WORKFLOWS_FOLDER, subdir)
+            if os.path.isdir(subdir_path) and 'office' in subdir.lower() and '60x80' in subdir:
+                for filename in os.listdir(subdir_path):
+                    if filename.endswith('.json') and 'office' in filename.lower():
+                        import re
+                        dimension_match = re.search(r'(60x80)', subdir)
+                        if not dimension_match:
+                            dimension_match = re.search(r'V?(60x80)', filename)
+                        if dimension_match:
+                            dimension = dimension_match.group(1)
+                            group_key = f"office-{dimension}"
+                            if group_key not in groups:
+                                groups[group_key] = {
+                                    'name': f'Office {dimension}',
+                                    'dimension': dimension,
+                                    'type': 'office',
+                                    'workflows': []
+                                }
+                            # Extraer estilo del nombre
+                            style = 'default'
+                            if 'artistic' in filename.lower():
+                                style = 'artistic'
+                            elif 'classic' in filename.lower():
+                                style = 'classic'
+                            elif 'minimalism' in filename.lower():
+                                style = 'minimalism'
+                            elif 'scandinavian' in filename.lower():
+                                style = 'scandinavian'
+                            elif 'modern' in filename.lower():
+                                style = 'modern'
+                            elif 'beach' in filename.lower():
+                                style = 'beach'
+                            elif 'close' in filename.lower():
+                                style = 'close'
+                            elif 'student' in filename.lower():
+                                style = 'student'
+                            workflow_path = f"{subdir}/{filename.replace('.json', '')}"
+                            groups[group_key]['workflows'].append({
+                                'filename': workflow_path,
+                                'style': style,
+                                'display_name': f'Office {style.title()} {dimension}'
+                            })
+        # --- FILTRAR SOLO bedroom-60x80, salon-60x80, bathroom-60x80 y office-60x80 ---
+        filtered_groups = {k: v for k, v in groups.items() if k in ['bedroom-60x80', 'salon-60x80', 'bathroom-60x80', 'office-60x80']}
         print(f"✓ Grupos de workflows encontrados: {list(filtered_groups.keys())}")
         return jsonify({"success": True, "groups": filtered_groups})
         
