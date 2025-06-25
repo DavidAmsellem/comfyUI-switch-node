@@ -169,7 +169,7 @@
   },
   "104": {
     "inputs": {
-      "image": "Captura de pantalla de 2025-06-24 09-30-13.png"
+      "image": "Captura de pantalla de 2025-06-24 11-39-16.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -321,7 +321,7 @@
   },
   "175": {
     "inputs": {
-      "seed": 237390016869983,
+      "seed": 943978320173172,
       "steps": 30,
       "cfg": 5.3,
       "sampler_name": "dpmpp_2m",
@@ -351,7 +351,7 @@
   },
   "244": {
     "inputs": {
-      "image": "60x80-high.png"
+      "image": "60x80-top-high.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -459,8 +459,8 @@
   },
   "361": {
     "inputs": {
-      "preset": "charcoal",
-      "frame_width": 20,
+      "preset": "gold",
+      "frame_width": 15,
       "image": [
         "97",
         0

@@ -455,7 +455,7 @@
   },
   "175": {
     "inputs": {
-      "seed": 78701000711704,
+      "seed": 820771785718693,
       "steps": 26,
       "cfg": 6.4,
       "sampler_name": "dpmpp_2m",
@@ -508,7 +508,8 @@
   "344": {
     "inputs": {
       "frame_width": 30,
-      "seed": 2756446622,
+      "seed": 4109331005,
+      "material_override": "auto",
       "image": [
         "97",
         0
@@ -539,18 +540,6 @@
     "class_type": "ESAM_ModelLoader_Zho",
     "_meta": {
       "title": "🔎ESAM Model Loader"
-    }
-  },
-  "352": {
-    "inputs": {
-      "mask": [
-        "356",
-        1
-      ]
-    },
-    "class_type": "MaskToImage",
-    "_meta": {
-      "title": "Convert Mask to Image"
     }
   },
   "356": {
@@ -585,28 +574,17 @@
       "title": "🔎Yoloworld ESAM"
     }
   },
-  "357": {
+  "361": {
     "inputs": {
+      "filename_prefix": "bedroom-artistic-v45x6022",
       "images": [
-        "352",
+        "142",
         0
       ]
     },
-    "class_type": "PreviewImage",
+    "class_type": "SaveImage",
     "_meta": {
-      "title": "Preview Image"
-    }
-  },
-  "360": {
-    "inputs": {
-      "images": [
-        "356",
-        0
-      ]
-    },
-    "class_type": "PreviewImage",
-    "_meta": {
-      "title": "Preview Image"
+      "title": "Save Image"
     }
   }
 }

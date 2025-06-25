@@ -17,6 +17,7 @@ from flask_cors import CORS
 from PIL import Image
 import requests
 from werkzeug.utils import secure_filename
+from image_save_utils import prepare_output_dir, save_generated_image, save_original_to_comfyui_input
 
 # Configuración
 app = Flask(__name__)
@@ -186,33 +187,30 @@ def wait_for_completion(prompt_id, timeout=1200):
     raise Exception(f"Timeout esperando completion después de {timeout} segundos")
 
 def extract_output_images(outputs):
-    """Extrae las imágenes de salida, priorizando el nodo 143 (imagen final)"""
+    """Extrae las imágenes de salida, priorizando el nodo SaveImage (361) como imagen final"""
     output_images = []
     final_image = None
-    
-    # Primero buscar el nodo 143 (imagen final)
-    if '143' in outputs and 'images' in outputs['143']:
-        for image_info in outputs['143']['images']:
+    # Buscar el nodo SaveImage (361)
+    save_image_node_id = '361'
+    if save_image_node_id in outputs and 'images' in outputs[save_image_node_id]:
+        for image_info in outputs[save_image_node_id]['images']:
             if 'filename' in image_info:
                 final_image = {
                     'filename': image_info['filename'],
                     'subfolder': image_info.get('subfolder', ''),
                     'type': image_info.get('type', 'output'),
-                    'node_id': '143',
+                    'node_id': save_image_node_id,
                     'is_final': True
                 }
                 break
-    
     # Si encontramos la imagen final, la ponemos primera
     if final_image:
         output_images.append(final_image)
-        print(f"✓ Imagen final encontrada en nodo 143: {final_image['filename']}")
-    
-    # Luego agregar otras imágenes (excluyendo nodo 143 para evitar duplicados)
+        print(f"✓ Imagen final encontrada en nodo SaveImage ({save_image_node_id}): {final_image['filename']}")
+    # Luego agregar otras imágenes (excluyendo nodo SaveImage para evitar duplicados)
     for node_id, node_output in outputs.items():
-        if node_id == '143':  # Ya procesamos este nodo
+        if node_id == save_image_node_id:
             continue
-            
         if 'images' in node_output:
             for image_info in node_output['images']:
                 if 'filename' in image_info:
@@ -223,7 +221,6 @@ def extract_output_images(outputs):
                         'node_id': node_id,
                         'is_final': False
                     })
-    
     print(f"✓ Total de imágenes extraídas: {len(output_images)} (final: {'Sí' if final_image else 'No'})")
     return output_images
 
@@ -231,35 +228,43 @@ def extract_output_images(outputs):
 def process_image():
     """Procesa una imagen usando un workflow con estilo específico"""
     try:
-        # Verificar que se envió un archivo
         if 'image' not in request.files:
             return jsonify({"error": "No se proporcionó ninguna imagen"}), 400
-        
         file = request.files['image']
         workflow_name = request.form.get('workflow', 'workflow_cuadro_bedroomV15x202')
-        
         print(f"🔄 Procesando imagen con workflow: {workflow_name}")
-        
-        # Guardar imagen en ComfyUI
-        image_filename = save_image_to_comfyui(file)
-        print(f"✓ Imagen guardada: {image_filename}")
-        
+        # Crear carpeta y guardar imagen original como PNG
+        output_dir, original_path, base_name = prepare_output_dir(file)
+        print(f"✓ Imagen original guardada en: {original_path}")
+        # Guardar también en input de ComfyUI
+        comfyui_image_relpath = save_original_to_comfyui_input(file, base_name, COMFYUI_INPUT_FOLDER)
+        print(f"✓ Imagen original guardada en input ComfyUI: {comfyui_image_relpath}")
+        # Usar comfyui_image_relpath como nombre de imagen para el workflow
+        image_filename = comfyui_image_relpath
         # Cargar workflow
         workflow = load_workflow(workflow_name)
         print(f"✓ Workflow cargado: {len(workflow)} nodos")
-        
         # Actualizar workflow (incluye imagen y seeds aleatorios)
         updated_workflow = update_workflow_for_processing(workflow, image_filename)
-        
         # Enviar a ComfyUI
         prompt_id = submit_to_comfyui(updated_workflow)
-        
         # Esperar resultados
         outputs = wait_for_completion(prompt_id)
-        
         # Extraer imágenes
         output_images = extract_output_images(outputs)
-        
+        # Guardar cada imagen generada en output_dir como PNG
+        for img in output_images:
+            # Solo buscar en output
+            comfyui_output_folder = '/media/davidadmin/Nuevo vol/comfyUI/ComfyUI/output'
+            comfyui_img_path = os.path.join(comfyui_output_folder, img['filename'])
+            print(f"[DEBUG] Buscando imagen generada en output: {comfyui_img_path}")
+            if os.path.exists(comfyui_img_path):
+                print(f"[DEBUG] Imagen encontrada, guardando en: {output_dir}")
+                with open(comfyui_img_path, 'rb') as f:
+                    img_bytes = f.read()
+                save_generated_image(img_bytes, output_dir, img['filename'])
+            else:
+                print(f"[DEBUG] Imagen NO encontrada en output: {img['filename']}")
         # Limpiar archivo temporal si existe
         temp_path = os.path.join(UPLOAD_FOLDER, image_filename)
         if os.path.exists(temp_path):
@@ -312,70 +317,53 @@ def process_image_multiple():
             return jsonify({"error": "Máximo 5 workflows permitidos"}), 400
         
         print(f"🔄 Procesando imagen con {len(workflow_names)} workflows: {workflow_names}")
-        
-        # Guardar imagen en ComfyUI
-        image_filename = save_image_to_comfyui(file)
-        print(f"✓ Imagen guardada: {image_filename}")
-        
+        # Crear carpeta y guardar imagen original como PNG
+        output_dir, original_path, base_name = prepare_output_dir(file)
+        print(f"✓ Imagen original guardada en: {original_path}")
+        # Guardar también en input de ComfyUI
+        comfyui_image_relpath = save_original_to_comfyui_input(file, base_name, COMFYUI_INPUT_FOLDER)
+        print(f"✓ Imagen original guardada en input ComfyUI: {comfyui_image_relpath}")
         results = []
         errors = []
-        
         for workflow_name in workflow_names:
             try:
                 print(f"🎨 Procesando con workflow: {workflow_name}")
-                
-                # Cargar workflow
                 workflow = load_workflow(workflow_name)
-                
-                # Actualizar workflow (incluye imagen y seeds aleatorios)
-                updated_workflow = update_workflow_for_processing(workflow, image_filename)
-                
-                # Enviar a ComfyUI
+                updated_workflow = update_workflow_for_processing(workflow, comfyui_image_relpath)
                 prompt_id = submit_to_comfyui(updated_workflow)
-                
-                # Esperar resultados
                 outputs = wait_for_completion(prompt_id)
-                
-                # Extraer imágenes
                 output_images = extract_output_images(outputs)
-                
+                for img in output_images:
+                    # Buscar primero en output, luego en input, luego en temp
+                    comfyui_output_folder = '/media/davidadmin/Nuevo vol/comfyUI/ComfyUI/output'
+                    comfyui_input_folder = COMFYUI_INPUT_FOLDER
+                    comfyui_temp_folder = '/media/davidadmin/Nuevo vol/comfyUI/ComfyUI/temp'
+                    comfyui_img_path = os.path.join(comfyui_output_folder, img['filename'])
+                    print(f"[DEBUG] Buscando imagen generada en output: {comfyui_img_path}")
+                    if os.path.exists(comfyui_img_path):
+                        print(f"[DEBUG] Imagen encontrada, guardando en: {output_dir}")
+                        with open(comfyui_img_path, 'rb') as f:
+                            img_bytes = f.read()
+                        save_generated_image(img_bytes, output_dir, img['filename'])
+                    else:
+                        print(f"[DEBUG] Imagen NO encontrada en output: {img['filename']}")
                 results.append({
                     "workflow": workflow_name,
                     "prompt_id": prompt_id,
                     "output_images": output_images,
                     "success": True
                 })
-                
                 print(f"✅ {workflow_name} completado con {len(output_images)} imágenes")
-                
             except Exception as e:
                 print(f"❌ Error en {workflow_name}: {str(e)}")
-                errors.append({
-                    "workflow": workflow_name,
-                    "error": str(e)
-                })
-        
-        # Limpiar archivo temporal
-        temp_path = os.path.join(UPLOAD_FOLDER, image_filename)
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
-        
-        print(f"🏁 Procesamiento múltiple completado: {len(results)} exitosos, {len(errors)} errores")
-        
+                errors.append({"workflow": workflow_name, "error": str(e)})
         return jsonify({
-            "success": True,
-            "total_workflows": len(workflow_names),
-            "successful_results": results,
+            "success": len(results) > 0,
+            "results": results,
             "errors": errors,
-            "summary": {
-                "successful": len(results),
-                "failed": len(errors),
-                "total_images": sum(len(r["output_images"]) for r in results)
-            }
+            "output_dir": output_dir
         })
-        
     except Exception as e:
-        print(f"❌ Error en procesamiento múltiple: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/get-image/<filename>', methods=['GET'])

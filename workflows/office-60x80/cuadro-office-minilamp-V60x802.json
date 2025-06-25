@@ -1,7 +1,7 @@
 {
   "1": {
     "inputs": {
-      "text": "rustic minimalist architectural living room interior front view, exposed natural materials like raw wood beams and stone walls, smooth neutral plaster surfaces, polished concrete or light oak flooring, large open space with high ceilings, floor-to-ceiling windows with natural light, custom-built wooden furniture with clean lines, earthy color palette (beige, clay, taupe), linen or wool textures, single sculptural armchair or bench, minimal decor with artisanal touches (ceramic vase, woven basket), soft shadows, serene atmosphere, balanced proportions, frontal perspective, high quality, photorealistic",
+      "text": "simple modern office interior front view, single small desk with clean lines, matte white or light wood surface, one modern chair in neutral color, smooth white or pale gray wall, natural soft lighting from side window, uncluttered floor with minimal objects like a small rug, a single plant pot, or a closed laptop bag, neutral color palette (white, gray, beige), calm and practical atmosphere, frontal perspective, photorealistic, high quality",
       "clip": [
         "4",
         1
@@ -50,7 +50,7 @@
   },
   "9": {
     "inputs": {
-      "text": "angled view, cluttered decor, bright colors, modern plastics, wall art, framed pictures, metal furniture, glossy finishes, wall-mounted TVs, vibrant patterns, heavy curtains, neon lighting, excessive ornamentation, dark lighting, low quality, blurry",
+      "text": "angled view, cluttered desk, wall art, shelves, tech clutter, dark furniture, bold colors, excessive decorations, wires and cables, wall-mounted screens, busy backgrounds, low lighting, low quality, blurry",
       "clip": [
         "4",
         1
@@ -169,7 +169,7 @@
   },
   "104": {
     "inputs": {
-      "image": "Captura de pantalla de 2025-06-24 11-39-16.png"
+      "image": "Captura de pantalla de 2025-06-24 13-10-21.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -321,7 +321,7 @@
   },
   "175": {
     "inputs": {
-      "seed": 237390016869983,
+      "seed": 472754108408620,
       "steps": 30,
       "cfg": 5.3,
       "sampler_name": "dpmpp_2m",
@@ -403,7 +403,7 @@
   },
   "356": {
     "inputs": {
-      "categories": "window, mirror, bookcase, wall patterns, wallpaper, wall decals, wall art, wall decorations, wall graphics, wall ornaments, wall motifs, bed",
+      "categories": "window, mirror, bookcase, wall patterns, wallpaper, wall decals, wall art, wall decorat,ions, wall graphics, wall ornaments, wall motifs, bed, bath",
       "confidence_threshold": 0.10000000000000002,
       "iou_threshold": 0.10000000000000002,
       "box_thickness": 2,

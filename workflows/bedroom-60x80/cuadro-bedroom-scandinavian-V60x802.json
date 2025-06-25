@@ -1,7 +1,7 @@
 {
   "1": {
     "inputs": {
-      "text": "scandinavian minimalist bedroom interior front view, neutral-toned bedding with soft textures, light wood furniture with clean lines, white or pale grey smooth walls, uncluttered space, large window with sheer curtains, cozy wool or jute rug on light hardwood floor, one or two well-placed green plants, simple bedside table with minimal decor, warm natural lighting, soft shadows, airy and peaceful atmosphere, high quality, photorealistic, frontal perspective, clean lines, modern nordic design",
+      "text": "scandinavian minimalist bathroom interior front view, soft natural light from large window, smooth white or pale gray walls, light wood or neutral stone flooring, freestanding tub or open shower area, wooden stool or bench with folded towels, woven basket with bath items placed on floor, cozy rug or mat in soft tones, small potted plant, clean lines and simple forms, matte textures, soft beige and pastel accents, warm and airy atmosphere, uncluttered but lived-in feel, frontal perspective, high quality, photorealistic",
       "clip": [
         "4",
         1
@@ -50,7 +50,7 @@
   },
   "9": {
     "inputs": {
-      "text": "side view, profile view, angled view, dark heavy furniture, vibrant patterns, busy rugs, wall decorations, wall art, posters, framed pictures, wall-mounted items, shelves with clutter, bold wallpaper, colorful walls, textured or patterned walls, excessive decor, neon lighting, artificial light, low lighting, messy space, low quality, blurry\n\n",
+      "text": "angled view, heavy furniture, dark colors, bold patterns, plastic decor, wall art, posters, metal shelves, aggressive lighting, cluttered items, bright neon objects, glossy surfaces, industrial finishes, low lighting, low quality, blurry",
       "clip": [
         "4",
         1
@@ -136,7 +136,7 @@
   },
   "97": {
     "inputs": {
-      "image": "example.png"
+      "image": "f14a484a35c7415cafd1622c27582bca.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -158,7 +158,7 @@
       "condition": "always",
       "multiple_of": 0,
       "image": [
-        "344",
+        "361",
         0
       ]
     },
@@ -169,7 +169,7 @@
   },
   "104": {
     "inputs": {
-      "image": "Captura de pantalla 2025-06-18 094702.png"
+      "image": "Captura de pantalla de 2025-06-23 20-23-36.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -321,7 +321,7 @@
   },
   "175": {
     "inputs": {
-      "seed": 735854456124272,
+      "seed": 72594913984026,
       "steps": 30,
       "cfg": 5.3,
       "sampler_name": "dpmpp_2m",
@@ -371,24 +371,6 @@
       "title": "Image To Mask"
     }
   },
-  "344": {
-    "inputs": {
-      "frame_width": 30,
-      "seed": 4014106556,
-      "image": [
-        "97",
-        0
-      ],
-      "background_reference": [
-        "7",
-        0
-      ]
-    },
-    "class_type": "SimpleFrameGenerator",
-    "_meta": {
-      "title": "Simple Frame Generator"
-    }
-  },
   "345": {
     "inputs": {
       "yolo_world_model": "yolo_world/l"
@@ -421,7 +403,7 @@
   },
   "356": {
     "inputs": {
-      "categories": "window, mirror, bookcase, wall patterns, wallpaper, wall decals, wall art, wall decorations, wall graphics, wall ornaments, wall motifs, bed",
+      "categories": "window, mirror, bookcase, wall patterns, wallpaper, wall decals, wall art, wall decorations, wall graphics, wall ornaments, wall motifs, bed, bath",
       "confidence_threshold": 0.10000000000000002,
       "iou_threshold": 0.10000000000000002,
       "box_thickness": 2,
@@ -473,6 +455,20 @@
     "class_type": "PreviewImage",
     "_meta": {
       "title": "Preview Image"
+    }
+  },
+  "361": {
+    "inputs": {
+      "preset": "charcoal",
+      "frame_width": 20,
+      "image": [
+        "97",
+        0
+      ]
+    },
+    "class_type": "DynamicFrameNode",
+    "_meta": {
+      "title": "Dynamic Frame Generator"
     }
   }
 }

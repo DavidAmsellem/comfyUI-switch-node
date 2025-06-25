@@ -221,7 +221,7 @@
       "condition": "always",
       "multiple_of": 0,
       "image": [
-        "344",
+        "361",
         0
       ]
     },
@@ -371,24 +371,6 @@
       "title": "Image To Mask"
     }
   },
-  "344": {
-    "inputs": {
-      "frame_width": 30,
-      "seed": 1919615514,
-      "image": [
-        "97",
-        0
-      ],
-      "background_reference": [
-        "7",
-        0
-      ]
-    },
-    "class_type": "SimpleFrameGenerator",
-    "_meta": {
-      "title": "Simple Frame Generator"
-    }
-  },
   "345": {
     "inputs": {
       "yolo_world_model": "yolo_world/l"
@@ -473,6 +455,20 @@
     "class_type": "PreviewImage",
     "_meta": {
       "title": "Preview Image"
+    }
+  },
+  "361": {
+    "inputs": {
+      "preset": "charcoal",
+      "frame_width": 20,
+      "image": [
+        "97",
+        0
+      ]
+    },
+    "class_type": "DynamicFrameNode",
+    "_meta": {
+      "title": "Dynamic Frame Generator"
     }
   }
 }

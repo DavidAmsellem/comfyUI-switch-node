@@ -169,7 +169,7 @@
   },
   "104": {
     "inputs": {
-      "image": "Captura de pantalla de 2025-06-23 14-46-12.png"
+      "image": "Captura de pantalla de 2025-06-24 14-03-53.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -351,7 +351,7 @@
   },
   "244": {
     "inputs": {
-      "image": "60x80-m.png"
+      "image": "60x80-top-high.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -375,6 +375,7 @@
     "inputs": {
       "frame_width": 30,
       "seed": 3285847176,
+      "material_override": "auto",
       "image": [
         "97",
         0
