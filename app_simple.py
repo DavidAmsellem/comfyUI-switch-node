@@ -224,6 +224,13 @@ def extract_output_images(outputs):
     print(f"✓ Total de imágenes extraídas: {len(output_images)} (final: {'Sí' if final_image else 'No'})")
     return output_images
 
+def upscale_and_save(input_path, output_path, scale=2):
+    img = Image.open(input_path)
+    new_size = (img.width * scale, img.height * scale)
+    upscaled = img.resize(new_size, Image.LANCZOS)
+    upscaled.save(output_path, format='PNG')
+    print(f"Upscaled {input_path} -> {output_path} ({new_size[0]}x{new_size[1]})")
+
 @app.route('/process-image', methods=['POST'])
 def process_image():
     """Procesa una imagen usando un workflow con estilo específico"""
@@ -236,6 +243,10 @@ def process_image():
         # Crear carpeta y guardar imagen original como PNG
         output_dir, original_path, base_name = prepare_output_dir(file)
         print(f"✓ Imagen original guardada en: {original_path}")
+        # Upscale automático x4 (manteniendo ambos archivos)
+        upscaled_path = os.path.join(output_dir, 'original_upscaled.png')
+        upscale_and_save(original_path, upscaled_path, scale=4)
+        print(f"✓ Imagen original upscaleada guardada en: {upscaled_path}")
         # Guardar también en input de ComfyUI
         comfyui_image_relpath = save_original_to_comfyui_input(file, base_name, COMFYUI_INPUT_FOLDER)
         print(f"✓ Imagen original guardada en input ComfyUI: {comfyui_image_relpath}")

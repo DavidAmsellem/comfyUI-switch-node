@@ -1,7 +1,7 @@
 {
   "1": {
     "inputs": {
-      "text": "classic elegant bathroom interior front view, soft natural lighting from tall window, white or cream smooth walls with subtle molding or wainscoting, freestanding clawfoot bathtub in porcelain white, polished marble or checkered floor, vintage gold or brass fixtures, neatly folded towels placed on floor beside tub, antique-style stool with bath products (glass bottles, soap bars, brush), small oriental rug or plush bath mat, fresh flowers in ceramic vase, wall-mounted mirror with ornate frame (optional), calm refined atmosphere, frontal composition, photorealistic, high quality",
+      "text": "scandinavian minimalist bathroom interior front view, soft natural light from large window, smooth white or pale gray walls, light wood or neutral stone flooring, freestanding tub or open shower area, wooden stool or bench with folded towels, woven basket with bath items placed on floor, cozy rug or mat in soft tones, small potted plant, clean lines and simple forms, matte textures, soft beige and pastel accents, warm and airy atmosphere, uncluttered but lived-in feel, frontal perspective, high quality, photorealistic",
       "clip": [
         "4",
         1
@@ -50,7 +50,7 @@
   },
   "9": {
     "inputs": {
-      "text": "angled view, modern minimalist furniture, plastic items, chrome or silver fixtures, bold patterns, neon colors, cluttered shelves, industrial decor, digital screens, wall-mounted TVs, aggressive lighting, dark ambiance, low quality, blurry",
+      "text": "angled view, heavy furniture,  window, mirror, windows, dark colors, window, mirror, windows, bold patterns, plastic decor, wall art, posters, metal shelves, aggressive lighting, cluttered items, bright neon objects, glossy surfaces, industrial finishes, low lighting, low quality, blurry, window, mirror, windows",
       "clip": [
         "4",
         1
@@ -76,7 +76,7 @@
   },
   "78": {
     "inputs": {
-      "weight": 1.0000000000000002,
+      "weight": 0.6600000000000001,
       "weight_type": "linear",
       "start_at": 0,
       "end_at": 1,
@@ -169,29 +169,11 @@
   },
   "104": {
     "inputs": {
-      "image": "Captura de pantalla de 2025-06-24 11-58-32.png"
+      "image": "cuadro-bathroom-classic-V60x802.png"
     },
     "class_type": "LoadImage",
     "_meta": {
       "title": "Load Image"
-    }
-  },
-  "107": {
-    "inputs": {
-      "width": 512,
-      "height": 512,
-      "interpolation": "nearest",
-      "method": "stretch",
-      "condition": "always",
-      "multiple_of": 0,
-      "image": [
-        "104",
-        0
-      ]
-    },
-    "class_type": "ImageResize+",
-    "_meta": {
-      "title": "🔧 Image Resize"
     }
   },
   "110": {
@@ -200,7 +182,7 @@
       "crop_position": "top",
       "sharpening": 0,
       "image": [
-        "107",
+        "104",
         0
       ]
     },
@@ -228,22 +210,6 @@
     "class_type": "IPAdapterEncoder",
     "_meta": {
       "title": "IPAdapter Encoder"
-    }
-  },
-  "115": {
-    "inputs": {
-      "upscale_method": "lanczos",
-      "width": 1200,
-      "height": 1200,
-      "crop": "disabled",
-      "image": [
-        "7",
-        0
-      ]
-    },
-    "class_type": "ImageScale",
-    "_meta": {
-      "title": "Upscale Image"
     }
   },
   "136": {
@@ -276,7 +242,7 @@
       ],
       "resize_source": false,
       "destination": [
-        "115",
+        "367",
         0
       ],
       "source": [
@@ -289,41 +255,11 @@
       "title": "ImageCompositeMasked"
     }
   },
-  "143": {
-    "inputs": {
-      "images": [
-        "142",
-        0
-      ]
-    },
-    "class_type": "PreviewImage",
-    "_meta": {
-      "title": "Preview Image"
-    }
-  },
-  "161": {
-    "inputs": {
-      "ipadapter_file": "ip-adapter-plus_sd15.safetensors"
-    },
-    "class_type": "IPAdapterModelLoader",
-    "_meta": {
-      "title": "IPAdapter Model Loader"
-    }
-  },
-  "162": {
-    "inputs": {
-      "clip_name": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"
-    },
-    "class_type": "CLIPVisionLoader",
-    "_meta": {
-      "title": "Load CLIP Vision"
-    }
-  },
   "175": {
     "inputs": {
-      "seed": 274849287313965,
+      "seed": 27456019523260,
       "steps": 30,
-      "cfg": 5.3,
+      "cfg": 7.03,
       "sampler_name": "dpmpp_2m",
       "scheduler": "karras",
       "denoise": 1,
@@ -351,7 +287,7 @@
   },
   "244": {
     "inputs": {
-      "image": "60x80-top-high.png"
+      "image": "60x80-high-close-ls.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -371,92 +307,6 @@
       "title": "Image To Mask"
     }
   },
-  "345": {
-    "inputs": {
-      "yolo_world_model": "yolo_world/l"
-    },
-    "class_type": "Yoloworld_ModelLoader_Zho",
-    "_meta": {
-      "title": "🔎Yoloworld Model Loader"
-    }
-  },
-  "346": {
-    "inputs": {
-      "device": "CPU"
-    },
-    "class_type": "ESAM_ModelLoader_Zho",
-    "_meta": {
-      "title": "🔎ESAM Model Loader"
-    }
-  },
-  "352": {
-    "inputs": {
-      "mask": [
-        "356",
-        1
-      ]
-    },
-    "class_type": "MaskToImage",
-    "_meta": {
-      "title": "Convert Mask to Image"
-    }
-  },
-  "356": {
-    "inputs": {
-      "categories": "window, mirror, bookcase, wall patterns, wallpaper, wall decals, wall art, wall decorations, wall graphics, wall ornaments, wall motifs, bed",
-      "confidence_threshold": 0.10000000000000002,
-      "iou_threshold": 0.10000000000000002,
-      "box_thickness": 2,
-      "text_thickness": 2,
-      "text_scale": 1,
-      "with_confidence": true,
-      "with_class_agnostic_nms": false,
-      "with_segmentation": true,
-      "mask_combined": false,
-      "mask_extracted": false,
-      "mask_extracted_index": 0,
-      "yolo_world_model": [
-        "345",
-        0
-      ],
-      "esam_model": [
-        "346",
-        0
-      ],
-      "image": [
-        "7",
-        0
-      ]
-    },
-    "class_type": "Yoloworld_ESAM_Zho",
-    "_meta": {
-      "title": "🔎Yoloworld ESAM"
-    }
-  },
-  "357": {
-    "inputs": {
-      "images": [
-        "352",
-        0
-      ]
-    },
-    "class_type": "PreviewImage",
-    "_meta": {
-      "title": "Preview Image"
-    }
-  },
-  "360": {
-    "inputs": {
-      "images": [
-        "356",
-        0
-      ]
-    },
-    "class_type": "PreviewImage",
-    "_meta": {
-      "title": "Preview Image"
-    }
-  },
   "361": {
     "inputs": {
       "preset": "charcoal",
@@ -469,6 +319,64 @@
     "class_type": "DynamicFrameNode",
     "_meta": {
       "title": "Dynamic Frame Generator"
+    }
+  },
+  "365": {
+    "inputs": {
+      "model_name": "4x-UltraSharp.pth"
+    },
+    "class_type": "UpscaleModelLoader",
+    "_meta": {
+      "title": "Load Upscale Model"
+    }
+  },
+  "366": {
+    "inputs": {
+      "upscale_model": [
+        "365",
+        0
+      ],
+      "image": [
+        "7",
+        0
+      ]
+    },
+    "class_type": "ImageUpscaleWithModel",
+    "_meta": {
+      "title": "Upscale Image (using Model)"
+    }
+  },
+  "367": {
+    "inputs": {
+      "width": 1200,
+      "height": 1200,
+      "upscale_method": "lanczos",
+      "keep_proportion": "resize",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
+      "divisible_by": 2,
+      "device": "cpu",
+      "image": [
+        "366",
+        0
+      ]
+    },
+    "class_type": "ImageResizeKJv2",
+    "_meta": {
+      "title": "Resize Image v2"
+    }
+  },
+  "369": {
+    "inputs": {
+      "filename_prefix": "bathroom-beach-v60x80",
+      "images": [
+        "142",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
     }
   }
 }

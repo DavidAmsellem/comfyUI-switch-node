@@ -240,7 +240,7 @@
   },
   "104": {
     "inputs": {
-      "image": "Captura de pantalla de 2025-06-23 13-17-40.png"
+      "image": "imagenes_nodo_104/cuadro-bedroom-artistic-V45x6022.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -301,22 +301,6 @@
       "title": "IPAdapter Encoder"
     }
   },
-  "115": {
-    "inputs": {
-      "upscale_method": "lanczos",
-      "width": 1200,
-      "height": 1200,
-      "crop": "disabled",
-      "image": [
-        "7",
-        0
-      ]
-    },
-    "class_type": "ImageScale",
-    "_meta": {
-      "title": "Upscale Image"
-    }
-  },
   "136": {
     "inputs": {
       "padding": 0,
@@ -347,7 +331,7 @@
       ],
       "resize_source": false,
       "destination": [
-        "115",
+        "365",
         0
       ],
       "source": [
@@ -455,7 +439,7 @@
   },
   "175": {
     "inputs": {
-      "seed": 820771785718693,
+      "seed": 469908368737888,
       "steps": 26,
       "cfg": 6.4,
       "sampler_name": "dpmpp_2m",
@@ -508,7 +492,7 @@
   "344": {
     "inputs": {
       "frame_width": 30,
-      "seed": 4109331005,
+      "seed": 3001849448,
       "material_override": "auto",
       "image": [
         "97",
@@ -585,6 +569,51 @@
     "class_type": "SaveImage",
     "_meta": {
       "title": "Save Image"
+    }
+  },
+  "363": {
+    "inputs": {
+      "upscale_model": [
+        "364",
+        0
+      ],
+      "image": [
+        "7",
+        0
+      ]
+    },
+    "class_type": "ImageUpscaleWithModel",
+    "_meta": {
+      "title": "Upscale Image (using Model)"
+    }
+  },
+  "364": {
+    "inputs": {
+      "model_name": "4x-UltraSharp.pth"
+    },
+    "class_type": "UpscaleModelLoader",
+    "_meta": {
+      "title": "Load Upscale Model"
+    }
+  },
+  "365": {
+    "inputs": {
+      "width": 1200,
+      "height": 1200,
+      "upscale_method": "lanczos",
+      "keep_proportion": "resize",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
+      "divisible_by": 2,
+      "device": "cpu",
+      "image": [
+        "363",
+        0
+      ]
+    },
+    "class_type": "ImageResizeKJv2",
+    "_meta": {
+      "title": "Resize Image v2"
     }
   }
 }

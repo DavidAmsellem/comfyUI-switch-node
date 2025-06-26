@@ -1,0 +1,420 @@
+{
+  "1": {
+    "inputs": {
+      "text": "Scandinavian minimalist bathroom interior, front view. Soft natural light ambiance (not direct sunlight), pale gray or smooth white walls, light wood or neutral stone floor. Freestanding bathtub or open walk-in shower. Wooden bench with neatly folded towels. Woven basket with bath items on floor. Soft textured rug or mat in beige or pastel tones. Small potted plant in corner. Matte finishes and natural materials. Simple clean lines, warm and airy atmosphere. Uncluttered but lived-in. Cozy, calm, harmonious space. High-resolution, photorealistic, architectural photography style.\n",
+      "clip": [
+        "4",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "2": {
+    "inputs": {
+      "width": 512,
+      "height": 512,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  },
+  "4": {
+    "inputs": {
+      "ckpt_name": "absolutereality_v181.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint"
+    }
+  },
+  "7": {
+    "inputs": {
+      "samples": [
+        "175",
+        0
+      ],
+      "vae": [
+        "4",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "9": {
+    "inputs": {
+      "text": "(windows:1.5), (window:1.5),(window frame), (mirror:1.4), (mirrors), (door:1.3), (doorway), (metallic decor), (bold patterns), (posters), (wall art), (cluttered), (neon objects), (plastic), (glossy surfaces), (industrial finishes), (metal shelves), (low lighting), (aggressive lighting), (dark tones), (heavy furniture), (distorted shapes), (poor composition), (blurry), (render artifacts), (low quality), (extra objects), (extra decor), (bad perspective),(cartoon)",
+      "clip": [
+        "4",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "65": {
+    "inputs": {
+      "method": "average",
+      "embed1": [
+        "112",
+        0
+      ]
+    },
+    "class_type": "IPAdapterCombineEmbeds",
+    "_meta": {
+      "title": "IPAdapter Combine Embeds"
+    }
+  },
+  "78": {
+    "inputs": {
+      "weight": 0.6000000000000001,
+      "weight_type": "linear",
+      "start_at": 0,
+      "end_at": 1,
+      "embeds_scaling": "V only",
+      "model": [
+        "79",
+        0
+      ],
+      "ipadapter": [
+        "80",
+        0
+      ],
+      "pos_embed": [
+        "65",
+        0
+      ],
+      "clip_vision": [
+        "81",
+        0
+      ]
+    },
+    "class_type": "IPAdapterEmbeds",
+    "_meta": {
+      "title": "IPAdapter Embeds"
+    }
+  },
+  "79": {
+    "inputs": {
+      "preset": "PLUS (high strength)",
+      "model": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "IPAdapterUnifiedLoader",
+    "_meta": {
+      "title": "IPAdapter Unified Loader"
+    }
+  },
+  "80": {
+    "inputs": {
+      "ipadapter_file": "ip-adapter-plus_sd15.safetensors"
+    },
+    "class_type": "IPAdapterModelLoader",
+    "_meta": {
+      "title": "IPAdapter Model Loader"
+    }
+  },
+  "81": {
+    "inputs": {
+      "clip_name": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"
+    },
+    "class_type": "CLIPVisionLoader",
+    "_meta": {
+      "title": "Load CLIP Vision"
+    }
+  },
+  "97": {
+    "inputs": {
+      "image": "Fotografia-horizontal-o-vertical-Foto-de-Claudia-Nicolow.jpg"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "102": {
+    "inputs": {
+      "width": [
+        "136",
+        4
+      ],
+      "height": [
+        "136",
+        5
+      ],
+      "interpolation": "nearest",
+      "method": "stretch",
+      "condition": "always",
+      "multiple_of": 0,
+      "image": [
+        "361",
+        0
+      ]
+    },
+    "class_type": "ImageResize+",
+    "_meta": {
+      "title": "🔧 Image Resize"
+    }
+  },
+  "104": {
+    "inputs": {
+      "image": "cuadro-bathroom-classic-V60x802.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "110": {
+    "inputs": {
+      "interpolation": "LANCZOS",
+      "crop_position": "top",
+      "sharpening": 0,
+      "image": [
+        "104",
+        0
+      ]
+    },
+    "class_type": "PrepImageForClipVision",
+    "_meta": {
+      "title": "Prep Image For ClipVision"
+    }
+  },
+  "112": {
+    "inputs": {
+      "weight": 0.5100000000000001,
+      "ipadapter": [
+        "80",
+        0
+      ],
+      "image": [
+        "110",
+        0
+      ],
+      "clip_vision": [
+        "81",
+        0
+      ]
+    },
+    "class_type": "IPAdapterEncoder",
+    "_meta": {
+      "title": "IPAdapter Encoder"
+    }
+  },
+  "136": {
+    "inputs": {
+      "padding": 0,
+      "blur": 0,
+      "mask": [
+        "247",
+        0
+      ],
+      "image_optional": [
+        "244",
+        0
+      ]
+    },
+    "class_type": "MaskBoundingBox+",
+    "_meta": {
+      "title": "🔧 Mask Bounding Box"
+    }
+  },
+  "142": {
+    "inputs": {
+      "x": [
+        "136",
+        2
+      ],
+      "y": [
+        "136",
+        3
+      ],
+      "resize_source": false,
+      "destination": [
+        "367",
+        0
+      ],
+      "source": [
+        "102",
+        0
+      ]
+    },
+    "class_type": "ImageCompositeMasked",
+    "_meta": {
+      "title": "ImageCompositeMasked"
+    }
+  },
+  "175": {
+    "inputs": {
+      "seed": 999572514048226,
+      "steps": 30,
+      "cfg": 8,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "denoise": 1,
+      "model": [
+        "78",
+        0
+      ],
+      "positive": [
+        "1",
+        0
+      ],
+      "negative": [
+        "9",
+        0
+      ],
+      "latent_image": [
+        "2",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "244": {
+    "inputs": {
+      "image": "60x80-h-top.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "247": {
+    "inputs": {
+      "method": "intensity",
+      "image": [
+        "244",
+        0
+      ]
+    },
+    "class_type": "Image To Mask",
+    "_meta": {
+      "title": "Image To Mask"
+    }
+  },
+  "361": {
+    "inputs": {
+      "preset": "black",
+      "frame_width": 20,
+      "image": [
+        "370",
+        0
+      ]
+    },
+    "class_type": "DynamicFrameNode",
+    "_meta": {
+      "title": "Dynamic Frame Generator"
+    }
+  },
+  "365": {
+    "inputs": {
+      "model_name": "4x-UltraSharp.pth"
+    },
+    "class_type": "UpscaleModelLoader",
+    "_meta": {
+      "title": "Load Upscale Model"
+    }
+  },
+  "366": {
+    "inputs": {
+      "upscale_model": [
+        "365",
+        0
+      ],
+      "image": [
+        "7",
+        0
+      ]
+    },
+    "class_type": "ImageUpscaleWithModel",
+    "_meta": {
+      "title": "Upscale Image (using Model)"
+    }
+  },
+  "367": {
+    "inputs": {
+      "width": 1200,
+      "height": 1200,
+      "upscale_method": "lanczos",
+      "keep_proportion": "resize",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
+      "divisible_by": 2,
+      "device": "cpu",
+      "image": [
+        "366",
+        0
+      ]
+    },
+    "class_type": "ImageResizeKJv2",
+    "_meta": {
+      "title": "Resize Image v2"
+    }
+  },
+  "369": {
+    "inputs": {
+      "filename_prefix": "bathroom-beach-v60x80",
+      "images": [
+        "142",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
+    }
+  },
+  "370": {
+    "inputs": {
+      "upscale_model": [
+        "371",
+        0
+      ],
+      "image": [
+        "97",
+        0
+      ]
+    },
+    "class_type": "ImageUpscaleWithModel",
+    "_meta": {
+      "title": "Upscale Image (using Model)"
+    }
+  },
+  "371": {
+    "inputs": {
+      "model_name": "4x-UltraSharp.pth"
+    },
+    "class_type": "UpscaleModelLoader",
+    "_meta": {
+      "title": "Load Upscale Model"
+    }
+  },
+  "373": {
+    "inputs": {
+      "filename_prefix": "Original-upscale",
+      "images": [
+        "370",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
+    }
+  }
+}

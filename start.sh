@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Parar cualquier instancia previa
+if [ -f "stop.sh" ]; then
+    echo "🛑 Ejecutando stop.sh para detener instancias previas..."
+    bash stop.sh
+fi
+
 # Script mejorado de inicio/reinicio para la API REST de ComfyUI
 set -e
 
