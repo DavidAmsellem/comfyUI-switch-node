@@ -198,50 +198,44 @@
         }
 
         .workflow-group {
-            background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
-            border: 2px solid #e8ecf7;
-            border-radius: 15px;
-            padding: 20px;
-            margin: 15px 0;
-            transition: all 0.3s ease;
-            cursor: pointer;
+            border: 1.5px solid #cfd8dc;
+            border-radius: 10px;
+            margin-bottom: 18px;
+            background: #f7fafd;
+            box-shadow: 0 2px 8px rgba(100, 100, 150, 0.04);
+            transition: box-shadow 0.2s;
         }
 
+        .workflow-group.selected,
         .workflow-group:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
-            border-color: #667eea;
-        }
-
-        .workflow-group.selected {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-color: #667eea;
+            box-shadow: 0 4px 16px rgba(100, 100, 150, 0.10);
+            border-color: #4ecdc4;
         }
 
         .workflow-group-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 10px;
+            padding: 16px 22px;
+            font-size: 1.2em;
+            font-weight: bold;
+            background: linear-gradient(90deg, #e0f7fa 60%, #f1f8e9 100%);
+            border-radius: 10px 10px 0 0;
+            cursor: pointer;
         }
 
         .workflow-group-title {
-            font-size: 1.2em;
-            font-weight: 600;
             margin: 0;
+            color: #2c3e50;
         }
 
         .workflow-group-count {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 4px 8px;
+            background: #4ecdc4;
+            color: white;
             border-radius: 12px;
-            font-size: 0.8em;
-            font-weight: bold;
-        }
-
-        .workflow-group.selected .workflow-group-count {
-            background: rgba(255, 255, 255, 0.3);
+            padding: 2px 12px;
+            font-size: 0.95em;
+            margin-left: 10px;
         }
 
         .workflow-group-styles {
@@ -725,6 +719,94 @@
                 max-height: none;
             }
         }
+
+        /* Nuevos estilos para el contenedor de orientaciones */
+        .orientations-container {
+            padding: 18px 28px 22px 28px;
+            border-radius: 0 0 12px 12px;
+            background: linear-gradient(120deg, #fafdff 80%, #e0f7fa 100%);
+            box-shadow: 0 2px 8px rgba(76, 205, 196, 0.07);
+            margin-top: -2px;
+            margin-bottom: 8px;
+            border-top: 1.5px solid #b2ebf2;
+            transition: background 0.3s, box-shadow 0.2s;
+        }
+
+        .orientations-container .orientation-selector {
+            margin-bottom: 18px;
+            font-size: 1.08em;
+            display: flex;
+            gap: 24px;
+            justify-content: flex-start;
+        }
+
+        .orientation-selector label {
+            cursor: pointer;
+            padding: 6px 18px;
+            border-radius: 8px;
+            background: #e0f2f1;
+            font-weight: 500;
+            border: 1.5px solid #b2ebf2;
+            box-shadow: 0 1px 3px rgba(76, 205, 196, 0.04);
+            transition: background 0.2s, border 0.2s;
+        }
+
+        .orientation-selector input[type="checkbox"]:checked+label,
+        .orientation-selector label:hover {
+            background: #b2ebf2;
+            border-color: #4ecdc4;
+        }
+
+        .orientation-group {
+            margin-bottom: 16px;
+            border-left: 4px solid #4ecdc4;
+            padding-left: 16px;
+            background: #f0f9ff;
+            border-radius: 7px;
+            box-shadow: 0 1px 4px rgba(76, 205, 196, 0.04);
+        }
+
+        .orientation-header {
+            font-weight: bold;
+            margin: 10px 0 6px 0;
+            color: #009688;
+            font-size: 1.08em;
+            letter-spacing: 0.5px;
+        }
+
+        .orientation-content {
+            margin-bottom: 6px;
+        }
+
+        .subfolder-group {
+            margin-bottom: 10px;
+            margin-left: 18px;
+        }
+
+        .subfolder-header {
+            font-size: 1.01em;
+            color: #607d8b;
+            margin-bottom: 3px;
+            font-weight: 500;
+        }
+
+        .subfolder-group ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .subfolder-group li {
+            padding: 5px 0 5px 14px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background 0.15s, color 0.15s;
+        }
+
+        .subfolder-group li.selected,
+        .subfolder-group li:hover {
+            background: #e0f2f1;
+            color: #00796b;
+        }
     </style>
 </head>
 
@@ -838,9 +920,9 @@
         let availableWorkflows = [];
         let selectedWorkflowGroup = null;
         let workflowGroups = {};
-        let processingQueue = [];  // NUEVO: Cola de procesamientos
-        let activeProcesses = new Map();  // NUEVO: Procesos activos
-        let processCounter = 0;  // NUEVO: Contador para IDs únicos
+        let processingQueue = []; // NUEVO: Cola de procesamientos
+        let activeProcesses = new Map(); // NUEVO: Procesos activos
+        let processCounter = 0; // NUEVO: Contador para IDs únicos
 
         // Verificar salud de la API al cargar
         window.onload = function () {
@@ -932,53 +1014,128 @@
                     const container = document.getElementById('workflowGroups');
                     container.innerHTML = '';
 
-                    Object.entries(data.groups).forEach(([groupKey, group]) => {
+                    // Mostrar solo los 4 grupos principales
+                    const mainGroups = ['bedroom-60x80', 'salon-60x80', 'bathroom-60x80', 'office-60x80'];
+                    mainGroups.forEach(groupKey => {
+                        const group = data.groups[groupKey];
+                        if (!group) return;
+                        // Crear acordeón para el grupo
                         const groupDiv = document.createElement('div');
                         groupDiv.className = 'workflow-group';
                         groupDiv.dataset.groupKey = groupKey;
-
                         // Header del grupo
                         const header = document.createElement('div');
                         header.className = 'workflow-group-header';
-
+                        header.style.cursor = 'pointer';
                         const title = document.createElement('h4');
                         title.className = 'workflow-group-title';
                         title.textContent = `🏠 ${group.name}`;
-
                         const count = document.createElement('span');
                         count.className = 'workflow-group-count';
                         count.textContent = `${group.workflows.length} estilos`;
-
                         header.appendChild(title);
                         header.appendChild(count);
-
-                        // Lista de estilos
-                        const styles = document.createElement('div');
-                        styles.className = 'workflow-group-styles';
-                        const styleNames = group.workflows.map(w => w.style).join(', ');
-                        styles.textContent = `Estilos: ${styleNames}`;
-
                         groupDiv.appendChild(header);
-                        groupDiv.appendChild(styles);
-
-                        // Evento click para seleccionar grupo
-                        groupDiv.addEventListener('click', () => {
-                            // Deseleccionar otros grupos
-                            container.querySelectorAll('.workflow-group').forEach(g => {
-                                g.classList.remove('selected');
+                        // Contenedor de orientaciones (plegable)
+                        const orientationsDiv = document.createElement('div');
+                        orientationsDiv.className = 'orientations-container';
+                        orientationsDiv.style.display = 'none';
+                        // Selector de orientación (radio)
+                        const orientationSelector = document.createElement('div');
+                        orientationSelector.className = 'orientation-selector';
+                        orientationSelector.innerHTML = `
+                            <label><input type="radio" name="orientation_${groupKey}" class="orientation-check" value="vertical" checked> ⬆️ Vertical</label>
+                            <label><input type="radio" name="orientation_${groupKey}" class="orientation-check" value="horizontal"> ➡️ Horizontal</label>
+                        `;
+                        orientationsDiv.appendChild(orientationSelector);
+                        // Por cada orientación (vertical/horizontal)
+                        const orientationGroups = {};
+                        Object.entries(group.by_orientation).forEach(([orientation, workflows]) => {
+                            if (workflows.length === 0) return;
+                            // Subacordeón por orientación
+                            const orientDiv = document.createElement('div');
+                            orientDiv.className = `orientation-group orientation-${orientation}`;
+                            // Header orientación
+                            const orientHeader = document.createElement('div');
+                            orientHeader.className = 'orientation-header';
+                            orientHeader.style.cursor = 'pointer';
+                            orientHeader.textContent = orientation === 'vertical' ? '⬆️ Verticales' : '➡️ Horizontales';
+                            orientDiv.appendChild(orientHeader);
+                            // Contenedor de subcarpetas y workflows
+                            const orientContent = document.createElement('div');
+                            orientContent.className = 'orientation-content';
+                            orientContent.style.display = 'none';
+                            // Agrupar por subcarpeta
+                            const bySubfolder = {};
+                            workflows.forEach(wf => {
+                                const folder = wf.subfolder || 'Raíz';
+                                if (!bySubfolder[folder]) bySubfolder[folder] = [];
+                                bySubfolder[folder].push(wf);
                             });
-
-                            // Seleccionar este grupo
-                            groupDiv.classList.add('selected');
-                            selectedWorkflowGroup = group;
-
-                            showStatus(`📋 Grupo seleccionado: ${group.name} (${group.workflows.length} workflows)`, 'info');
+                            Object.entries(bySubfolder).forEach(([subfolder, wfs]) => {
+                                const subfolderDiv = document.createElement('div');
+                                subfolderDiv.className = 'subfolder-group';
+                                // Header subcarpeta
+                                const subfolderHeader = document.createElement('div');
+                                subfolderHeader.className = 'subfolder-header';
+                                subfolderHeader.textContent = subfolder === 'Raíz' ? '📁 (Raíz)' : `📁 ${subfolder}`;
+                                subfolderDiv.appendChild(subfolderHeader);
+                                // Lista de workflows
+                                const list = document.createElement('ul');
+                                wfs.forEach(wf => {
+                                    const li = document.createElement('li');
+                                    li.textContent = `🎨 ${wf.style} - ${wf.filename}`;
+                                    li.title = wf.display_name;
+                                    // Selección al hacer click
+                                    li.addEventListener('click', (e) => {
+                                        e.stopPropagation();
+                                        // Deseleccionar otros
+                                        container.querySelectorAll('li.selected').forEach(el => el.classList.remove('selected'));
+                                        li.classList.add('selected');
+                                        selectedWorkflowGroup = group;
+                                        selectedWorkflowGroup.selected_workflow = wf;
+                                        showStatus(`📋 Seleccionado: ${wf.display_name}`);
+                                    });
+                                    list.appendChild(li);
+                                });
+                                subfolderDiv.appendChild(list);
+                                orientContent.appendChild(subfolderDiv);
+                            });
+                            orientDiv.appendChild(orientContent);
+                            // Toggle orientación
+                            orientHeader.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                orientContent.style.display = orientContent.style.display === 'none' ? 'block' : 'none';
+                            });
+                            orientationsDiv.appendChild(orientDiv);
+                            orientationGroups[orientation] = orientDiv;
                         });
-
+                        // Lógica para mostrar solo la orientación seleccionada (radio)
+                        function updateOrientationDisplay() {
+                            Object.entries(orientationGroups).forEach(([orientation, div]) => {
+                                const checked = orientationSelector.querySelector(`input[value="${orientation}"]`).checked;
+                                div.style.display = checked ? 'block' : 'none';
+                            });
+                        }
+                        orientationSelector.querySelectorAll('.orientation-check').forEach(rb => {
+                            rb.addEventListener('change', updateOrientationDisplay);
+                        });
+                        // Mostrar solo la orientación vertical por defecto
+                        updateOrientationDisplay();
+                        groupDiv.appendChild(orientationsDiv);
+                        // Toggle grupo
+                        header.addEventListener('click', () => {
+                            // Deseleccionar todos los grupos
+                            document.querySelectorAll('.workflow-group').forEach(g => g.classList.remove('selected'));
+                            groupDiv.classList.add('selected');
+                            orientationsDiv.style.display = orientationsDiv.style.display === 'none' ? 'block' : 'none';
+                            // Guardar el grupo seleccionado globalmente
+                            selectedWorkflowGroup = group;
+                            selectedWorkflowGroup._groupKey = groupKey;
+                        });
                         container.appendChild(groupDiv);
                     });
-
-                    console.log('✓ Grupos de workflows cargados:', Object.keys(data.groups));
+                    console.log('✓ Grupos de workflows cargados:', mainGroups);
                 }
             } catch (error) {
                 console.error('Error cargando grupos de workflows:', error);
@@ -1215,6 +1372,55 @@
             const resultsSection = document.getElementById('resultsSection');
             const resultImages = document.getElementById('resultImages');
 
+            // NUEVO: Si el backend devuelve final_image_url, usarlo directamente
+            if (data.final_image_url) {
+                // Limpiar resultados anteriores
+                resultImages.innerHTML = '';
+                const imageContainer = document.createElement('div');
+                imageContainer.className = 'result-image-container';
+                const title = document.createElement('h4');
+                title.textContent = processId ?
+                    `✨ Resultado Final #${processId}` :
+                    `✨ Imagen Final Generada`;
+                const imageWrapper = document.createElement('div');
+                imageWrapper.className = 'result-image';
+                const img = document.createElement('img');
+                img.src = data.final_image_url;
+                img.alt = 'Resultado Final';
+                img.loading = 'lazy';
+                // Efecto de carga
+                const loadingDiv = document.createElement('div');
+                loadingDiv.className = 'image-loading';
+                loadingDiv.textContent = '🎨 Cargando imagen final...';
+                imageWrapper.appendChild(loadingDiv);
+                img.onload = () => {
+                    loadingDiv.remove();
+                    img.classList.add('loaded');
+                    imageWrapper.appendChild(img);
+                };
+                img.onerror = () => {
+                    loadingDiv.textContent = '❌ Error al cargar imagen';
+                    loadingDiv.style.background = '#ffebee';
+                    loadingDiv.style.color = '#c62828';
+                };
+                // Botón de descarga
+                const downloadBtn = document.createElement('a');
+                downloadBtn.textContent = '⬇️ Descargar Imagen Final';
+                downloadBtn.className = 'download-btn';
+                downloadBtn.href = data.final_image_url;
+                downloadBtn.download = data.final_image && data.final_image.filename ? `final_${data.final_image.filename}` : 'imagen_final.png';
+                imageContainer.appendChild(title);
+                imageContainer.appendChild(imageWrapper);
+                imageContainer.appendChild(downloadBtn);
+                resultImages.appendChild(imageContainer);
+                resultsSection.style.display = 'block';
+                showStatus('✨ ¡Imagen final generada exitosamente!', 'success');
+                setTimeout(() => {
+                    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+                return;
+            }
+
             if (data.output_images && data.output_images.length > 0) {
                 // Filtrar solo la imagen final (nodo 143 - ImageCompositeMasked)
                 const finalImages = data.output_images.filter(imageInfo =>
@@ -1241,7 +1447,13 @@
                     imageWrapper.className = 'result-image';
 
                     const img = document.createElement('img');
-                    img.src = `${API_BASE_URL}/get-image/${imageInfo.filename}?subfolder=${imageInfo.subfolder}&type=${imageInfo.type}`;
+                    // Usar siempre base_name para la URL
+                    let baseName = imageInfo.base_name || (imageInfo.subfolder ? imageInfo.subfolder.replace(/^\/+|\/+$/g, '') : '');
+                    if (!baseName) {
+                        // Si no hay subfolder, intentar derivar del filename (sin extensión)
+                        baseName = imageInfo.filename ? imageInfo.filename.split('.')[0] : '';
+                    }
+                    img.src = `${API_BASE_URL}/get-image/${imageInfo.filename}?base_name=${encodeURIComponent(baseName)}`;
                     img.alt = `Resultado Final`;
                     img.loading = 'lazy';
 
@@ -1314,7 +1526,7 @@
                     const imageContainer = document.createElement('div');
                     imageContainer.className = 'result-image-container';
                     const title = document.createElement('h4');
-                    title.textContent = `✨ ${result.workflow_name}`;
+                    title.textContent = `✨ ${result.workflow_name || result.workflow || ''}`;
                     const imageWrapper = document.createElement('div');
                     imageWrapper.className = 'result-image';
                     // Efecto de carga
@@ -1338,7 +1550,11 @@
                         loadingDiv.style.color = '#c62828';
                     };
                     // Asignar src después de agregar handlers
-                    img.src = `${API_BASE_URL}/get-image/${imageInfo.filename}?subfolder=${imageInfo.subfolder}&type=${imageInfo.type}`;
+                    let baseName = imageInfo.base_name || (imageInfo.subfolder ? imageInfo.subfolder.replace(/^\/+|\/+$/g, '') : '');
+                    if (!baseName) {
+                        baseName = imageInfo.filename ? imageInfo.filename.split('.')[0] : '';
+                    }
+                    img.src = `${API_BASE_URL}/get-image/${imageInfo.filename}?base_name=${encodeURIComponent(baseName)}`;
                     // Badge nodo
                     const nodeInfo = document.createElement('span');
                     nodeInfo.className = 'node-info';
@@ -1521,41 +1737,74 @@
         }
 
         async function processImageGroup() {
-            if (!selectedWorkflowGroup) {
-                showStatus('❌ Por favor selecciona un grupo de workflows primero', 'error');
+            // Buscar el grupo seleccionado
+            const groupDiv = document.querySelector('.workflow-group.selected');
+            if (!groupDiv) {
+                showStatus('❌ Selecciona un grupo antes de imprimir', 'error');
                 return;
             }
-            const workflows = selectedWorkflowGroup.workflows.map(w => w.filename);
+            // Obtener el key del grupo
+            const groupKey = groupDiv.dataset.groupKey;
+            // Obtener la orientación seleccionada (radio)
+            const orientationRadio = groupDiv.querySelector('.orientation-check:checked');
+            if (!orientationRadio) {
+                showStatus('❌ Selecciona una orientación (vertical/horizontal)', 'error');
+                return;
+            }
+            const selectedOrientation = orientationRadio.value;
+            // Obtener la lista de workflows de ese grupo y orientación
+            const workflowGroupsData = await fetch(`${API_BASE_URL}/workflow-groups`).then(r => r.json());
+            const groupData = workflowGroupsData.groups[groupKey];
+            if (!groupData || !groupData.by_orientation || !groupData.by_orientation[selectedOrientation]) {
+                showStatus('❌ No se encontraron workflows para ese grupo y orientación', 'error');
+                return;
+            }
+            const workflows = groupData.by_orientation[selectedOrientation].map(wf => wf.filename.replace('.json',''));
             if (workflows.length === 0) {
-                showStatus('❌ El grupo seleccionado no tiene workflows', 'error');
+                showStatus('❌ No hay workflows para la orientación seleccionada', 'error');
                 return;
             }
-            showStatus(`🔄 Procesando ${workflows.length} workflows del grupo ${selectedWorkflowGroup.name}...`, 'info');
-            showStatus(`⏱️ NOTA: El procesamiento puede tardar varios minutos`, 'info');
-            document.getElementById('statusSection').style.display = 'block';
-            // Crear FormData
+            // Mostrar en pantalla el grupo y orientación seleccionados
+            let printDiv = document.getElementById('printResult');
+            if (!printDiv) {
+                printDiv = document.createElement('div');
+                printDiv.id = 'printResult';
+                printDiv.style.margin = '20px 0';
+                printDiv.style.padding = '16px';
+                printDiv.style.background = '#e0f2f1';
+                printDiv.style.borderRadius = '8px';
+                printDiv.style.fontWeight = 'bold';
+                printDiv.style.color = '#00796b';
+                const previewSection = document.getElementById('previewSection');
+                if (previewSection) {
+                    previewSection.parentNode.insertBefore(printDiv, previewSection.nextSibling);
+                } else {
+                    document.body.appendChild(printDiv);
+                }
+            }
+            printDiv.innerHTML = `🖨️ <b>Grupo seleccionado:</b> ${groupKey} <br> <b>Orientación:</b> ${selectedOrientation} <br> <b>Workflows:</b> ${workflows.join(', ')}`;
+            showStatus(`🖨️ Procesando grupo: ${groupKey} | Orientación: ${selectedOrientation} (${workflows.length} workflows)`, 'info');
+            // Enviar al backend
             const formData = new FormData();
             formData.append('image', selectedFile);
             formData.append('workflows', JSON.stringify(workflows));
             try {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 1800000); // 30 minutos
-                // Usar endpoint asíncrono
-                const response = await fetch(`${API_BASE_URL}/process-multiple-workflows-async`, {
+                const timeoutId = setTimeout(() => controller.abort(), 1200000); // 20 minutos
+                const response = await fetch(`${API_BASE_URL}/process-multiple-workflows`, {
                     method: 'POST',
                     body: formData,
                     signal: controller.signal
                 });
                 clearTimeout(timeoutId);
                 const data = await response.json();
-                if (response.ok && data.success && data.prompt_ids && data.prompt_ids.length > 0) {
-                    showStatus(`✅ ${data.prompt_ids.length} workflows enviados a la cola de ComfyUI`, 'success');
-                    // Polling para cada prompt_id
-                    for (let i = 0; i < data.prompt_ids.length; i++) {
-                        pollPromptResult(data.prompt_ids[i], data.workflow_names[i]);
+                if (response.ok && data.success) {
+                    showStatus(`✅ Procesamiento completado para ${workflows.length} workflows`, 'success');
+                    if (data.results && data.results.length > 0) {
+                        displayMultipleResults(data.results);
                     }
                 } else {
-                    showStatus(`❌ Error procesando grupo: ${data.error || 'No se recibieron prompt_ids'}`, 'error');
+                    showStatus(`❌ Error: ${data.error || 'Error desconocido'}`, 'error');
                 }
             } catch (error) {
                 if (error.name === 'AbortError') {

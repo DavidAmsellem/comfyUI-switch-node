@@ -1,7 +1,7 @@
 {
   "1": {
     "inputs": {
-      "text": "scandinavian minimalist bathroom interior front view, soft natural light from large window, smooth white or pale gray walls, light wood or neutral stone flooring, freestanding tub or open shower area, wooden stool or bench with folded towels, woven basket with bath items placed on floor, cozy rug or mat in soft tones, small potted plant, clean lines and simple forms, matte textures, soft beige and pastel accents, warm and airy atmosphere, uncluttered but lived-in feel, frontal perspective, high quality, photorealistic",
+      "text": "Scandinavian minimalist bathroom interior, front view. Soft natural light ambiance (not direct sunlight), pale gray or smooth white walls, light wood or neutral stone floor. Freestanding bathtub or open walk-in shower. Wooden bench with neatly folded towels. Woven basket with bath items on floor. Soft textured rug or mat in beige or pastel tones. Small potted plant in corner. Matte finishes and natural materials. Simple clean lines, warm and airy atmosphere. Uncluttered but lived-in. Cozy, calm, harmonious space. High-resolution, photorealistic, architectural photography style.\n",
       "clip": [
         "4",
         1
@@ -25,7 +25,7 @@
   },
   "4": {
     "inputs": {
-      "ckpt_name": "Deliberate_v2.safetensors"
+      "ckpt_name": "absolutereality_v181.safetensors"
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {
@@ -50,7 +50,7 @@
   },
   "9": {
     "inputs": {
-      "text": "angled view, heavy furniture, dark colors, bold patterns, plastic decor, wall art, posters, metal shelves, aggressive lighting, cluttered items, bright neon objects, glossy surfaces, industrial finishes, low lighting, low quality, blurry",
+      "text": "(windows:1.5), (window:1.5),(window frame), (mirror:1.4), (mirrors), (door:1.3), (doorway), (metallic decor), (bold patterns), (posters), (wall art), (cluttered), (neon objects), (plastic), (glossy surfaces), (industrial finishes), (metal shelves), (low lighting), (aggressive lighting), (dark tones), (heavy furniture), (distorted shapes), (poor composition), (blurry), (render artifacts), (low quality), (extra objects), (extra decor), (bad perspective),(cartoon)",
       "clip": [
         "4",
         1
@@ -76,7 +76,7 @@
   },
   "78": {
     "inputs": {
-      "weight": 0.7600000000000001,
+      "weight": 0.6000000000000001,
       "weight_type": "linear",
       "start_at": 0,
       "end_at": 1,
@@ -136,7 +136,7 @@
   },
   "97": {
     "inputs": {
-      "image": "f14a484a35c7415cafd1622c27582bca.png"
+      "image": "Fotografia-horizontal-o-vertical-Foto-de-Claudia-Nicolow.jpg"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -169,7 +169,7 @@
   },
   "104": {
     "inputs": {
-      "image": "cuadro-bathroom-scandinavian-V60x802.png"
+      "image": "cuadro-bathroom-old-V60x802.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -193,7 +193,7 @@
   },
   "112": {
     "inputs": {
-      "weight": 0.38000000000000006,
+      "weight": 0.5100000000000001,
       "ipadapter": [
         "80",
         0
@@ -257,9 +257,9 @@
   },
   "175": {
     "inputs": {
-      "seed": 936733746655570,
+      "seed": 999572514048226,
       "steps": 30,
-      "cfg": 5.3,
+      "cfg": 8,
       "sampler_name": "dpmpp_2m",
       "scheduler": "karras",
       "denoise": 1,
@@ -287,7 +287,7 @@
   },
   "244": {
     "inputs": {
-      "image": "60x80-high-close-ls.png"
+      "image": "60x80-h-top.d.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -309,10 +309,10 @@
   },
   "361": {
     "inputs": {
-      "preset": "charcoal",
+      "preset": "black",
       "frame_width": 20,
       "image": [
-        "97",
+        "370",
         0
       ]
     },
@@ -371,6 +371,44 @@
       "filename_prefix": "bathroom-beach-v60x80",
       "images": [
         "142",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
+    }
+  },
+  "370": {
+    "inputs": {
+      "upscale_model": [
+        "371",
+        0
+      ],
+      "image": [
+        "97",
+        0
+      ]
+    },
+    "class_type": "ImageUpscaleWithModel",
+    "_meta": {
+      "title": "Upscale Image (using Model)"
+    }
+  },
+  "371": {
+    "inputs": {
+      "model_name": "4x-UltraSharp.pth"
+    },
+    "class_type": "UpscaleModelLoader",
+    "_meta": {
+      "title": "Load Upscale Model"
+    }
+  },
+  "373": {
+    "inputs": {
+      "filename_prefix": "Original-upscale",
+      "images": [
+        "370",
         0
       ]
     },

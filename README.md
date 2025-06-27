@@ -2,6 +2,22 @@
 
 API REST que permite enviar una imagen para ser procesada en un flujo automático de ComfyUI para generar imágenes combinadas.
 
+---
+
+## 🚀 NUEVO FLUJO AUTOMATIZADO Y ROBUSTO (2025)
+
+- **Guardado automático**: Al recibir una imagen por la API REST, se guarda la imagen original y una versión upscaleada x4 en `outputs/<nombre_base>/`.
+- **Solo outputs válidos**: Solo se guardan en `outputs` las imágenes realmente generadas por los workflows (ignorando input y temp).
+- **Soporte robusto**: Funciona con workflows simples, múltiples y nodos SaveImage.
+- **Scripts auxiliares**:
+  - `save_node104_images.py`: Copia imágenes originales usadas en el nodo 104 de cada workflow a una carpeta centralizada.
+  - `update_node104_paths.py`: Actualiza los workflows para que el nodo 104 apunte a la nueva ubicación de las imágenes.
+  - `upscale_and_save.py`: Upscalea imágenes originales en outputs de forma masiva (útil para lotes previos).
+- **start.sh**: Ahora ejecuta primero `stop.sh` para reinicio limpio.
+- **Listo para sobrescribir en GitHub**.
+
+---
+
 ## Características
 
 - Envío de imágenes mediante HTTP POST
@@ -34,10 +50,10 @@ cp .env.example .env
 ### Iniciar el servidor
 
 ```bash
-python app.py
+./start.sh
 ```
 
-El servidor se iniciará en `http://localhost:5000` por defecto.
+El servidor se iniciará en `http://localhost:5000` por defecto. El script detiene instancias previas automáticamente.
 
 ### Endpoints disponibles
 
@@ -84,9 +100,13 @@ curl -X POST \
       "type": "output"
     }
   ],
-  "message": "Imagen procesada exitosamente"
+  "message": "Imagen procesada exitosamente",
+  "original_saved": "outputs/mi_imagen/original.jpg",
+  "upscaled_saved": "outputs/mi_imagen/upscaled_x4.jpg"
 }
 ```
+
+> **Nota:** Ahora la respuesta incluye las rutas de la imagen original y la upscaleada x4.
 
 #### 3. Descargar imagen generada
 ```http
@@ -156,7 +176,8 @@ with open('mi_imagen.jpg', 'rb') as f:
 if response.status_code == 200:
     result = response.json()
     print(f"Procesamiento exitoso: {result['prompt_id']}")
-    
+    print(f"Original guardada en: {result['original_saved']}")
+    print(f"Upscaleada x4 en: {result['upscaled_saved']}")
     # Descargar imagen procesada
     if result['output_images']:
         img_info = result['output_images'][0]
@@ -167,7 +188,6 @@ if response.status_code == 200:
                 'type': img_info['type']
             }
         )
-        
         with open('imagen_procesada.png', 'wb') as f:
             f.write(img_response.content)
         print("Imagen descargada como 'imagen_procesada.png'")
@@ -180,23 +200,20 @@ if response.status_code == 200:
 async function processImage(imageFile) {
     const formData = new FormData();
     formData.append('image', imageFile);
-    
     try {
         const response = await fetch('http://localhost:5000/process-image', {
             method: 'POST',
             body: formData
         });
-        
         const result = await response.json();
-        
         if (result.success) {
             console.log('Imagen procesada:', result.prompt_id);
-            
+            console.log('Original:', result.original_saved);
+            console.log('Upscaleada:', result.upscaled_saved);
             // Descargar imagen procesada
             if (result.output_images.length > 0) {
                 const imgInfo = result.output_images[0];
                 const imgUrl = `http://localhost:5000/get-image/${imgInfo.filename}?subfolder=${imgInfo.subfolder}&type=${imgInfo.type}`;
-                
                 // Crear enlace de descarga
                 const a = document.createElement('a');
                 a.href = imgUrl;
@@ -210,7 +227,6 @@ async function processImage(imageFile) {
         console.error('Error:', error);
     }
 }
-
 // Usar con un input file
 document.getElementById('fileInput').addEventListener('change', (e) => {
     if (e.target.files[0]) {
@@ -232,7 +248,9 @@ document.getElementById('fileInput').addEventListener('change', (e) => {
 
 - `workflow_cuadro_bedroomV15x202.json`: Workflow de ComfyUI que define el procesamiento
 - `temp_uploads/`: Directorio temporal para imágenes subidas
-- `outputs/`: Directorio para imágenes procesadas
+- `outputs/`: Directorio para imágenes procesadas (ahora con subcarpetas por imagen, originales y upscaleados)
+- `save_node104_images.py`, `update_node104_paths.py`, `upscale_and_save.py`: Scripts auxiliares para gestión y organización de imágenes/workflows
+- `start.sh` y `stop.sh`: Scripts de inicio/parada robustos
 
 ## Manejo de errores
 
@@ -274,3 +292,24 @@ Todos los errores incluyen un mensaje descriptivo en JSON:
 - Imágenes muy grandes pueden tardar más
 - Verificar recursos del sistema (CPU/GPU/RAM)
 - Aumentar timeout si es necesario
+
+---
+
+## Opcional / TODO
+
+- Permitir configurar el factor de upscale vía API REST.
+- Mejorar feedback de la API sobre rutas de archivos generados/upscaleados.
+- Añadir backup automático de workflows antes de editarlos con los scripts.
+
+## Subida a GitHub
+
+Para sobrescribir el repo remoto:
+```bash
+git add .
+git commit -m "Actualización flujo automatizado y scripts auxiliares"
+git push -f origin main
+```
+
+---
+
+> Última actualización: 26 de junio de 2025
