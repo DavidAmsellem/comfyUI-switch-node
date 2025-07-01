@@ -18,6 +18,9 @@ from PIL import Image
 import requests
 from werkzeug.utils import secure_filename
 
+# Importar configuración de estilos
+from style_presets import get_available_styles, apply_style_to_workflow, get_workflow_nodes_for_style
+
 # Configuración básica
 app = Flask(__name__)
 CORS(app)
@@ -224,9 +227,9 @@ def load_workflow(workflow_name):
         log_error(f"Error al cargar workflow: {str(e)}")
         raise
 
-def update_workflow(workflow, image_filename, frame_color='black', output_subfolder=None):
+def update_workflow(workflow, image_filename, frame_color='black', style_id='default', style_node_id=None, output_subfolder=None):
     """
-    Actualiza el workflow con la nueva imagen y configuraciones
+    Actualiza el workflow con la nueva imagen, configuraciones y estilo
     Retorna: workflow actualizado
     """
     workflow_copy = copy.deepcopy(workflow)
@@ -246,6 +249,41 @@ def update_workflow(workflow, image_filename, frame_color='black', output_subfol
         log_success(f"Color del marco actualizado a: {frame_color}")
     else:
         log_warning(f"No se pudo actualizar el color del marco")
+    
+    # Aplicar estilo predefinido
+    if style_id and style_id != 'default':
+        log_info(f"Aplicando estilo '{style_id}' al workflow...")
+        
+        # Obtener información del estilo
+        from style_presets import get_style_prompt
+        style_prompt = get_style_prompt(style_id)
+        log_info(f"Prompt del estilo: '{style_prompt}'")
+        
+        # Aplicar el estilo
+        workflow_copy = apply_style_to_workflow(workflow_copy, style_id, style_node_id)
+        
+        # Verificar que se aplicó correctamente
+        if style_node_id:
+            if style_node_id in workflow_copy:
+                applied_value = ""
+                node = workflow_copy[style_node_id]
+                if "inputs" in node:
+                    applied_value = node["inputs"].get("prompt", node["inputs"].get("text", ""))
+                log_success(f"Estilo aplicado: {style_id} al nodo {style_node_id}")
+                log_info(f"Valor aplicado en nodo {style_node_id}: '{applied_value}'")
+            else:
+                log_error(f"Nodo especificado {style_node_id} no existe en el workflow")
+        else:
+            # Verificar en el nodo de estilo por defecto para Searge
+            style_node_6 = workflow_copy.get("6", {})
+            if "inputs" in style_node_6:
+                applied_value = style_node_6["inputs"].get("prompt", "")
+                log_success(f"Estilo aplicado: {style_id} (auto-detectado al nodo 6)")
+                log_info(f"Valor aplicado en nodo 6: '{applied_value}'")
+            else:
+                log_warning("No se pudo verificar la aplicación del estilo")
+    elif style_node_id:
+        log_info(f"Nodo de estilo especificado ({style_node_id}) pero sin estilo seleccionado")
     
     # Actualizar nodos SaveImage (subfolder si se especifica)
     if output_subfolder:
@@ -453,6 +491,20 @@ def health_check():
         "timestamp": datetime.now().isoformat()
     })
 
+@app.route('/styles', methods=['GET'])
+def list_styles():
+    """Lista estilos predefinidos disponibles"""
+    try:
+        styles = get_available_styles()
+        return jsonify({
+            "styles": styles,
+            "total": len(styles),
+            "message": "Estilos cargados correctamente"
+        })
+    except Exception as e:
+        log_error(f"Error cargando estilos: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/workflows', methods=['GET'])
 def list_workflows():
     """Lista workflows disponibles organizados por tipo y orientación"""
@@ -500,7 +552,8 @@ def list_workflows():
         "structure": workflows_structure,
         "total": len(workflows_list),
         "config": WORKFLOW_CONFIG,
-        "available_colors": WORKFLOW_CONFIG.get("frame_colors", ["black", "white", "brown", "gold", "silver"])
+        "available_colors": WORKFLOW_CONFIG.get("frame_colors", ["black", "white", "brown", "gold", "silver"]),
+        "available_styles": get_available_styles()
     })
 
 @app.route('/process-image', methods=['POST'])
@@ -523,14 +576,22 @@ def process_image():
         # Parámetros
         workflow_name = request.form.get('workflow', 'default')
         frame_color = request.form.get('frame_color', 'black')
+        style_id = request.form.get('style', 'default')
+        style_node_id = request.form.get('style_node', None)  # Nodo personalizado para aplicar estilo
         original_filename = request.form.get('original_filename', file.filename)
         
-        log_info(f"Parámetros: workflow={workflow_name}, frame_color={frame_color}, file={original_filename}")
+        log_info(f"Parámetros: workflow={workflow_name}, frame_color={frame_color}, style={style_id}, style_node={style_node_id}, file={original_filename}")
         
         # Validar color del marco
         if frame_color not in WORKFLOW_CONFIG['frame_colors']:
             frame_color = 'black'
             log_warning(f"Color de marco no válido, usando: {frame_color}")
+        
+        # Validar estilo
+        available_styles = [style['id'] for style in get_available_styles()]
+        if style_id not in available_styles:
+            style_id = 'default'
+            log_warning(f"Estilo no válido, usando: {style_id}")
         
         # Preparar nombres y directorios
         base_name = secure_filename(original_filename.rsplit('.', 1)[0] if '.' in original_filename else 'image')
@@ -557,7 +618,7 @@ def process_image():
         # Cargar y actualizar workflow
         log_info(f"Cargando workflow: {workflow_name}")
         workflow = load_workflow(workflow_name)
-        updated_workflow = update_workflow(workflow, workflow_filename, frame_color, base_name)
+        updated_workflow = update_workflow(workflow, workflow_filename, frame_color, style_id, style_node_id, base_name)
         
         # Enviar a ComfyUI
         log_info("Enviando a ComfyUI...")
@@ -591,6 +652,8 @@ def process_image():
             "prompt_id": prompt_id,
             "workflow_used": workflow_name,
             "frame_color": frame_color,
+            "style_used": style_id,
+            "style_node_used": style_node_id if style_node_id else "auto-detectado",
             "base_name": base_name,
             "output_dir": output_dir,
             "original_image": {
@@ -637,6 +700,28 @@ def get_image(base_name, filename):
         log_error(f"Error al obtener imagen: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/workflow-nodes/<workflow_name>', methods=['GET'])
+def get_workflow_nodes(workflow_name):
+    """Obtiene los nodos candidatos para aplicar estilos en un workflow específico"""
+    try:
+        # Cargar el workflow
+        workflow = load_workflow(workflow_name)
+        
+        # Obtener nodos candidatos
+        candidate_nodes = get_workflow_nodes_for_style(workflow)
+        
+        return jsonify({
+            "workflow_name": workflow_name,
+            "candidate_nodes": candidate_nodes,
+            "total": len(candidate_nodes),
+            "message": f"Se encontraron {len(candidate_nodes)} nodos candidatos para aplicar estilos"
+        })
+    except FileNotFoundError:
+        return jsonify({"error": f"Workflow no encontrado: {workflow_name}"}), 404
+    except Exception as e:
+        log_error(f"Error obteniendo nodos del workflow {workflow_name}: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/')
 def serve_client():
     """Sirve el cliente web principal"""
@@ -652,7 +737,7 @@ def serve_client():
             return jsonify({
                 "message": "ComfyUI API REST - Nueva implementación",
                 "version": "2.0.0",
-                "endpoints": ["/health", "/workflows", "/process-image", "/get-image"],
+                "endpoints": ["/health", "/workflows", "/styles", "/workflow-nodes/<workflow_name>", "/process-image", "/get-image"],
                 "web_clients": ["/web_client_fixed.html", "/web_client.html"]
             })
 

@@ -273,9 +273,59 @@
 
                 <div class="section">
                     <h3>🎨 Seleccionar Workflow</h3>
-                    <select id="workflowSelect" class="workflow-select">
-                        <option value="">Cargando workflows...</option>
-                    </select>
+                    
+                    <!-- Selector de Tipo de Habitación -->
+                    <div style="margin-bottom: 15px;">
+                        <label for="roomTypeSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">🏠 Tipo de Habitación:</label>
+                        <select id="roomTypeSelect" class="workflow-select" style="max-height: none;">
+                            <option value="">Selecciona un tipo...</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Selector de Orientación -->
+                    <div style="margin-bottom: 15px;">
+                        <label for="orientationSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">📐 Orientación:</label>
+                        <select id="orientationSelect" class="workflow-select" style="max-height: none;" disabled>
+                            <option value="">Primero selecciona un tipo...</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Selector de Workflow Específico -->
+                    <div style="margin-bottom: 15px;">
+                        <label for="workflowSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">🎯 Workflow Específico:</label>
+                        <select id="workflowSelect" class="workflow-select" style="max-height: none;" disabled>
+                            <option value="">Selecciona orientación primero...</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Info del workflow seleccionado -->
+                    <div id="workflowInfo" style="display: none; background: #e3f2fd; border-radius: 6px; padding: 10px; font-size: 0.9em; color: #1976d2;">
+                        <strong>✨ Workflow seleccionado:</strong>
+                        <div id="workflowInfoText"></div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>✨ Estilo Visual</h3>
+                    <div style="margin-bottom: 15px;">
+                        <label for="styleSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">🎨 Selecciona un estilo:</label>
+                        <select id="styleSelect" class="workflow-select" style="max-height: none;">
+                            <option value="default">🎨 Por defecto</option>
+                        </select>
+                        <div id="styleDescription" style="margin-top: 8px; padding: 8px; background: #f0f8ff; border-radius: 4px; font-size: 0.85em; color: #2c5aa0; display: none;"></div>
+                    </div>
+                    
+                    <!-- Selector de Nodo para Estilo (opcional) -->
+                    <div style="margin-bottom: 15px;" id="styleNodeSection" style="display: none;">
+                        <label for="styleNodeSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">⚙️ Nodo de Estilo (Opcional):</label>
+                        <select id="styleNodeSelect" class="workflow-select" style="max-height: none;">
+                            <option value="">🔧 Auto-detectar (recomendado)</option>
+                        </select>
+                        <div style="margin-top: 8px; padding: 8px; background: #fff3cd; border-radius: 4px; font-size: 0.85em; color: #856404;">
+                            💡 <strong>Opcional:</strong> Selecciona un nodo específico donde aplicar el estilo. Si no seleccionas ninguno, se detectará automáticamente el mejor nodo.
+                        </div>
+                        <div id="nodeDescription" style="margin-top: 8px; padding: 8px; background: #e8f5e8; border-radius: 4px; font-size: 0.85em; color: #2d5a2d; display: none;"></div>
+                    </div>
                 </div>
 
                 <div class="section">
@@ -308,7 +358,7 @@
                     </div>
                 </div>
 
-                <button class="btn" id="processBtn" onclick="processImage()" disabled>
+                <button class="btn" id="processBtn" disabled>
                     🚀 Procesar Imagen
                 </button>
             </div>
@@ -333,6 +383,9 @@
         const API_BASE_URL = window.location.origin;
         let selectedFile = null;
         let availableWorkflows = [];
+        let workflowsStructure = {};
+        let availableStyles = [];
+        let currentWorkflowNodes = [];
 
         // Inicialización
         window.onload = function() {
@@ -374,6 +427,28 @@
                     handleFileSelect(e.target.files[0]);
                 }
             });
+
+            // Selectores en cascada
+            document.getElementById('roomTypeSelect').addEventListener('change', handleRoomTypeChange);
+            document.getElementById('orientationSelect').addEventListener('change', handleOrientationChange);
+            document.getElementById('workflowSelect').addEventListener('change', handleWorkflowChange);
+            
+            // Selector de estilo
+            document.getElementById('styleSelect').addEventListener('change', handleStyleChange);
+            
+            // Selector de nodo de estilo
+            document.getElementById('styleNodeSelect').addEventListener('change', handleStyleNodeChange);
+            
+            // Botón de procesamiento
+            document.getElementById('processBtn').addEventListener('click', processImage);
+        }
+
+        function checkProcessButtonState() {
+            const processBtn = document.getElementById('processBtn');
+            const workflowSelect = document.getElementById('workflowSelect');
+            
+            // Habilitar solo si hay imagen Y workflow seleccionado
+            processBtn.disabled = !selectedFile || !workflowSelect.value;
         }
 
         async function checkHealth() {
@@ -397,42 +472,166 @@
 
         async function loadWorkflows() {
             try {
+                showStatus('🔄 Cargando workflows...', 'info');
                 const response = await fetch(`${API_BASE_URL}/workflows`);
                 const data = await response.json();
 
                 availableWorkflows = data.workflows || [];
-                const select = document.getElementById('workflowSelect');
-                select.innerHTML = '';
+                workflowsStructure = data.structure || {};
+                availableStyles = data.available_styles || [];
 
-                if (availableWorkflows.length > 0) {
-                    // Crear opciones agrupadas
-                    const structure = data.structure || {};
-                    
-                    Object.keys(structure).forEach(roomType => {
-                        const optgroup = document.createElement('optgroup');
-                        optgroup.label = `🏠 ${roomType.charAt(0).toUpperCase() + roomType.slice(1)}`;
-                        
-                        Object.keys(structure[roomType]).forEach(orientation => {
-                            structure[roomType][orientation].forEach(workflow => {
-                                const option = document.createElement('option');
-                                option.value = workflow.id;
-                                option.textContent = `📐 ${orientation} - ${workflow.name}`;
-                                optgroup.appendChild(option);
-                            });
-                        });
-                        
-                        select.appendChild(optgroup);
-                    });
-
-                    showStatus(`✅ ${data.total} workflows cargados`, 'success');
-                } else {
-                    select.innerHTML = '<option value="">No hay workflows disponibles</option>';
-                    showStatus('❌ No se encontraron workflows', 'error');
-                }
+                populateRoomTypes();
+                populateStyles();
+                showStatus(`✅ ${data.total} workflows cargados`, 'success');
             } catch (error) {
                 console.error('Error cargando workflows:', error);
                 showStatus('❌ Error cargando workflows', 'error');
             }
+        }
+
+        function populateStyles() {
+            const styleSelect = document.getElementById('styleSelect');
+            styleSelect.innerHTML = '';
+
+            availableStyles.forEach(style => {
+                const option = document.createElement('option');
+                option.value = style.id;
+                option.textContent = style.name;
+                option.dataset.description = style.description;
+                styleSelect.appendChild(option);
+            });
+        }
+
+        function handleStyleChange() {
+            const styleSelect = document.getElementById('styleSelect');
+            const styleDescription = document.getElementById('styleDescription');
+            
+            const selectedOption = styleSelect.options[styleSelect.selectedIndex];
+            
+            if (selectedOption && selectedOption.dataset.description) {
+                styleDescription.textContent = selectedOption.dataset.description;
+                styleDescription.style.display = 'block';
+                showStatus(`✨ Estilo seleccionado: ${selectedOption.textContent}`, 'info');
+            } else {
+                styleDescription.style.display = 'none';
+            }
+        }
+
+        function populateRoomTypes() {
+            const roomTypeSelect = document.getElementById('roomTypeSelect');
+            roomTypeSelect.innerHTML = '<option value="">Selecciona un tipo...</option>';
+
+            Object.keys(workflowsStructure).forEach(roomType => {
+                const option = document.createElement('option');
+                option.value = roomType;
+                option.textContent = `🏠 ${roomType.charAt(0).toUpperCase() + roomType.slice(1)}`;
+                roomTypeSelect.appendChild(option);
+            });
+        }
+
+        function handleRoomTypeChange() {
+            const roomTypeSelect = document.getElementById('roomTypeSelect');
+            const orientationSelect = document.getElementById('orientationSelect');
+            const workflowSelect = document.getElementById('workflowSelect');
+            const workflowInfo = document.getElementById('workflowInfo');
+            const styleNodeSection = document.getElementById('styleNodeSection');
+
+            const selectedRoomType = roomTypeSelect.value;
+
+            // Reset selectors
+            orientationSelect.innerHTML = '<option value="">Selecciona una orientación...</option>';
+            workflowSelect.innerHTML = '<option value="">Selecciona orientación primero...</option>';
+            workflowSelect.disabled = true;
+            workflowInfo.style.display = 'none';
+            styleNodeSection.style.display = 'none';
+            clearStyleNodes();
+
+            if (selectedRoomType && workflowsStructure[selectedRoomType]) {
+                orientationSelect.disabled = false;
+                
+                Object.keys(workflowsStructure[selectedRoomType]).forEach(orientation => {
+                    const option = document.createElement('option');
+                    option.value = orientation;
+                    option.textContent = `📐 ${orientation}`;
+                    orientationSelect.appendChild(option);
+                });
+
+                showStatus(`📂 Tipo seleccionado: ${selectedRoomType}`, 'info');
+            } else {
+                orientationSelect.disabled = true;
+            }
+        }
+
+        function handleOrientationChange() {
+            const roomTypeSelect = document.getElementById('roomTypeSelect');
+            const orientationSelect = document.getElementById('orientationSelect');
+            const workflowSelect = document.getElementById('workflowSelect');
+            const workflowInfo = document.getElementById('workflowInfo');
+            const styleNodeSection = document.getElementById('styleNodeSection');
+
+            const selectedRoomType = roomTypeSelect.value;
+            const selectedOrientation = orientationSelect.value;
+
+            // Reset workflow selector
+            workflowSelect.innerHTML = '<option value="">Selecciona un workflow específico...</option>';
+            workflowInfo.style.display = 'none';
+            styleNodeSection.style.display = 'none';
+            clearStyleNodes();
+
+            if (selectedRoomType && selectedOrientation && 
+                workflowsStructure[selectedRoomType] && 
+                workflowsStructure[selectedRoomType][selectedOrientation]) {
+                
+                workflowSelect.disabled = false;
+                
+                workflowsStructure[selectedRoomType][selectedOrientation].forEach(workflow => {
+                    const option = document.createElement('option');
+                    option.value = workflow.id;
+                    option.textContent = `🎯 ${workflow.name}`;
+                    option.dataset.workflow = JSON.stringify(workflow);
+                    workflowSelect.appendChild(option);
+                });
+
+                showStatus(`📐 Orientación seleccionada: ${selectedOrientation}`, 'info');
+            } else {
+                workflowSelect.disabled = true;
+            }
+        }
+
+        function handleWorkflowChange() {
+            const workflowSelect = document.getElementById('workflowSelect');
+            const workflowInfo = document.getElementById('workflowInfo');
+            const workflowInfoText = document.getElementById('workflowInfoText');
+            const styleNodeSection = document.getElementById('styleNodeSection');
+
+            const selectedOption = workflowSelect.options[workflowSelect.selectedIndex];
+
+            if (selectedOption && selectedOption.value) {
+                const workflowData = JSON.parse(selectedOption.dataset.workflow || '{}');
+                
+                workflowInfoText.innerHTML = `
+                    <div style="margin-top: 5px;">
+                        <strong>Nombre:</strong> ${workflowData.name || 'N/A'}<br>
+                        <strong>Tipo:</strong> ${workflowData.room_type || 'N/A'}<br>
+                        <strong>Orientación:</strong> ${workflowData.orientation || 'N/A'}<br>
+                        <strong>Estado:</strong> ${workflowData.status || 'N/A'}
+                    </div>
+                `;
+                
+                workflowInfo.style.display = 'block';
+                styleNodeSection.style.display = 'block';
+                showStatus(`🎯 Workflow seleccionado: ${workflowData.name}`, 'success');
+                
+                // Cargar nodos del workflow para selección de estilo
+                loadWorkflowNodes(workflowData.id || selectedOption.value);
+            } else {
+                workflowInfo.style.display = 'none';
+                styleNodeSection.style.display = 'none';
+                clearStyleNodes();
+            }
+            
+            // Verificar estado del botón
+            checkProcessButtonState();
         }
 
         function handleFileSelect(file) {
@@ -451,10 +650,10 @@
             };
             reader.readAsDataURL(file);
 
-            // Habilitar botón de procesamiento
-            document.getElementById('processBtn').disabled = false;
-
             showStatus(`📁 Imagen seleccionada: ${file.name}`, 'info');
+
+            // Verificar estado del botón
+            checkProcessButtonState();
 
             // Limpiar resultados anteriores
             clearResults();
@@ -465,6 +664,8 @@
             const resultImages = document.getElementById('resultImages');
             resultsSection.style.display = 'none';
             resultImages.innerHTML = '';
+            
+            // No limpiar la selección de nodos aquí, solo los resultados
         }
 
         async function processImage() {
@@ -491,6 +692,14 @@
                 }
             }
 
+            // Obtener estilo seleccionado
+            const styleSelect = document.getElementById('styleSelect');
+            const selectedStyle = styleSelect.value || 'default';
+
+            // Obtener nodo de estilo seleccionado
+            const styleNodeSelect = document.getElementById('styleNodeSelect');
+            const selectedStyleNode = styleNodeSelect.value || null;
+
             // Deshabilitar botón
             const processBtn = document.getElementById('processBtn');
             processBtn.disabled = true;
@@ -499,6 +708,12 @@
             showStatus(`🚀 Iniciando procesamiento...`, 'info');
             showStatus(`📋 Workflow: ${selectedWorkflow}`, 'info');
             showStatus(`🎨 Color del marco: ${selectedFrameColor}`, 'info');
+            showStatus(`✨ Estilo: ${selectedStyle}`, 'info');
+            if (selectedStyleNode) {
+                showStatus(`⚙️ Nodo de estilo: ${selectedStyleNode}`, 'info');
+            } else {
+                showStatus(`🔧 Nodo de estilo: auto-detectar`, 'info');
+            }
             showStatus(`⏱️ Esto puede tardar varios minutos`, 'info');
 
             try {
@@ -507,6 +722,10 @@
                 formData.append('image', selectedFile);
                 formData.append('workflow', selectedWorkflow);
                 formData.append('frame_color', selectedFrameColor);
+                formData.append('style', selectedStyle);
+                if (selectedStyleNode) {
+                    formData.append('style_node', selectedStyleNode);
+                }
 
                 // Enviar petición
                 const response = await fetch(`${API_BASE_URL}/process-image`, {
@@ -587,6 +806,84 @@
             // Limpiar mensajes viejos
             if (statusMessages.children.length > 50) {
                 statusMessages.removeChild(statusMessages.firstChild);
+            }
+        }
+
+        async function loadWorkflowNodes(workflowId) {
+            if (!workflowId) {
+                clearStyleNodes();
+                return;
+            }
+
+            try {
+                showStatus(`🔄 Cargando nodos del workflow...`, 'info');
+                const response = await fetch(`${API_BASE_URL}/workflow-nodes/${workflowId}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    currentWorkflowNodes = data.candidate_nodes || [];
+                    populateStyleNodes();
+                    showStatus(`✅ ${currentWorkflowNodes.length} nodos candidatos cargados`, 'success');
+                } else {
+                    console.error('Error cargando nodos:', data.error);
+                    showStatus(`⚠️ Error cargando nodos: ${data.error}`, 'error');
+                    clearStyleNodes();
+                }
+            } catch (error) {
+                console.error('Error cargando nodos del workflow:', error);
+                showStatus('❌ Error de conexión al cargar nodos', 'error');
+                clearStyleNodes();
+            }
+        }
+
+        function populateStyleNodes() {
+            const styleNodeSelect = document.getElementById('styleNodeSelect');
+            styleNodeSelect.innerHTML = '<option value="">🔧 Auto-detectar (recomendado)</option>';
+
+            currentWorkflowNodes.forEach(node => {
+                const option = document.createElement('option');
+                option.value = node.id;
+                option.dataset.node = JSON.stringify(node);
+                
+                // Añadir emoji para nodos recomendados
+                const prefix = node.recommended ? '⭐' : '⚙️';
+                option.textContent = `${prefix} ${node.name}`;
+                
+                styleNodeSelect.appendChild(option);
+            });
+        }
+
+        function clearStyleNodes() {
+            const styleNodeSelect = document.getElementById('styleNodeSelect');
+            styleNodeSelect.innerHTML = '<option value="">🔧 Auto-detectar (recomendado)</option>';
+            currentWorkflowNodes = [];
+            
+            const nodeDescription = document.getElementById('nodeDescription');
+            nodeDescription.style.display = 'none';
+        }
+
+        function handleStyleNodeChange() {
+            const styleNodeSelect = document.getElementById('styleNodeSelect');
+            const nodeDescription = document.getElementById('nodeDescription');
+            
+            const selectedOption = styleNodeSelect.options[styleNodeSelect.selectedIndex];
+            
+            if (selectedOption && selectedOption.value && selectedOption.dataset.node) {
+                const nodeData = JSON.parse(selectedOption.dataset.node);
+                
+                nodeDescription.innerHTML = `
+                    <strong>📝 Información del nodo:</strong><br>
+                    <strong>Tipo:</strong> ${nodeData.type}<br>
+                    <strong>Descripción:</strong> ${nodeData.description}<br>
+                    ${nodeData.current_value ? `<strong>Contenido actual:</strong> ${nodeData.current_value}` : ''}
+                `;
+                nodeDescription.style.display = 'block';
+                
+                const prefix = nodeData.recommended ? 'recomendado' : 'personalizado';
+                showStatus(`⚙️ Nodo ${prefix} seleccionado: ${nodeData.name}`, 'info');
+            } else {
+                nodeDescription.style.display = 'none';
+                showStatus(`🔧 Usando auto-detección de nodo`, 'info');
             }
         }
     </script>
