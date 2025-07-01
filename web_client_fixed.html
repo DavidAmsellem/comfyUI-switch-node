@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ComfyUI API - Cliente Simple</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
+    <style>
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        
+        .health-indicator {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+        
+        .health-ok {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+        
+        .health-error {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+        
+        .panel {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .section {
+            margin-bottom: 25px;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .section h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 1.2em;
+        }
+        
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-area:hover {
+            border-color: #4facfe;
+            background: rgba(79, 172, 254, 0.05);
+        }
+        
+        .upload-area.dragover {
+            border-color: #4facfe;
+            background: rgba(79, 172, 254, 0.1);
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .workflow-select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1em;
+            max-height: 200px;
+            background: white;
+        }
+        
+        .color-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .color-option {
+            text-align: center;
+        }
+        
+        .color-option input[type="radio"] {
+            display: none;
+        }
+        
+        .color-option label {
+            display: block;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+        }
+        
+        .color-option input[type="radio"]:checked + label {
+            border-color: #4facfe;
+            transform: scale(1.05);
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 20px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .preview-image {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .status-messages {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        .status-message {
+            margin-bottom: 5px;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        
+        .status-success {
+            background: rgba(76, 175, 80, 0.1);
+            color: #4CAF50;
+        }
+        
+        .status-error {
+            background: rgba(244, 67, 54, 0.1);
+            color: #f44336;
+        }
+        
+        .status-info {
+            background: rgba(33, 150, 243, 0.1);
+            color: #2196F3;
+        }
+        
+        .result-images {
+            display: grid;
+            gap: 20px;
+        }
+        
+        .result-item {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .result-item img {
+            width: 100%;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+        
+        .download-btn {
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            display: inline-block;
+            transition: background 0.3s ease;
+        }
+        
+        .download-btn:hover {
+            background: #218838;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="health-indicator" id="healthIndicator">Verificando...</div>
+            <h1>🎨 ComfyUI API Client</h1>
+            <p>Procesa imágenes con workflows de ComfyUI</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Panel Izquierdo: Controles -->
+            <div class="panel">
+                <div class="section">
+                    <h3>📁 Subir Imagen</h3>
+                    <div class="upload-area" id="uploadArea">
+                        <p>🖼️ Arrastra una imagen aquí o haz clic para seleccionar</p>
+                        <input type="file" id="fileInput" class="file-input" accept="image/*">
+                    </div>
+                </div>
+
+                <div class="section" id="previewSection" style="display: none;">
+                    <h3>👀 Vista Previa</h3>
+                    <img id="previewImage" class="preview-image" alt="Vista previa">
+                </div>
+
+                <div class="section">
+                    <h3>🎨 Seleccionar Workflow</h3>
+                    <select id="workflowSelect" class="workflow-select">
+                        <option value="">Cargando workflows...</option>
+                    </select>
+                </div>
+
+                <div class="section">
+                    <h3>🖼️ Color del Marco</h3>
+                    <div class="color-options" id="colorOptions">
+                        <div class="color-option">
+                            <input type="radio" id="black" name="frameColor" value="black" checked>
+                            <label for="black" style="background: #1a1a1a; color: white;">Negro</label>
+                        </div>
+                        <div class="color-option">
+                            <input type="radio" id="white" name="frameColor" value="white">
+                            <label for="white" style="background: #f5f5f5; color: #333; border: 1px solid #ddd;">Blanco</label>
+                        </div>
+                        <div class="color-option">
+                            <input type="radio" id="brown" name="frameColor" value="brown">
+                            <label for="brown" style="background: #8B4513; color: white;">Marrón</label>
+                        </div>
+                        <div class="color-option">
+                            <input type="radio" id="gold" name="frameColor" value="gold">
+                            <label for="gold" style="background: #FFD700; color: #333;">Dorado</label>
+                        </div>
+                        <div class="color-option">
+                            <input type="radio" id="red" name="frameColor" value="red">
+                            <label for="red" style="background: #DC143C; color: white;">Rojo</label>
+                        </div>
+                        <div class="color-option">
+                            <input type="radio" id="blue" name="frameColor" value="blue">
+                            <label for="blue" style="background: #1E90FF; color: white;">Azul</label>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn" id="processBtn" onclick="processImage()" disabled>
+                    🚀 Procesar Imagen
+                </button>
+            </div>
+
+            <!-- Panel Derecho: Estado y Resultados -->
+            <div class="panel">
+                <div class="section">
+                    <h3>📊 Estado del Procesamiento</h3>
+                    <div class="status-messages" id="statusMessages"></div>
+                </div>
+
+                <div class="section" id="resultsSection" style="display: none;">
+                    <h3>✨ Resultados</h3>
+                    <div class="result-images" id="resultImages"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        const API_BASE_URL = window.location.origin;
+        let selectedFile = null;
+        let availableWorkflows = [];
+
+        // Inicialización
+        window.onload = function() {
+            checkHealth();
+            loadWorkflows();
+            setupEventListeners();
+        };
+
+        function setupEventListeners() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+
+            // Drag and drop
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFileSelect(files[0]);
+                }
+            });
+
+            uploadArea.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFileSelect(e.target.files[0]);
+                }
+            });
+        }
+
+        async function checkHealth() {
+            const indicator = document.getElementById('healthIndicator');
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                const data = await response.json();
+
+                if (data.status === 'ok' && data.comfyui_connection === 'ok') {
+                    indicator.textContent = '✅ API y ComfyUI Conectados';
+                    indicator.className = 'health-indicator health-ok';
+                } else {
+                    indicator.textContent = '⚠️ API OK, ComfyUI Desconectado';
+                    indicator.className = 'health-indicator health-error';
+                }
+            } catch (error) {
+                indicator.textContent = '❌ API No Disponible';
+                indicator.className = 'health-indicator health-error';
+            }
+        }
+
+        async function loadWorkflows() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/workflows`);
+                const data = await response.json();
+
+                availableWorkflows = data.workflows || [];
+                const select = document.getElementById('workflowSelect');
+                select.innerHTML = '';
+
+                if (availableWorkflows.length > 0) {
+                    // Crear opciones agrupadas
+                    const structure = data.structure || {};
+                    
+                    Object.keys(structure).forEach(roomType => {
+                        const optgroup = document.createElement('optgroup');
+                        optgroup.label = `🏠 ${roomType.charAt(0).toUpperCase() + roomType.slice(1)}`;
+                        
+                        Object.keys(structure[roomType]).forEach(orientation => {
+                            structure[roomType][orientation].forEach(workflow => {
+                                const option = document.createElement('option');
+                                option.value = workflow.id;
+                                option.textContent = `📐 ${orientation} - ${workflow.name}`;
+                                optgroup.appendChild(option);
+                            });
+                        });
+                        
+                        select.appendChild(optgroup);
+                    });
+
+                    showStatus(`✅ ${data.total} workflows cargados`, 'success');
+                } else {
+                    select.innerHTML = '<option value="">No hay workflows disponibles</option>';
+                    showStatus('❌ No se encontraron workflows', 'error');
+                }
+            } catch (error) {
+                console.error('Error cargando workflows:', error);
+                showStatus('❌ Error cargando workflows', 'error');
+            }
+        }
+
+        function handleFileSelect(file) {
+            if (!file.type.startsWith('image/')) {
+                showStatus('❌ El archivo debe ser una imagen', 'error');
+                return;
+            }
+
+            selectedFile = file;
+
+            // Mostrar vista previa
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('previewImage').src = e.target.result;
+                document.getElementById('previewSection').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+
+            // Habilitar botón de procesamiento
+            document.getElementById('processBtn').disabled = false;
+
+            showStatus(`📁 Imagen seleccionada: ${file.name}`, 'info');
+
+            // Limpiar resultados anteriores
+            clearResults();
+        }
+
+        function clearResults() {
+            const resultsSection = document.getElementById('resultsSection');
+            const resultImages = document.getElementById('resultImages');
+            resultsSection.style.display = 'none';
+            resultImages.innerHTML = '';
+        }
+
+        async function processImage() {
+            if (!selectedFile) {
+                showStatus('❌ Por favor selecciona una imagen primero', 'error');
+                return;
+            }
+
+            const workflowSelect = document.getElementById('workflowSelect');
+            const selectedWorkflow = workflowSelect.value;
+
+            if (!selectedWorkflow) {
+                showStatus('❌ Por favor selecciona un workflow', 'error');
+                return;
+            }
+
+            // Obtener color del marco
+            const frameColorRadios = document.querySelectorAll('input[name="frameColor"]');
+            let selectedFrameColor = 'black';
+            for (const radio of frameColorRadios) {
+                if (radio.checked) {
+                    selectedFrameColor = radio.value;
+                    break;
+                }
+            }
+
+            // Deshabilitar botón
+            const processBtn = document.getElementById('processBtn');
+            processBtn.disabled = true;
+            processBtn.textContent = '🔄 Procesando...';
+
+            showStatus(`🚀 Iniciando procesamiento...`, 'info');
+            showStatus(`📋 Workflow: ${selectedWorkflow}`, 'info');
+            showStatus(`🎨 Color del marco: ${selectedFrameColor}`, 'info');
+            showStatus(`⏱️ Esto puede tardar varios minutos`, 'info');
+
+            try {
+                // Crear FormData
+                const formData = new FormData();
+                formData.append('image', selectedFile);
+                formData.append('workflow', selectedWorkflow);
+                formData.append('frame_color', selectedFrameColor);
+
+                // Enviar petición
+                const response = await fetch(`${API_BASE_URL}/process-image`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    showStatus(`✅ Procesamiento completado exitosamente`, 'success');
+                    displayResults(data);
+                } else {
+                    showStatus(`❌ Error: ${data.error || 'Error desconocido'}`, 'error');
+                }
+
+            } catch (error) {
+                console.error('Error procesando imagen:', error);
+                showStatus(`❌ Error de conexión: ${error.message}`, 'error');
+            } finally {
+                // Rehabilitar botón
+                processBtn.disabled = false;
+                processBtn.textContent = '🚀 Procesar Imagen';
+            }
+        }
+
+        function displayResults(data) {
+            const resultsSection = document.getElementById('resultsSection');
+            const resultImages = document.getElementById('resultImages');
+
+            resultImages.innerHTML = '';
+
+            // Mostrar imagen original
+            if (data.original_image) {
+                const originalDiv = document.createElement('div');
+                originalDiv.className = 'result-item';
+                originalDiv.innerHTML = `
+                    <h4>📄 Imagen Original</h4>
+                    <img src="${data.original_image.url}" alt="Imagen Original">
+                    <a href="${data.original_image.url}" class="download-btn" download>⬇️ Descargar Original</a>
+                `;
+                resultImages.appendChild(originalDiv);
+            }
+
+            // Mostrar imágenes generadas
+            if (data.generated_images && data.generated_images.length > 0) {
+                data.generated_images.forEach((image, index) => {
+                    const imageDiv = document.createElement('div');
+                    imageDiv.className = 'result-item';
+                    imageDiv.innerHTML = `
+                        <h4>✨ Resultado ${index + 1}</h4>
+                        <img src="${image.url}" alt="Imagen Generada">
+                        <a href="${image.url}" class="download-btn" download="${image.filename}">⬇️ Descargar</a>
+                    `;
+                    resultImages.appendChild(imageDiv);
+                });
+            }
+
+            resultsSection.style.display = 'block';
+            
+            // Scroll hacia los resultados
+            setTimeout(() => {
+                resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+
+        function showStatus(message, type = 'info') {
+            const statusMessages = document.getElementById('statusMessages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `status-message status-${type}`;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            msgDiv.textContent = `[${timestamp}] ${message}`;
+            
+            statusMessages.appendChild(msgDiv);
+            statusMessages.scrollTop = statusMessages.scrollHeight;
+
+            // Limpiar mensajes viejos
+            if (statusMessages.children.length > 50) {
+                statusMessages.removeChild(statusMessages.firstChild);
+            }
+        }
+    </script>
+</body>
+</html>
