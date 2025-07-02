@@ -3,149 +3,76 @@
 Configuración de estilos predefinidos para workflows
 """
 
-# Estilos predefinidos que se pueden aplicar al nodo de Style (6)
+# Estilos predefinidos simplificados (6 estilos bien definidos)
 STYLE_PRESETS = {
     "default": {
         "name": "🎨 Por defecto",
-        "description": "Sin estilo adicional, usa el prompt original",
+        "description": "Sin estilo adicional, usa el prompt original del workflow",
         "style_prompt": "",
-        "display_order": 1
+        "negative_prompt": "",
+        "display_order": 1,
+        "force_text2img": False
     },
-    "colorful": {
-        "name": "🌈 Colorido",
-        "description": "Colores vibrantes y saturados con creatividad aumentada",
-        "style_prompt": "vibrant explosive colors, rainbow spectrum interior design, neon bright saturated surfaces, bold chromatic furniture, vivid colorful walls and floors, intense color palette, electric bright materials, fluorescent colored elements, psychedelic interior atmosphere, empty clean back wall for artwork display, creative colorful transformation",
-        "display_order": 2,
-        "denoise_override": 0.85
-    },
-    "warm": {
-        "name": "🔥 Cálido",
-        "description": "Transformación cálida y acogedora con materiales dorados",
-        "style_prompt": "warm golden interior transformation, cozy luxurious atmosphere, amber honey-colored materials, golden hour sunlight flooding room, warm wood textures, brass and copper accents, soft warm lighting fixtures, comfortable inviting furniture, sunset glow illumination, rich warm color palette, empty clean back wall ready for artwork, creative warm redesign",
-        "display_order": 3,
-        "denoise_override": 0.85
-    },
-    "cool": {
-        "name": "❄️ Fresco",
-        "description": "Transformación moderna con tonos fríos y cristalinos",
-        "style_prompt": "cool modern interior transformation, crisp blue and silver materials, ice crystal lighting effects, contemporary steel and glass elements, arctic fresh atmosphere, cool mint and blue color scheme, crystalline surfaces, modern minimalist furniture, fresh clean air feeling, empty pristine back wall for display, creative cool redesign",
-        "display_order": 4,
-        "denoise_override": 0.85
-    },
-    "luxury": {
-        "name": "✨ Lujoso",
-        "description": "Transformación premium con materiales de alta gama",
-        "style_prompt": "luxury interior transformation, premium marble and gold materials, crystal chandeliers and elegant lighting, sophisticated high-end furniture, opulent rich textures and fabrics, sumptuous velvet and silk elements, exclusive designer finishes, lavish premium quality surfaces, refined luxurious atmosphere, empty elegant back wall for premium artwork display, creative luxury redesign",
-        "display_order": 5,
-        "denoise_override": 0.85
-    },
-    "minimalist": {
-        "name": "⚪ Minimalista",
-        "description": "Transformación minimalista zen con líneas puras",
-        "style_prompt": "minimalist interior transformation, pure white and neutral surfaces, clean geometric lines, uncluttered zen space, essential furniture only, serene minimalist atmosphere, natural light flooding, simple elegant forms, stark clean beauty, geometric simplicity, empty perfect back wall for single artwork focus, creative minimalist redesign",
-        "display_order": 6,
-        "denoise_override": 0.85
-    },
-    "industrial": {
-        "name": "🏭 Industrial",
-        "description": "Transformación industrial urbana con materiales crudos",
-        "style_prompt": "industrial interior transformation, exposed concrete and steel materials, raw urban aesthetic, metal pipe fixtures, brick and concrete textures, industrial lighting fixtures, weathered metal surfaces, urban loft atmosphere, rustic industrial furniture, factory-inspired design, empty raw back wall for industrial art display, creative industrial redesign",
-        "display_order": 7,
-        "denoise_override": 0.85
-    },
-    "natural": {
-        "name": "🌿 Natural",
-        "description": "Transformación orgánica con abundantes elementos naturales",
-        "style_prompt": "natural organic interior transformation, abundant wood and stone materials, living plant elements throughout, earthy natural color palette, organic flowing textures, biophilic design integration, natural fiber furniture, bamboo and rattan accents, nature-inspired lighting, fresh green atmosphere, empty natural back wall for nature artwork display, creative organic redesign",
-        "display_order": 8,
-        "denoise_override": 0.85
-    },
-    "vintage": {
-        "name": "🕰️ Vintage",
-        "description": "Transformación vintage con elementos retro auténticos",
-        "style_prompt": "vintage interior transformation, authentic retro materials and furniture, aged leather and worn wood surfaces, classic vintage color palette, nostalgic atmosphere with period details, antique fixtures and lighting, timeless elegant design, weathered vintage textures, old-world charm and character, empty classic back wall for vintage artwork display, creative retro redesign",
-        "display_order": 9,
-        "denoise_override": 0.85
-    },
-    "futuristic": {
-        "name": "🚀 Futurista",
-        "description": "Transformación futurista high-tech con tecnología avanzada",
-        "style_prompt": "futuristic interior transformation, high-tech surfaces and materials, holographic lighting effects, sleek metallic finishes, advanced technology integration, sci-fi aesthetic design, LED strip lighting everywhere, glass and chrome elements, cyberpunk atmosphere, digital displays, empty high-tech back wall for digital art display, creative futuristic redesign",
-        "display_order": 10,
-        "denoise_override": 0.85
-    },
-    "artistic": {
-        "name": "🎭 Artístico",
-        "description": "Transformación artística con elementos creativos y expresivos",
-        "style_prompt": "artistic interior transformation, creative gallery-worthy design, unique sculptural furniture, expressive bold colors and textures, artistic composition and layout, creative lighting installations, avant-garde design elements, inspirational artistic atmosphere, innovative material combinations, empty artistic back wall perfect for featured artwork display, creative artistic redesign",
-        "display_order": 11,
-        "denoise_override": 0.85
-    },
-    "scandinavian": {
-        "name": "🇸🇪 Escandinavo",
-        "description": "Transformación escandinava con hygge y funcionalidad nórdica",
-        "style_prompt": "scandinavian interior transformation, light natural wood throughout, cozy hygge atmosphere, functional nordic design, white and light color palette, natural textures and materials, minimalist functional furniture, soft natural lighting, clean scandinavian lines, comfortable hygge elements, empty clean back wall for nordic art display, creative scandinavian redesign",
-        "display_order": 12,
-        "denoise_override": 0.85
-    },
-    "dramatic": {
-        "name": "🎭 Dramático",
-        "description": "Transformación dramática con contrastes intensos y iluminación teatral",
-        "style_prompt": "dramatic interior transformation, intense theatrical lighting, high contrast shadows and highlights, bold dramatic color combinations, striking visual impact design, moody atmospheric lighting effects, powerful chiaroscuro effects, dramatic architectural elements, intense emotional atmosphere, empty dramatic back wall for powerful artwork display, creative dramatic redesign",
-        "display_order": 13,
-        "denoise_override": 0.85
-    },
-    "cinematic": {
-        "name": "🎬 Cinematográfico",
-        "description": "Transformación cinematográfica con calidad de película profesional",
-        "style_prompt": "cinematic interior transformation, professional movie-quality lighting, film-grade cinematography setup, hollywood-style design elements, cinematic color grading atmosphere, dramatic film lighting techniques, movie set quality materials, professional cinematographic composition, film grain texture aesthetic, empty cinematic back wall for featured display, creative cinematic redesign",
-        "display_order": 14,
-        "denoise_override": 0.85
-    },
-    "neon": {
-        "name": "⚡ Neón",
-        "description": "Transformación neón cyberpunk con luces vibrantes",
-        "style_prompt": "neon cyberpunk interior transformation, glowing neon lighting everywhere, electric blue and hot pink accents, fluorescent tube lighting, retro-futuristic atmosphere, vibrant glowing surfaces, cyberpunk aesthetic design, neon sign elements, electric color scheme, dark background with bright accents, empty neon-lit back wall for digital artwork display, creative neon redesign",
-        "display_order": 15,
-        "denoise_override": 0.85
-    },
-    "botanical": {
-        "name": "🌿 Botánico",
-        "description": "Transformación botánica con abundante vegetación tropical",
-        "style_prompt": "botanical interior transformation, lush tropical plants everywhere, jungle-like vegetation integration, living wall installations, abundant green foliage, tropical paradise atmosphere, natural botanical elements, biophilic design throughout, garden-like interior space, nature sanctuary feeling, empty botanical back wall for nature artwork display, creative botanical redesign",
-        "display_order": 16,
-        "denoise_override": 0.85
-    },
-    "extreme_colorful": {
-        "name": "🌈💥 Súper Colorido",
-        "description": "Transformación explosiva con colores extremadamente intensos",
-        "style_prompt": "(((explosive colorful interior transformation))), (((rainbow spectrum surfaces everywhere))), (((neon psychedelic design elements))), kaleidoscope color palette, fluorescent bright materials, electric vivid textures, chromatic explosion atmosphere, intense saturation throughout, vibrant color combinations, empty colorful back wall for rainbow artwork display, creative explosive redesign",
-        "display_order": 17,
-        "denoise_override": 0.9
-    },
-    "dark_moody": {
-        "name": "🖤 Oscuro y Atmosférico",
-        "description": "Transformación oscura con atmósfera misteriosa y dramática",
-        "style_prompt": "(((dark moody interior transformation))), (((gothic dramatic atmosphere))), (((mysterious shadow lighting))), noir aesthetic design, deep contrast materials, brooding darkness throughout, chiaroscuro lighting effects, dark sophisticated elements, mysterious ambiance, empty dark back wall for dramatic artwork display, creative dark redesign",
-        "display_order": 18,
-        "denoise_override": 0.85
-    },
-    "hyperrealistic": {
-        "name": "📸 Hiperrealista",
-        "description": "Transformación hiperrealista con detalles fotográficos perfectos",
-        "style_prompt": "(((hyperrealistic interior transformation))), (((photographic quality materials))), (((ultra-detailed surface textures))), 8K resolution finish, professional photography lighting, sharp focus on every detail, realistic material properties, lifelike surface rendering, perfect photorealistic quality, empty photorealistic back wall for detailed artwork display, creative hyperrealistic redesign",
-        "display_order": 19,
-        "denoise_override": 0.75
-    },
-    "test_main_force": {
-        "name": "🧪 TEST: Forzar Main Prompt",
-        "description": "Estilo de prueba que fuerza aplicación al nodo Main Prompt",
-        "style_prompt": "(((TESTING MAIN PROMPT OVERRIDE TRANSFORMATION))), (((experimental creative redesign))), forced main node application test, override style node behavior, main prompt injection test, creative testing transformation, empty testing back wall for experimental display",
-        "display_order": 20,
-        "force_main_prompt": True,
-        "force_target_node": "main_prompt",
-        "denoise_override": 0.9
-    }
+    
+   "minimalist": {
+    "name": "⚪ Minimalista",
+    "description": "Estilo minimalista moderno con líneas limpias y espacios despejados",
+    "style_prompt": "minimalist modern interior, clean white surfaces, geometric simple furniture, natural lighting, uncluttered space, zen atmosphere, pure lines, nordic influences, photorealistic, architectural photography",
+    "negative_prompt": "cluttered, ornate decorations, busy patterns, excessive furniture, dark colors, vintage elements, baroque style, multiple objects, crowded space, cartoon, anime, illustration, artwork on walls, paintings, prints, frames on walls",
+    "display_order": 2,
+    "denoise_override": 0.85,
+    "force_text2img": True
+},
+
+"luxury": {
+    "name": "✨ Lujoso",
+    "description": "Estilo de lujo premium con materiales de alta gama y elegancia",
+    "style_prompt": "luxury premium interior, marble surfaces, gold accents, crystal elements, velvet furniture, silk textures, elegant lighting, sophisticated atmosphere, high-end materials, opulent design, photorealistic, professional interior photography",
+    "negative_prompt": "cheap materials, plastic furniture, fluorescent lighting, cluttered space, industrial elements, rough textures, budget design, casual style, basic finishes, cartoon, anime, illustration, artwork on walls, paintings, prints, frames on walls",
+    "display_order": 3,
+    "denoise_override": 0.85,
+    "force_text2img": True
+},
+
+"industrial": {
+    "name": "🏭 Industrial",
+    "description": "Estilo industrial urbano con materiales crudos y acabados metálicos",
+    "style_prompt": "industrial loft interior, exposed concrete, steel beams, metal fixtures, raw materials, urban atmosphere, Edison bulb lighting, weathered textures, factory aesthetic, brick walls, photorealistic, architectural photography",
+    "negative_prompt": "ornate decorations, soft fabrics, pastel colors, delicate materials, classical elements, fancy furniture, decorative moldings, elegant finishes, luxury textures, cartoon, anime, illustration, artwork on walls, paintings, prints, frames on walls",
+    "display_order": 4,
+    "denoise_override": 0.85,
+    "force_text2img": True
+},
+
+"warm_cozy": {
+    "name": "🔥 Cálido y Acogedor",
+    "description": "Estilo cálido y acogedor con tonos tierra y materiales naturales",
+    "style_prompt": "warm cozy interior, natural wood textures, warm earth tones, soft lighting, comfortable furniture, wool textures, amber glow, fireplace atmosphere, rustic elements, inviting space, photorealistic, interior photography",
+    "negative_prompt": "cold colors, steel materials, harsh lighting, clinical atmosphere, stark white surfaces, modern minimalism, glass furniture, fluorescent lights, sterile environment, cartoon, anime, illustration, artwork on walls, paintings, prints, frames on walls",
+    "display_order": 5,
+    "denoise_override": 0.85,
+    "force_text2img": True
+},
+
+"futuristic": {
+    "name": "🚀 Futurista",
+    "description": "Estilo futurista high-tech con tecnología avanzada y materiales innovadores",
+    "style_prompt": "futuristic sci-fi interior, sleek surfaces, LED lighting, holographic elements, chrome finishes, glass panels, high-tech atmosphere, digital displays, cyberpunk influences, advanced materials, photorealistic, modern architecture",
+    "negative_prompt": "vintage elements, natural wood, rustic materials, traditional furniture, antique decorations, warm colors, organic textures, classical design, aged surfaces, cartoon, anime, illustration, artwork on walls, paintings, prints, frames on walls",
+    "display_order": 6,
+    "denoise_override": 0.85,
+    "force_text2img": True
+},
+
+"artistic_bohemian": {
+    "name": "🎭 Artístico Bohemio",
+    "description": "Estilo artístico bohemio con colores vibrantes y elementos creativos",
+    "style_prompt": "artistic bohemian interior, vibrant colors, eclectic furniture, creative textures, artistic elements, colorful fabrics, unique lighting, expressive atmosphere, gallery vibe, creative chaos, photorealistic, interior design photography",
+    "negative_prompt": "minimalist design, corporate style, sterile environment, monochrome colors, uniform furniture, stark lighting, conservative design, bland surfaces, business atmosphere, cartoon, anime, illustration, artwork on walls, paintings, prints, frames on walls",
+    "display_order": 7,
+    "denoise_override": 0.85,
+    "force_text2img": True
+}
 }
 
 # Configuración de nodos específicos para diferentes tipos de workflow
@@ -203,6 +130,22 @@ def get_style_prompt(style_id):
         return STYLE_PRESETS[style_id]["style_prompt"]
     return ""
 
+def get_style_negative_prompt(style_id):
+    """
+    Obtiene el prompt negativo de estilo para un ID dado
+    """
+    if style_id in STYLE_PRESETS:
+        return STYLE_PRESETS[style_id].get("negative_prompt", "")
+    return ""
+
+def style_forces_text2img(style_id):
+    """
+    Verifica si un estilo fuerza el modo text2img
+    """
+    if style_id in STYLE_PRESETS:
+        return STYLE_PRESETS[style_id].get("force_text2img", False)
+    return False
+
 def detect_workflow_type(workflow):
     """
     Detecta el tipo de workflow basado en los nodos presentes
@@ -219,7 +162,7 @@ def get_node_config(workflow_type):
 
 def apply_style_to_workflow(workflow, style_id, custom_node_id=None):
     """
-    Aplica un estilo al workflow modificando el nodo correspondiente y ajustando parámetros
+    Aplica un estilo al workflow modificando los nodos correspondientes (positivo y negativo)
     
     Args:
         workflow: El workflow JSON
@@ -229,15 +172,22 @@ def apply_style_to_workflow(workflow, style_id, custom_node_id=None):
     if style_id not in STYLE_PRESETS or style_id == "default":
         return workflow
     
-    style_prompt = get_style_prompt(style_id)
+    style_data = STYLE_PRESETS[style_id]
+    style_prompt = style_data.get("style_prompt", "")
+    negative_prompt = style_data.get("negative_prompt", "")
+    
     if not style_prompt:
         return workflow
     
     # Detectar tipo de workflow
     workflow_type = detect_workflow_type(workflow)
     
-    # 1. Aplicar el prompt del estilo al nodo correspondiente
-    style_data = STYLE_PRESETS.get(style_id, {})
+    print(f"🎨 Aplicando estilo '{style_id}' con TEXT2IMG forzado")
+    print(f"📝 Prompt positivo: {style_prompt[:100]}...")
+    if negative_prompt:
+        print(f"❌ Prompt negativo: {negative_prompt[:100]}...")
+    
+    # 1. Aplicar el prompt positivo del estilo
     force_main_prompt = style_data.get("force_main_prompt", False)
     
     if custom_node_id and custom_node_id in workflow:
@@ -245,39 +195,65 @@ def apply_style_to_workflow(workflow, style_id, custom_node_id=None):
         print(f"🎯 Estilo aplicado a nodo específico seleccionado: {custom_node_id}")
     elif force_main_prompt:
         # FORZAR aplicación al nodo Main Prompt (nodo 3 en workflows Searge)
-        # Esto es específico para el estilo de prueba test_main_force
         force_node_id = "3"  # Main Prompt en workflows Searge
         if force_node_id in workflow:
             workflow = apply_style_to_specific_node(workflow, style_prompt, force_node_id)
-            print(f"🔧 *** FORZANDO *** aplicación al Main Prompt {force_node_id} (estilo: {force_node_id})")
-            print(f"🔧 Prompt original: {workflow[force_node_id]['inputs'].get('prompt', '')[:50]}...")
-            print(f"🔧 Nuevo prompt con estilo: {workflow[force_node_id]['inputs'].get('prompt', '')[-100:]}")
+            print(f"🔧 *** FORZANDO *** aplicación al Main Prompt {force_node_id}")
         else:
-            print(f"❌ ERROR: No se encontró nodo Main Prompt {force_node_id} para forzar aplicación")
+            print(f"❌ ERROR: No se encontró nodo Main Prompt {force_node_id}")
     else:
-        # Usar la detección automática
+        # Usar la detección automática para nodo Style
         node_config = get_node_config(workflow_type)
         
-        # Aplicar estilo según el tipo de workflow
         if workflow_type == "searge" and node_config["style_node_id"]:
             style_node_id = node_config["style_node_id"]
             if style_node_id in workflow:
                 workflow = apply_style_to_specific_node(workflow, style_prompt, style_node_id)
-                print(f"✅ Estilo aplicado al nodo Style automático: {style_node_id}")
+                print(f"✅ Estilo aplicado al nodo Style: {style_node_id}")
         elif workflow_type == "basic":
-            # Para workflows básicos, añadir al prompt principal
             main_node_id = node_config["main_prompt_node_id"]
             if main_node_id in workflow:
                 workflow = apply_style_to_specific_node(workflow, style_prompt, main_node_id)
                 print(f"✅ Estilo aplicado al Main Prompt básico: {main_node_id}")
     
-    # 2. Ajustar parámetros de conditioning para mayor impacto visual
+    # 2. Aplicar el prompt negativo si existe
+    if negative_prompt:
+        workflow = apply_negative_style_to_workflow(workflow, negative_prompt, workflow_type)
+    
+    # 3. Ajustar parámetros de conditioning para mayor impacto visual
     if style_id != "default":
         workflow = adjust_conditioning_parameters_for_style(workflow, style_id, workflow_type)
     
-    # 3. Aplicar denoise_override si el estilo lo especifica
-    if style_id in STYLE_PRESETS and "denoise_override" in STYLE_PRESETS[style_id]:
-        workflow = apply_denoise_override(workflow, STYLE_PRESETS[style_id]["denoise_override"], workflow_type)
+    # 4. Aplicar denoise_override si el estilo lo especifica
+    if "denoise_override" in style_data:
+        workflow = apply_denoise_override(workflow, style_data["denoise_override"], workflow_type)
+    
+    return workflow
+
+def apply_negative_style_to_workflow(workflow, negative_prompt, workflow_type):
+    """
+    Aplica el prompt negativo del estilo a los nodos correspondientes
+    """
+    node_config = get_node_config(workflow_type)
+    
+    if workflow_type == "searge":
+        # En workflows Searge, buscar nodos de prompt negativo
+        for node_id, node_data in workflow.items():
+            if (isinstance(node_data, dict) and 
+                node_data.get('class_type') == 'SeargeTextInputV2'):
+                
+                meta_title = node_data.get("_meta", {}).get("title", "")
+                
+                # Aplicar a nodos de prompt negativo
+                if "Negative Prompt" in meta_title or "negative" in meta_title.lower():
+                    current_negative = node_data.get("inputs", {}).get("prompt", "")
+                    if current_negative.strip():
+                        # Añadir al negative prompt existente
+                        workflow[node_id]["inputs"]["prompt"] = f"{current_negative.strip()}, {negative_prompt}"
+                    else:
+                        workflow[node_id]["inputs"]["prompt"] = negative_prompt
+                    print(f"❌ Prompt negativo aplicado al nodo {node_id}")
+                    break
     
     return workflow
 

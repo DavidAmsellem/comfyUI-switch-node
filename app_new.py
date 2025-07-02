@@ -9,6 +9,9 @@ import random
 import copy
 import time
 import shutil
+import threading
+import concurrent.futures
+import stat
 from datetime import datetime
 from io import BytesIO
 
@@ -29,6 +32,10 @@ CORS(app)
 COMFYUI_HOST = os.getenv('COMFYUI_HOST', 'localhost')
 COMFYUI_PORT = os.getenv('COMFYUI_PORT', '8188')
 COMFYUI_URL = f"http://{COMFYUI_HOST}:{COMFYUI_PORT}"
+
+# Sistema de tracking de batches en progreso
+ACTIVE_BATCHES = {}  # batch_id -> batch_info
+BATCH_LOCK = threading.Lock()
 
 # Directorios principales (simplificados)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -230,9 +237,25 @@ def load_workflow(workflow_name):
 def update_workflow(workflow, image_filename, frame_color='black', style_id='default', style_node_id=None, output_subfolder=None):
     """
     Actualiza el workflow con la nueva imagen, configuraciones y estilo
+    
+    LÓGICA IMPLEMENTADA:
+    - Por defecto: img2img (más fiel a la imagen original)
+    - Con estilo aplicado: text2img + ControlNet depth/canny con strength 0.85
+    
     Retorna: workflow actualizado
     """
     workflow_copy = copy.deepcopy(workflow)
+    
+    # Determinar si se aplica estilo (para decidir img2img vs text2img)
+    has_style = style_id and style_id != 'default'
+    
+    # Verificar si el estilo fuerza text2img
+    forces_text2img = False
+    if has_style:
+        from style_presets import style_forces_text2img
+        forces_text2img = style_forces_text2img(style_id)
+    
+    log_info(f"🎯 Modo de procesamiento: {'TEXT2IMG + ControlNet 0.85 (estilo fuerza)' if forces_text2img else 'IMG2IMG (preservar original)'} (estilo: {style_id})")
     
     # Actualizar nodo LoadImage
     load_node_id = WORKFLOW_CONFIG['load_image_node_id']
@@ -250,16 +273,46 @@ def update_workflow(workflow, image_filename, frame_color='black', style_id='def
     else:
         log_warning(f"No se pudo actualizar el color del marco")
     
-    # Aplicar estilo predefinido
-    if style_id and style_id != 'default':
-        log_info(f"Aplicando estilo '{style_id}' al workflow...")
+    # CONFIGURAR MODO DE WORKFLOW Y CONTROLNET SEGÚN ESTILO
+    if forces_text2img:
+        # CON ESTILO QUE FUERZA TEXT2IMG: Cambiar a text2img y activar ControlNet con strength alta
+        log_info("🎨 Estilo aplicado: Configurando TEXT2IMG + ControlNet 0.85...")
         
-        # Obtener información del estilo
-        from style_presets import get_style_prompt
-        style_prompt = get_style_prompt(style_id)
-        log_info(f"Prompt del estilo: '{style_prompt}'")
+        # Cambiar a text2img
+        for node_id, node_data in workflow_copy.items():
+            if isinstance(node_data, dict) and node_data.get('class_type') == 'SeargeOperatingMode':
+                if 'inputs' in node_data and 'workflow_mode' in node_data['inputs']:
+                    node_data['inputs']['workflow_mode'] = 'text-to-image'
+                    log_success(f"Modo cambiado a TEXT2IMG en nodo {node_id}")
+        
+        # Configurar ControlNet Depth con strength 0.85
+        for node_id, node_data in workflow_copy.items():
+            if (isinstance(node_data, dict) and 
+                node_data.get('class_type') == 'SeargeControlnetAdapterV2' and
+                'inputs' in node_data and 
+                node_data['inputs'].get('controlnet_mode') == 'depth'):
+                
+                node_data['inputs']['strength'] = 0.85
+                log_success(f"ControlNet Depth strength actualizado a 0.85 en nodo {node_id}")
+        
+        # Configurar ControlNet Canny con strength 0.85
+        for node_id, node_data in workflow_copy.items():
+            if (isinstance(node_data, dict) and 
+                node_data.get('class_type') == 'SeargeControlnetAdapterV2' and
+                'inputs' in node_data and 
+                node_data['inputs'].get('controlnet_mode') == 'canny'):
+                
+                node_data['inputs']['strength'] = 0.85
+                log_success(f"ControlNet Canny strength actualizado a 0.85 en nodo {node_id}")
         
         # Aplicar el estilo
+        from style_presets import get_style_prompt, get_style_negative_prompt, style_forces_text2img
+        style_prompt = get_style_prompt(style_id)
+        negative_prompt = get_style_negative_prompt(style_id)
+        log_info(f"📝 Prompt del estilo: '{style_prompt[:100]}...'")
+        if negative_prompt:
+            log_info(f"❌ Prompt negativo del estilo: '{negative_prompt[:100]}...'")
+        
         workflow_copy = apply_style_to_workflow(workflow_copy, style_id, style_node_id)
         
         # Verificar que se aplicó correctamente
@@ -282,8 +335,36 @@ def update_workflow(workflow, image_filename, frame_color='black', style_id='def
                 log_info(f"Valor aplicado en nodo 6: '{applied_value}'")
             else:
                 log_warning("No se pudo verificar la aplicación del estilo")
-    elif style_node_id:
-        log_info(f"Nodo de estilo especificado ({style_node_id}) pero sin estilo seleccionado")
+    
+    else:
+        # SIN ESTILO O ESTILO QUE NO FUERZA TEXT2IMG: Asegurar img2img y ControlNet con strength baja
+        log_info("📷 Sin estilo o estilo compatible: Manteniendo IMG2IMG...")
+        
+        # Asegurar img2img
+        for node_id, node_data in workflow_copy.items():
+            if isinstance(node_data, dict) and node_data.get('class_type') == 'SeargeOperatingMode':
+                if 'inputs' in node_data and 'workflow_mode' in node_data['inputs']:
+                    node_data['inputs']['workflow_mode'] = 'image-to-image'
+                    log_success(f"Modo mantenido en IMG2IMG en nodo {node_id}")
+        
+        # Configurar ControlNet con strength más baja para preservar imagen original
+        for node_id, node_data in workflow_copy.items():
+            if (isinstance(node_data, dict) and 
+                node_data.get('class_type') == 'SeargeControlnetAdapterV2' and
+                'inputs' in node_data and 
+                node_data['inputs'].get('controlnet_mode') == 'depth'):
+                
+                node_data['inputs']['strength'] = 0.2  # Strength baja para img2img
+                log_success(f"ControlNet Depth strength mantenido en 0.2 para IMG2IMG en nodo {node_id}")
+        
+        for node_id, node_data in workflow_copy.items():
+            if (isinstance(node_data, dict) and 
+                node_data.get('class_type') == 'SeargeControlnetAdapterV2' and
+                'inputs' in node_data and 
+                node_data['inputs'].get('controlnet_mode') == 'canny'):
+                
+                node_data['inputs']['strength'] = 0.71  # Strength actual para img2img
+                log_success(f"ControlNet Canny strength mantenido en 0.71 para IMG2IMG en nodo {node_id}")
     
     # Actualizar nodos SaveImage (subfolder si se especifica)
     if output_subfolder:
@@ -301,7 +382,7 @@ def update_workflow(workflow, image_filename, frame_color='black', style_id='def
             new_seed = random.randint(1, 2**32-1)
             node_data['inputs']['seed'] = new_seed
     
-    log_success("Workflow actualizado correctamente")
+    log_success(f"✅ Workflow actualizado correctamente en modo: {'TEXT2IMG + ControlNet 0.85' if forces_text2img else 'IMG2IMG (fiel al original)'}")
     return workflow_copy
 
 # ==================== COMUNICACIÓN CON COMFYUI ====================
@@ -647,10 +728,13 @@ def process_image():
                 log_success(f"Imagen copiada: {dest_path}")
         
         # Crear respuesta
+        processing_mode = "text2img + controlnet_0.85" if (style_id and style_id != 'default') else "img2img_preserving_original"
+        
         response = {
             "success": True,
             "prompt_id": prompt_id,
             "workflow_used": workflow_name,
+            "processing_mode": processing_mode,
             "frame_color": frame_color,
             "style_used": style_id,
             "style_node_used": style_node_id if style_node_id else "auto-detectado",
@@ -662,7 +746,7 @@ def process_image():
             },
             "generated_images": saved_images,
             "total_images": len(saved_images),
-            "message": f"Procesamiento completado. {len(saved_images)} imágenes generadas."
+            "message": f"Procesamiento completado en modo {processing_mode}. {len(saved_images)} imágenes generadas."
         }
         
         log_success("=== PROCESAMIENTO COMPLETADO ===")
@@ -722,6 +806,43 @@ def get_workflow_nodes(workflow_name):
         log_error(f"Error obteniendo nodos del workflow {workflow_name}: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/batch-status/<batch_id>', methods=['GET'])
+def get_batch_status(batch_id):
+    """
+    Obtiene el status actual de un batch en progreso
+    """
+    with BATCH_LOCK:
+        if batch_id not in ACTIVE_BATCHES:
+            return jsonify({"error": "Batch no encontrado"}), 404
+        
+        batch_info = ACTIVE_BATCHES[batch_id].copy()
+    
+    return jsonify(batch_info)
+
+@app.route('/batch-status/<batch_id>', methods=['DELETE'])
+def clear_batch_status(batch_id):
+    """
+    Limpia un batch completado del tracking
+    """
+    with BATCH_LOCK:
+        if batch_id in ACTIVE_BATCHES:
+            del ACTIVE_BATCHES[batch_id]
+            return jsonify({"success": True, "message": f"Batch {batch_id} eliminado del tracking"})
+        else:
+            return jsonify({"error": "Batch no encontrado"}), 404
+
+@app.route('/active-batches', methods=['GET'])
+def get_active_batches():
+    """
+    Obtiene la lista de todos los batches activos
+    """
+    with BATCH_LOCK:
+        batches = {bid: {"status": info["status"], "total_workflows": info["total_workflows"], 
+                        "completed_workflows": info["completed_workflows"]} 
+                  for bid, info in ACTIVE_BATCHES.items()}
+    
+    return jsonify({"active_batches": batches, "count": len(batches)})
+
 @app.route('/')
 def serve_client():
     """Sirve el cliente web principal"""
@@ -752,12 +873,14 @@ def serve_fixed_client():
 
 @app.route('/web_client.html')
 def serve_original_client():
-    """Sirve el cliente web original"""
-    client_path = os.path.join(BASE_DIR, 'web_client.html')
-    if os.path.exists(client_path):
-        return send_file(client_path)
-    else:
-        return jsonify({"error": "Cliente web original no encontrado"}), 404
+    """Servir el cliente web original (fallback)"""
+    try:
+        return send_file('web_client.html')
+    except FileNotFoundError:
+        return jsonify({
+            "error": "Cliente web original no encontrado",
+            "message": "Use /web_client_fixed.html en su lugar"
+        }), 404
 
 # ==================== FUNCIONES AUXILIARES ADICIONALES ====================
 
@@ -887,36 +1010,67 @@ def process_batch():
         # Generar ID único para este batch
         batch_id = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + str(uuid.uuid4())[:8]
         
-        start_time = time.time()
+        # Inicializar tracking del batch
+        with BATCH_LOCK:
+            ACTIVE_BATCHES[batch_id] = {
+                "batch_id": batch_id,
+                "status": "starting",
+                "total_workflows": len(filtered_workflows),
+                "completed_workflows": 0,
+                "successful": 0,
+                "failed": 0,
+                "results": [],
+                "start_time": time.time(),
+                "estimated_completion": None,
+                "current_operation": "Iniciando procesamiento...",
+                "workflow_list": [w["id"] for w in filtered_workflows]
+            }
         
-        # ¡PROCESAR TODOS LOS WORKFLOWS SIMULTÁNEAMENTE!
         log_info(f"🚀 Iniciando procesamiento simultáneo de {len(filtered_workflows)} workflows...")
-        results = process_all_workflows_simultáneamente(image_file, filtered_workflows, common_params, batch_id)
+        log_info(f"📊 Batch ID para tracking: {batch_id}")
         
-        total_time = time.time() - start_time
+        # Guardar el contenido de la imagen en memoria antes de iniciar el thread
+        image_file.seek(0)
+        image_data = BytesIO(image_file.read())
+        image_data.seek(0)
         
-        # Compilar estadísticas
-        successful_results = [r for r in results if r.get("success", False)]
-        failed_results = [r for r in results if not r.get("success", False)]
+        # Iniciar procesamiento en thread separado
+        def process_batch_async():
+            try:
+                results = process_all_workflows_simultáneamente_with_tracking(
+                    image_data, filtered_workflows, common_params, batch_id
+                )
+                
+                # Finalizar batch
+                with BATCH_LOCK:
+                    if batch_id in ACTIVE_BATCHES:
+                        batch_info = ACTIVE_BATCHES[batch_id]
+                        batch_info["status"] = "completed"
+                        batch_info["total_processing_time"] = round(time.time() - batch_info["start_time"], 2)
+                        batch_info["final_results"] = results
+                        
+            except Exception as e:
+                log_error(f"❌ Error en procesamiento async de batch {batch_id}: {str(e)}")
+                with BATCH_LOCK:
+                    if batch_id in ACTIVE_BATCHES:
+                        ACTIVE_BATCHES[batch_id]["status"] = "error"
+                        ACTIVE_BATCHES[batch_id]["error"] = str(e)
         
-        log_success(f"✅ Batch completado en {total_time:.1f}s: {len(successful_results)} exitosos, {len(failed_results)} fallos")
+        # Iniciar thread
+        thread = threading.Thread(target=process_batch_async)
+        thread.daemon = True
+        thread.start()
         
+        # Retornar inmediatamente el ID del batch para tracking
         return jsonify({
             "success": True,
             "batch_id": batch_id,
-            "processing_mode": "simultaneous",
+            "processing_mode": "asynchronous_with_tracking",
+            "status": "processing",
             "total_workflows": len(filtered_workflows),
-            "successful": len(successful_results),
-            "failed": len(failed_results),
-            "total_processing_time": round(total_time, 2),
-            "average_time_per_workflow": round(total_time / len(filtered_workflows), 2) if filtered_workflows else 0,
-            "results": results,
-            "summary": {
-                "workflows_processed": [r["workflow_id"] for r in results],
-                "successful_workflows": [r["workflow_id"] for r in successful_results],
-                "failed_workflows": [r["workflow_id"] for r in failed_results],
-                "total_images_generated": sum(len(r.get("generated_images", [])) for r in successful_results)
-            },
+            "message": "Batch iniciado. Use GET /batch-status/{batch_id} para consultar progreso",
+            "status_endpoint": f"/batch-status/{batch_id}",
+            "workflow_list": [w["id"] for w in filtered_workflows],
             "batch_config": batch_config,
             "common_params": common_params
         })
@@ -1042,21 +1196,63 @@ def process_single_workflow_for_batch(image_file, workflow_info, common_params):
             "processing_time": 0
         }
 
-def process_all_workflows_simultáneamente(image_file, workflows, common_params, batch_id):
+def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, common_params, batch_id):
     """
-    Procesa todos los workflows simultáneamente enviándolos a ComfyUI de una vez
+    Procesa todos los workflows simultáneamente con tracking en tiempo real
+    image_data: BytesIO object con el contenido de la imagen
     """
-    import threading
     import concurrent.futures
     
     results = []
     submitted_prompts = {}  # prompt_id -> workflow_info
     
+    # Actualizar status: enviando workflows
+    with BATCH_LOCK:
+        if batch_id in ACTIVE_BATCHES:
+            ACTIVE_BATCHES[batch_id]["status"] = "submitting"
+            ACTIVE_BATCHES[batch_id]["current_operation"] = "Enviando workflows a ComfyUI..."
+    
     log_info(f"🚀 Enviando {len(workflows)} workflows simultáneamente a ComfyUI...")
     
+    # Pre-cargar la imagen una vez para todos los workflows
+    log_info("📷 Pre-cargando imagen para todos los workflows...")
+    try:
+        image_data.seek(0)
+        master_image = Image.open(image_data)
+        
+        # Convertir a RGB si es necesario
+        if master_image.mode in ('RGBA', 'LA', 'P'):
+            background = Image.new('RGB', master_image.size, (255, 255, 255))
+            if master_image.mode == 'P':
+                master_image = master_image.convert('RGBA')
+            background.paste(master_image, mask=master_image.split()[-1] if master_image.mode in ('RGBA', 'LA') else None)
+            master_image = background
+        elif master_image.mode != 'RGB':
+            master_image = master_image.convert('RGB')
+            
+        # Redimensionar si es muy grande
+        max_size = 2048
+        if master_image.width > max_size or master_image.height > max_size:
+            master_image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+            log_info(f"📏 Imagen redimensionada a: {master_image.width}x{master_image.height}")
+            
+        log_success("✅ Imagen pre-cargada correctamente")
+    except Exception as e:
+        log_error(f"❌ Error pre-cargando imagen: {str(e)}")
+        with BATCH_LOCK:
+            if batch_id in ACTIVE_BATCHES:
+                ACTIVE_BATCHES[batch_id]["status"] = "error"
+                ACTIVE_BATCHES[batch_id]["error"] = f"Error pre-cargando imagen: {str(e)}"
+        return []
+
     # Fase 1: Preparar y enviar todos los workflows a ComfyUI
     for i, workflow_info in enumerate(workflows):
         try:
+            # Actualizar progreso
+            with BATCH_LOCK:
+                if batch_id in ACTIVE_BATCHES:
+                    ACTIVE_BATCHES[batch_id]["current_operation"] = f"Enviando {i+1}/{len(workflows)}: {workflow_info['id']}"
+            
             log_info(f"📤 Preparando {i+1}/{len(workflows)}: {workflow_info['id']}")
             
             # Guardar imagen temporal única para cada workflow
@@ -1065,10 +1261,8 @@ def process_all_workflows_simultáneamente(image_file, workflows, common_params,
             
             input_path = os.path.join(COMFYUI_INPUT_DIR, unique_filename)
             
-            # Resetear el file pointer y guardar imagen
-            image_file.seek(0)
-            image = Image.open(image_file.stream)
-            image.save(input_path, format='PNG')
+            # Guardar copia de la imagen pre-cargada
+            master_image.save(input_path, format='PNG', optimize=False)
             
             # Cargar y actualizar workflow
             workflow = load_workflow(workflow_info["id"])
@@ -1093,39 +1287,72 @@ def process_all_workflows_simultáneamente(image_file, workflows, common_params,
                 log_success(f"✅ Enviado {i+1}/{len(workflows)}: {workflow_info['id']} (prompt_id: {prompt_id})")
             else:
                 log_error(f"❌ Error enviando {i+1}/{len(workflows)}: {workflow_info['id']}")
-                results.append({
+                result = {
                     "workflow_id": workflow_info["id"],
                     "workflow_info": workflow_info,
                     "success": False,
                     "error": "Error enviando workflow a ComfyUI",
                     "processing_time": 0
-                })
+                }
+                results.append(result)
+                
+                # Actualizar tracking inmediatamente
+                with BATCH_LOCK:
+                    if batch_id in ACTIVE_BATCHES:
+                        batch_info = ACTIVE_BATCHES[batch_id]
+                        batch_info["completed_workflows"] += 1
+                        batch_info["failed"] += 1
+                        batch_info["results"].append(result)
                 
         except Exception as e:
             log_error(f"❌ Error preparando workflow {workflow_info['id']}: {str(e)}")
-            results.append({
+            result = {
                 "workflow_id": workflow_info["id"],
                 "workflow_info": workflow_info,
                 "success": False,
                 "error": f"Error preparando workflow: {str(e)}",
                 "processing_time": 0
-            })
+            }
+            results.append(result)
+            
+            # Actualizar tracking inmediatamente
+            with BATCH_LOCK:
+                if batch_id in ACTIVE_BATCHES:
+                    batch_info = ACTIVE_BATCHES[batch_id]
+                    batch_info["completed_workflows"] += 1
+                    batch_info["failed"] += 1
+                    batch_info["results"].append(result)
     
     if not submitted_prompts:
         log_error("❌ No se pudo enviar ningún workflow a ComfyUI")
+        with BATCH_LOCK:
+            if batch_id in ACTIVE_BATCHES:
+                ACTIVE_BATCHES[batch_id]["status"] = "error"
+                ACTIVE_BATCHES[batch_id]["error"] = "No se pudo enviar ningún workflow"
         return results
+    
+    # Actualizar status: procesando
+    with BATCH_LOCK:
+        if batch_id in ACTIVE_BATCHES:
+            ACTIVE_BATCHES[batch_id]["status"] = "processing"
+            ACTIVE_BATCHES[batch_id]["current_operation"] = f"Procesando {len(submitted_prompts)} workflows..."
     
     log_info(f"🏁 {len(submitted_prompts)} workflows enviados a ComfyUI. Esperando resultados...")
     
-    # Fase 2: Esperar y recoger resultados simultáneamente
-    def wait_for_single_workflow(prompt_id, workflow_data):
-        """Espera el resultado de un workflow específico"""
+    # Fase 2: Esperar y recoger resultados simultáneamente CON TRACKING
+    def wait_for_single_workflow_with_tracking(prompt_id, workflow_data, master_image):
+        """Espera el resultado de un workflow específico CON TRACKING"""
         try:
             start_time = workflow_data["submit_time"]
             workflow_info = workflow_data["workflow_info"]
             index = workflow_data["index"]
             
             log_info(f"⏳ Esperando resultado {index+1}: {workflow_info['id']} (prompt_id: {prompt_id})")
+            
+            # Actualizar status individual
+            with BATCH_LOCK:
+                if batch_id in ACTIVE_BATCHES:
+                    ACTIVE_BATCHES[batch_id]["current_operation"] = f"Procesando: {workflow_info['id']}"
             
             # Esperar completion de este workflow específico
             outputs = wait_for_completion(prompt_id, timeout=600)  # 10 minutos timeout
@@ -1151,15 +1378,11 @@ def process_all_workflows_simultáneamente(image_file, workflows, common_params,
             
             # Guardar imagen original en el directorio del workflow
             original_dest = os.path.join(workflow_output_dir, 'original.png')
-            image_file.seek(0)
-            image = Image.open(image_file.stream)
-            image.save(original_dest, format='PNG')
+            master_image.save(original_dest, format='PNG')
             
             processing_time = time.time() - start_time
             
-            log_success(f"✅ Completado {index+1}: {workflow_info['id']} en {processing_time:.1f}s ({len(saved_images)} imágenes)")
-            
-            return {
+            result = {
                 "workflow_id": workflow_info["id"],
                 "workflow_info": workflow_info,
                 "success": True,
@@ -1169,28 +1392,64 @@ def process_all_workflows_simultáneamente(image_file, workflows, common_params,
                     "url": f"/get-image/batch_{workflow_info['id'].replace('/', '_')}/original.png"
                 },
                 "processing_time": round(processing_time, 2),
-                "prompt_id": prompt_id
+                "prompt_id": prompt_id,
+                "completion_time": datetime.now().isoformat()
             }
+            
+            log_success(f"✅ Completado {index+1}: {workflow_info['id']} en {processing_time:.1f}s ({len(saved_images)} imágenes)")
+            
+            # *** ACTUALIZAR TRACKING INMEDIATAMENTE CUANDO TERMINA ***
+            with BATCH_LOCK:
+                if batch_id in ACTIVE_BATCHES:
+                    batch_info = ACTIVE_BATCHES[batch_id]
+                    batch_info["completed_workflows"] += 1
+                    batch_info["successful"] += 1
+                    batch_info["results"].append(result)
+                    
+                    # Calcular estimación de tiempo restante
+                    if batch_info["completed_workflows"] > 0:
+                        elapsed_time = time.time() - batch_info["start_time"]
+                        avg_time_per_workflow = elapsed_time / batch_info["completed_workflows"]
+                        remaining_workflows = batch_info["total_workflows"] - batch_info["completed_workflows"]
+                        estimated_remaining = avg_time_per_workflow * remaining_workflows
+                        batch_info["estimated_completion"] = time.time() + estimated_remaining
+                    
+                    batch_info["current_operation"] = f"Completado: {workflow_info['id']} ({batch_info['completed_workflows']}/{batch_info['total_workflows']})"
+            
+            return result
             
         except Exception as e:
             processing_time = time.time() - workflow_data["submit_time"]
             log_error(f"❌ Error procesando {workflow_info['id']}: {str(e)}")
-            return {
+            
+            result = {
                 "workflow_id": workflow_info["id"],
                 "workflow_info": workflow_info,
                 "success": False,
                 "error": str(e),
                 "processing_time": round(processing_time, 2),
-                "prompt_id": prompt_id
+                "prompt_id": prompt_id,
+                "completion_time": datetime.now().isoformat()
             }
+            
+            # *** ACTUALIZAR TRACKING INMEDIATAMENTE EN CASO DE ERROR ***
+            with BATCH_LOCK:
+                if batch_id in ACTIVE_BATCHES:
+                    batch_info = ACTIVE_BATCHES[batch_id]
+                    batch_info["completed_workflows"] += 1
+                    batch_info["failed"] += 1
+                    batch_info["results"].append(result)
+                    batch_info["current_operation"] = f"Error en: {workflow_info['id']} ({batch_info['completed_workflows']}/{batch_info['total_workflows']})"
+            
+            return result
     
     # Usar ThreadPoolExecutor para esperar todos los workflows en paralelo
     max_workers = min(len(submitted_prompts), 10)  # Máximo 10 hilos concurrentes
     
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        # Enviar todas las tareas de espera
+        # Enviar todas las tareas de espera (crear copia de imagen para cada hilo)
         future_to_prompt = {
-            executor.submit(wait_for_single_workflow, prompt_id, workflow_data): prompt_id 
+            executor.submit(wait_for_single_workflow_with_tracking, prompt_id, workflow_data, master_image.copy()): prompt_id 
             for prompt_id, workflow_data in submitted_prompts.items()
         }
         
@@ -1207,14 +1466,23 @@ def process_all_workflows_simultáneamente(image_file, workflows, common_params,
                 workflow_data = submitted_prompts[prompt_id]
                 workflow_info = workflow_data["workflow_info"]
                 log_error(f"❌ Error obteniendo resultado de {workflow_info['id']}: {str(e)}")
-                results.append({
+                error_result = {
                     "workflow_id": workflow_info["id"],
                     "workflow_info": workflow_info,
                     "success": False,
                     "error": f"Error obteniendo resultado: {str(e)}",
                     "processing_time": 0,
                     "prompt_id": prompt_id
-                })
+                }
+                results.append(error_result)
+                
+                # Actualizar tracking
+                with BATCH_LOCK:
+                    if batch_id in ACTIVE_BATCHES:
+                        batch_info = ACTIVE_BATCHES[batch_id]
+                        batch_info["completed_workflows"] += 1
+                        batch_info["failed"] += 1
+                        batch_info["results"].append(error_result)
     
     # Ordenar resultados por el índice original para mantener orden
     results.sort(key=lambda x: next(
@@ -1223,7 +1491,7 @@ def process_all_workflows_simultáneamente(image_file, workflows, common_params,
     ))
     
     return results
-        
+
 # ==================== INICIO DEL SERVIDOR ====================
 
 if __name__ == '__main__':

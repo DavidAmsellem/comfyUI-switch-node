@@ -514,7 +514,7 @@
   },
   "610": {
     "inputs": {
-      "seed": 71394652411814,
+      "seed": 1018044306406491,
       "image_size_preset": "none - use settings",
       "image_width": 1200,
       "image_height": 1200,
@@ -574,7 +574,7 @@
   },
   "613": {
     "inputs": {
-      "denoise": 0.5300000000000001,
+      "denoise": 0.6100000000000001,
       "inpaint_mask_blur": 8,
       "inpaint_mask_mode": "masked - full",
       "data": [
@@ -612,7 +612,7 @@
     "inputs": {
       "dynamic_cfg_method": "rescale",
       "dynamic_cfg_factor": 0.4000000000000001,
-      "refiner_detail_boost": 0.20000000000000004,
+      "refiner_detail_boost": 0.5500000000000002,
       "contrast_factor": 0.05000000000000001,
       "saturation_factor": 0.10000000000000002,
       "latent_detailer": "none",
@@ -1012,9 +1012,9 @@
   },
   "681": {
     "inputs": {
-      "controlnet_mode": "none",
+      "controlnet_mode": "canny",
       "controlnet_preprocessor": true,
-      "strength": 0.4600000000000001,
+      "strength": 0.26000000000000006,
       "low_threshold": 0,
       "high_threshold": 1,
       "start_percent": 0,
@@ -1243,7 +1243,7 @@
   },
   "699": {
     "inputs": {
-      "image": "cuadro-bathroom-minimalism-V60x802.png"
+      "image": "e6mmqmducags9ema81vqg4lssvin112lzmqib9g8jpg.jpg"
     },
     "class_type": "LoadImage",
     "_meta": {

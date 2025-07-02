@@ -518,7 +518,7 @@
       "image_size_preset": "none - use settings",
       "image_width": 1200,
       "image_height": 1200,
-      "steps": 28,
+      "steps": 30,
       "cfg": 5,
       "sampler_preset": "1 - DPM++ 2M Karras",
       "sampler_name": "dpmpp_2m",
@@ -574,7 +574,7 @@
   },
   "613": {
     "inputs": {
-      "denoise": 0.5500000000000002,
+      "denoise": 0.6000000000000001,
       "inpaint_mask_blur": 8,
       "inpaint_mask_mode": "masked - full",
       "data": [
@@ -612,7 +612,7 @@
     "inputs": {
       "dynamic_cfg_method": "rescale",
       "dynamic_cfg_factor": 0.4000000000000001,
-      "refiner_detail_boost": 0.20000000000000004,
+      "refiner_detail_boost": 0.6000000000000001,
       "contrast_factor": 0.05000000000000001,
       "saturation_factor": 0.10000000000000002,
       "latent_detailer": "none",
@@ -1012,9 +1012,9 @@
   },
   "681": {
     "inputs": {
-      "controlnet_mode": "none",
+      "controlnet_mode": "canny",
       "controlnet_preprocessor": true,
-      "strength": 1.0000000000000002,
+      "strength": 0.20000000000000004,
       "low_threshold": 0,
       "high_threshold": 1,
       "start_percent": 0,
@@ -1234,7 +1234,7 @@
   },
   "698": {
     "inputs": {
-      "image": "60x80-h-top.png"
+      "image": "60x80-high-close-lss.png"
     },
     "class_type": "LoadImage",
     "_meta": {

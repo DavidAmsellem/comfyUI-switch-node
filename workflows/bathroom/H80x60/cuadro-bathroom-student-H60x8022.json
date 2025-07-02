@@ -1,7 +1,7 @@
 {
   "3": {
     "inputs": {
-      "prompt": "a modern minimalist bathroom, clean and empty matte back wall, soft neutral lighting, centered bathtub with natural fabric, smooth wooden floor with subtle grain, frontal view, symmetrical composition, warm and cozy atmosphere, no decor on the wall\n"
+      "prompt": "a clean modern bathroom with a plain back wall, front view, no decoration, soft lighting, minimalist\n"
     },
     "class_type": "SeargeTextInputV2",
     "_meta": {
@@ -85,7 +85,7 @@
   },
   "268": {
     "inputs": {
-      "image": "cuadro-bathroom-old-V60x802.png"
+      "image": "open.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -94,7 +94,7 @@
   },
   "269": {
     "inputs": {
-      "image": "cuadro-bathroom-old-V60x802.png"
+      "image": "open.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -103,7 +103,7 @@
   },
   "463": {
     "inputs": {
-      "enabled": true,
+      "enabled": false,
       "images": [
         "573",
         0
@@ -388,7 +388,7 @@
   },
   "540": {
     "inputs": {
-      "stage": "none - skip",
+      "stage": "upscaling",
       "input_from": "data stream",
       "output_to": "data stream",
       "data": [
@@ -418,7 +418,7 @@
   },
   "542": {
     "inputs": {
-      "stage": "none - skip",
+      "stage": "high resolution",
       "input_from": "data stream",
       "output_to": "data stream",
       "data": [
@@ -514,12 +514,12 @@
   },
   "610": {
     "inputs": {
-      "seed": 603142351471952,
+      "seed": 137732769632549,
       "image_size_preset": "none - use settings",
       "image_width": 1200,
       "image_height": 1200,
-      "steps": 30,
-      "cfg": 5,
+      "steps": 28,
+      "cfg": 6,
       "sampler_preset": "1 - DPM++ 2M Karras",
       "sampler_name": "dpmpp_2m",
       "scheduler": "karras",
@@ -536,7 +536,7 @@
   },
   "611": {
     "inputs": {
-      "workflow_mode": "image-to-image",
+      "workflow_mode": "text-to-image",
       "prompting_mode": "default - all prompts",
       "batch_size": 1,
       "data": [
@@ -574,7 +574,7 @@
   },
   "613": {
     "inputs": {
-      "denoise": 0.5900000000000001,
+      "denoise": 0.15000000000000002,
       "inpaint_mask_blur": 8,
       "inpaint_mask_mode": "masked - full",
       "data": [
@@ -612,7 +612,7 @@
     "inputs": {
       "dynamic_cfg_method": "rescale",
       "dynamic_cfg_factor": 0.4000000000000001,
-      "refiner_detail_boost": 0.5500000000000002,
+      "refiner_detail_boost": 0.7000000000000002,
       "contrast_factor": 0.05000000000000001,
       "saturation_factor": 0.10000000000000002,
       "latent_detailer": "none",
@@ -653,7 +653,7 @@
   "618": {
     "inputs": {
       "hires_mode": "none",
-      "hires_scale": "1.25x",
+      "hires_scale": "2x",
       "hires_denoise": 0.20000000000000004,
       "hires_softness": 0.10000000000000002,
       "hires_detail_boost": 0.5000000000000001,
@@ -805,7 +805,7 @@
   },
   "647": {
     "inputs": {
-      "image": "cuadro-bathroom-old-V60x802.png",
+      "image": "example.png",
       "channel": "green"
     },
     "class_type": "LoadImageMask",
@@ -815,7 +815,7 @@
   },
   "658": {
     "inputs": {
-      "image": "cuadro-bathroom-old-V60x802.png"
+      "image": "open.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -850,7 +850,7 @@
   },
   "668": {
     "inputs": {
-      "image": "cuadro-bathroom-old-V60x802.png"
+      "image": "open.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -859,7 +859,7 @@
   },
   "669": {
     "inputs": {
-      "image": "cuadro-bathroom-old-V60x802.png"
+      "image": "open.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -881,7 +881,7 @@
   },
   "671": {
     "inputs": {
-      "image": "cuadro-bathroom-old-V60x802.png"
+      "image": "open.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -903,7 +903,7 @@
   },
   "673": {
     "inputs": {
-      "image": "cuadro-bathroom-old-V60x802.png"
+      "image": "open.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -970,7 +970,7 @@
       "start_percent": 0,
       "end_percent": 1,
       "noise_augmentation": 0,
-      "revision_enhancer": false,
+      "revision_enhancer": true,
       "data": [
         "678",
         0
@@ -989,7 +989,7 @@
     "inputs": {
       "controlnet_mode": "depth",
       "controlnet_preprocessor": true,
-      "strength": 0.4000000000000001,
+      "strength": 0.7000000000000002,
       "low_threshold": 0,
       "high_threshold": 1,
       "start_percent": 0,
@@ -1014,7 +1014,7 @@
     "inputs": {
       "controlnet_mode": "canny",
       "controlnet_preprocessor": true,
-      "strength": 0.32000000000000006,
+      "strength": 0.8600000000000002,
       "low_threshold": 0,
       "high_threshold": 1,
       "start_percent": 0,
@@ -1039,7 +1039,7 @@
     "inputs": {
       "controlnet_mode": "none",
       "controlnet_preprocessor": true,
-      "strength": 1.0000000000000002,
+      "strength": 0.8500000000000002,
       "low_threshold": 0,
       "high_threshold": 1,
       "start_percent": 0,
@@ -1221,7 +1221,7 @@
   },
   "698": {
     "inputs": {
-      "image": "60x80-high-close-d.png"
+      "image": "60x80-hmid-top.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -1230,7 +1230,7 @@
   },
   "699": {
     "inputs": {
-      "image": "e6mmqmducags9ema81vqg4lssvin112lzmqib9g8jpg.jpg"
+      "image": "cuadro-bathroom-minimalism-V60x802.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -1271,18 +1271,6 @@
       "title": "Cargar Modelo de Escala Superior"
     }
   },
-  "703": {
-    "inputs": {
-      "images": [
-        "701",
-        0
-      ]
-    },
-    "class_type": "PreviewImage",
-    "_meta": {
-      "title": "Vista previa de imagen"
-    }
-  },
   "704": {
     "inputs": {
       "filename_prefix": "ComfyUI",
@@ -1294,6 +1282,18 @@
     "class_type": "SaveImage",
     "_meta": {
       "title": "Guardar Imagen"
+    }
+  },
+  "706": {
+    "inputs": {
+      "images": [
+        "701",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Vista previa de imagen"
     }
   }
 }
