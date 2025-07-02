@@ -737,7 +737,7 @@ def serve_client():
             return jsonify({
                 "message": "ComfyUI API REST - Nueva implementación",
                 "version": "2.0.0",
-                "endpoints": ["/health", "/workflows", "/styles", "/workflow-nodes/<workflow_name>", "/process-image", "/get-image"],
+                "endpoints": ["/health", "/workflows", "/styles", "/workflow-nodes/<workflow_name>", "/process-image", "/process-batch", "/get-image"],
                 "web_clients": ["/web_client_fixed.html", "/web_client.html"]
             })
 
@@ -759,24 +759,498 @@ def serve_original_client():
     else:
         return jsonify({"error": "Cliente web original no encontrado"}), 404
 
-# ==================== INICIO DE LA APLICACIÓN ====================
+# ==================== FUNCIONES AUXILIARES ADICIONALES ====================
+
+def is_allowed_file(filename):
+    """Verifica si el archivo tiene una extensión permitida (alias de allowed_file)"""
+    return allowed_file(filename)
+
+def get_available_workflows():
+    """Obtiene la lista de workflows disponibles"""
+    workflows = []
+    
+    if os.path.exists(WORKFLOWS_DIR):
+        for root, dirs, files in os.walk(WORKFLOWS_DIR):
+            for filename in files:
+                if filename.endswith('.json'):
+                    # Obtener la ruta relativa desde workflows/
+                    rel_path = os.path.relpath(os.path.join(root, filename), WORKFLOWS_DIR)
+                    path_parts = rel_path.replace('\\', '/').split('/')
+                    
+                    # Ejemplo: bathroom/H80x60/cuadro-bathroom-open-H60x802.json
+                    if len(path_parts) >= 3:
+                        room_type = path_parts[0]  # bathroom
+                        orientation = path_parts[1]  # H80x60
+                        workflow_name = path_parts[2].replace('.json', '')  # cuadro-bathroom-open-H60x802
+                        
+                        # ID único para el workflow
+                        workflow_id = f"{room_type}/{orientation}/{workflow_name}"
+                        
+                        workflow_info = {
+                            "id": workflow_id,
+                            "name": workflow_name,
+                            "filename": filename,
+                            "room_type": room_type,
+                            "orientation": orientation,
+                            "path": rel_path.replace('\\', '/'),
+                            "status": "available"
+                        }
+                        
+                        workflows.append(workflow_info)
+    
+    return workflows
+
+# ==================== PROCESAMIENTO EN LOTE ====================
+
+@app.route('/process-batch', methods=['POST'])
+def process_batch():
+    """
+    Procesa una imagen con múltiples workflows simultáneamente
+    """
+    try:
+        log_info("📦 Iniciando procesamiento en lote...")
+        
+        # Validar datos de entrada
+        if 'image' not in request.files or not request.files['image']:
+            return jsonify({"error": "No se encontró archivo de imagen"}), 400
+            
+        image_file = request.files['image']
+        
+        if not is_allowed_file(image_file.filename):
+            return jsonify({"error": f"Formato de archivo no permitido. Usar: {', '.join(WORKFLOW_CONFIG['allowed_extensions'])}"}), 400
+        
+        # Obtener parámetros del batch
+        batch_config = {}
+        
+        # Verificar si se envió como JSON en batch_config
+        if 'batch_config' in request.form:
+            try:
+                batch_config = json.loads(request.form['batch_config'])
+                log_info(f"📋 Configuración del batch desde JSON: {batch_config}")
+            except json.JSONDecodeError:
+                log_warning("⚠️ Error decodificando batch_config JSON, usando parámetros individuales")
+        
+        # Filtros opcionales (fallback a parámetros individuales)
+        if not batch_config.get('room_types') and 'room_types' in request.form:
+            room_types_str = request.form['room_types']
+            batch_config['room_types'] = [t.strip() for t in room_types_str.split(',') if t.strip()]
+            
+        if not batch_config.get('orientations') and 'orientations' in request.form:
+            orientations_str = request.form['orientations']
+            batch_config['orientations'] = [o.strip() for o in orientations_str.split(',') if o.strip()]
+            
+        if not batch_config.get('specific_workflows') and 'specific_workflows' in request.form:
+            specific_str = request.form['specific_workflows']
+            batch_config['specific_workflows'] = [w.strip() for w in specific_str.split(',') if w.strip()]
+        
+        # Parámetros comunes (pueden venir del JSON o del form)
+        frame_color = batch_config.get('frame_color') or request.form.get('frame_color', 'black')
+        style = batch_config.get('style') or request.form.get('style', 'default')
+        
+        log_info(f"📋 Configuración del batch: {batch_config}")
+        log_info(f"🎨 Parámetros: frame_color={frame_color}, style={style}")
+        
+        # Validar estilo
+        available_styles = get_available_styles()
+        available_style_ids = [style['id'] for style in available_styles]
+        if style not in available_style_ids:
+            return jsonify({"error": f"Estilo no encontrado: {style}. Estilos disponibles: {available_style_ids}"}), 400
+        
+        # Obtener workflows disponibles
+        available_workflows = get_available_workflows()
+        
+        # Filtrar workflows según criterios del batch
+        filtered_workflows = filter_workflows_for_batch(batch_config, available_workflows)
+        
+        if not filtered_workflows:
+            return jsonify({
+                "error": "No se encontraron workflows que coincidan con los criterios especificados",
+                "available_workflows": len(available_workflows),
+                "criteria": batch_config
+            }), 400
+        
+        log_info(f"🎯 Workflows seleccionados: {len(filtered_workflows)}/{len(available_workflows)}")
+        
+        # Preparar parámetros comunes
+        common_params = {
+            "frame_color": frame_color,
+            "style": style
+        }
+        
+        # Obtener nodos de estilo si es necesario
+        if filtered_workflows:
+            sample_workflow = load_workflow(filtered_workflows[0]["id"])
+            style_nodes = get_workflow_nodes_for_style(sample_workflow)
+            if style_nodes:
+                common_params["style_node"] = style_nodes[0]["id"]
+        
+        # Generar ID único para este batch
+        batch_id = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + str(uuid.uuid4())[:8]
+        
+        start_time = time.time()
+        
+        # ¡PROCESAR TODOS LOS WORKFLOWS SIMULTÁNEAMENTE!
+        log_info(f"🚀 Iniciando procesamiento simultáneo de {len(filtered_workflows)} workflows...")
+        results = process_all_workflows_simultáneamente(image_file, filtered_workflows, common_params, batch_id)
+        
+        total_time = time.time() - start_time
+        
+        # Compilar estadísticas
+        successful_results = [r for r in results if r.get("success", False)]
+        failed_results = [r for r in results if not r.get("success", False)]
+        
+        log_success(f"✅ Batch completado en {total_time:.1f}s: {len(successful_results)} exitosos, {len(failed_results)} fallos")
+        
+        return jsonify({
+            "success": True,
+            "batch_id": batch_id,
+            "processing_mode": "simultaneous",
+            "total_workflows": len(filtered_workflows),
+            "successful": len(successful_results),
+            "failed": len(failed_results),
+            "total_processing_time": round(total_time, 2),
+            "average_time_per_workflow": round(total_time / len(filtered_workflows), 2) if filtered_workflows else 0,
+            "results": results,
+            "summary": {
+                "workflows_processed": [r["workflow_id"] for r in results],
+                "successful_workflows": [r["workflow_id"] for r in successful_results],
+                "failed_workflows": [r["workflow_id"] for r in failed_results],
+                "total_images_generated": sum(len(r.get("generated_images", [])) for r in successful_results)
+            },
+            "batch_config": batch_config,
+            "common_params": common_params
+        })
+        
+    except Exception as e:
+        log_error(f"❌ Error en procesamiento batch: {str(e)}")
+        return jsonify({
+            "success": False, 
+            "error": str(e),
+            "processing_mode": "simultaneous"
+        }), 500
+
+def filter_workflows_for_batch(batch_config, available_workflows):
+    """
+    Filtra workflows según los criterios del batch
+    """
+    filtered = []
+    
+    room_types = batch_config.get("room_types", [])
+    orientations = batch_config.get("orientations", [])
+    specific_workflows = batch_config.get("specific_workflows", [])
+    
+    for workflow in available_workflows:
+        # Si hay workflows específicos, usar solo esos
+        if specific_workflows and workflow["id"] not in specific_workflows:
+            continue
+            
+        # Filtrar por tipo de habitación
+        if room_types and workflow["room_type"] not in room_types:
+            continue
+            
+        # Filtrar por orientación  
+        if orientations and workflow["orientation"] not in orientations:
+            continue
+            
+        filtered.append(workflow)
+    
+    return filtered
+
+def process_single_workflow_for_batch(image_file, workflow_info, common_params):
+    """
+    Procesa la imagen con un workflow específico para el batch
+    """
+    try:
+        # Reutilizar la lógica existente de process_image pero adaptada
+        start_time = time.time()
+        
+        # Guardar imagen temporal
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"batch_{timestamp}_{workflow_info['id'].replace('/', '_')}.{image_file.filename.split('.')[-1]}"
+        
+        input_path = os.path.join(COMFYUI_INPUT_DIR, filename)
+        image_file.seek(0)  # Reset file pointer
+        image_file.save(input_path)
+        
+        # Cargar y actualizar workflow
+        workflow = load_workflow(workflow_info["id"])
+        workflow = update_workflow(
+            workflow, 
+            filename, 
+            common_params["frame_color"], 
+            common_params["style"], 
+            common_params.get("style_node"),
+            workflow_info["id"]  # output_subfolder
+        )
+        
+        # Enviar a ComfyUI
+        prompt_id = submit_workflow_to_comfyui(workflow)
+        if not prompt_id:
+            raise Exception("Error enviando workflow a ComfyUI")
+        
+        # Esperar resultados
+        outputs = wait_for_completion(prompt_id)
+        if not outputs:
+            raise Exception("Error esperando resultados de ComfyUI")
+        
+        # Extraer imágenes generadas
+        generated_images = extract_generated_images(outputs)
+        
+        # Crear directorio de salida para este workflow
+        workflow_output_dir = create_output_directory(f"batch_{workflow_info['id'].replace('/', '_')}")
+        
+        # Copiar imágenes generadas
+        saved_images = []
+        for img_info in generated_images:
+            source_path = find_image_file(img_info['filename'], img_info['subfolder'])
+            if source_path:
+                dest_path = os.path.join(workflow_output_dir, f"result_{img_info['filename']}")
+                shutil.copy2(source_path, dest_path)
+                saved_images.append({
+                    'filename': f"result_{img_info['filename']}",
+                    'url': f"/get-image/batch_{workflow_info['id'].replace('/', '_')}/result_{img_info['filename']}",
+                    'original_filename': img_info['filename']
+                })
+        
+        # Guardar imagen original en el directorio del workflow
+        original_dest = os.path.join(workflow_output_dir, 'original.png')
+        image_file.seek(0)
+        image = Image.open(image_file.stream)
+        image.save(original_dest, format='PNG')
+        
+        processing_time = time.time() - start_time
+        
+        return {
+            "workflow_id": workflow_info["id"],
+            "workflow_info": workflow_info,
+            "success": True,
+            "generated_images": saved_images,
+            "original_image": {
+                "filename": "original.png",
+                "url": f"/get-image/batch_{workflow_info['id'].replace('/', '_')}/original.png"
+            },
+            "processing_time": round(processing_time, 2)
+        }
+        
+    except Exception as e:
+        log_error(f"Error procesando workflow {workflow_info['id']}: {str(e)}")
+        return {
+            "workflow_id": workflow_info["id"],
+            "workflow_info": workflow_info,
+            "success": False,
+            "error": str(e),
+            "processing_time": 0
+        }
+
+def process_all_workflows_simultáneamente(image_file, workflows, common_params, batch_id):
+    """
+    Procesa todos los workflows simultáneamente enviándolos a ComfyUI de una vez
+    """
+    import threading
+    import concurrent.futures
+    
+    results = []
+    submitted_prompts = {}  # prompt_id -> workflow_info
+    
+    log_info(f"🚀 Enviando {len(workflows)} workflows simultáneamente a ComfyUI...")
+    
+    # Fase 1: Preparar y enviar todos los workflows a ComfyUI
+    for i, workflow_info in enumerate(workflows):
+        try:
+            log_info(f"📤 Preparando {i+1}/{len(workflows)}: {workflow_info['id']}")
+            
+            # Guardar imagen temporal única para cada workflow
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            unique_filename = f"batch_{batch_id}_{i:03d}_{workflow_info['id'].replace('/', '_')}.png"
+            
+            input_path = os.path.join(COMFYUI_INPUT_DIR, unique_filename)
+            
+            # Resetear el file pointer y guardar imagen
+            image_file.seek(0)
+            image = Image.open(image_file.stream)
+            image.save(input_path, format='PNG')
+            
+            # Cargar y actualizar workflow
+            workflow = load_workflow(workflow_info["id"])
+            workflow = update_workflow(
+                workflow, 
+                unique_filename, 
+                common_params["frame_color"], 
+                common_params["style"], 
+                common_params.get("style_node"),
+                f"batch_{workflow_info['id'].replace('/', '_')}"  # output_subfolder
+            )
+            
+            # Enviar a ComfyUI (sin esperar)
+            prompt_id = submit_workflow_to_comfyui(workflow)
+            if prompt_id:
+                submitted_prompts[prompt_id] = {
+                    "workflow_info": workflow_info,
+                    "unique_filename": unique_filename,
+                    "submit_time": time.time(),
+                    "index": i
+                }
+                log_success(f"✅ Enviado {i+1}/{len(workflows)}: {workflow_info['id']} (prompt_id: {prompt_id})")
+            else:
+                log_error(f"❌ Error enviando {i+1}/{len(workflows)}: {workflow_info['id']}")
+                results.append({
+                    "workflow_id": workflow_info["id"],
+                    "workflow_info": workflow_info,
+                    "success": False,
+                    "error": "Error enviando workflow a ComfyUI",
+                    "processing_time": 0
+                })
+                
+        except Exception as e:
+            log_error(f"❌ Error preparando workflow {workflow_info['id']}: {str(e)}")
+            results.append({
+                "workflow_id": workflow_info["id"],
+                "workflow_info": workflow_info,
+                "success": False,
+                "error": f"Error preparando workflow: {str(e)}",
+                "processing_time": 0
+            })
+    
+    if not submitted_prompts:
+        log_error("❌ No se pudo enviar ningún workflow a ComfyUI")
+        return results
+    
+    log_info(f"🏁 {len(submitted_prompts)} workflows enviados a ComfyUI. Esperando resultados...")
+    
+    # Fase 2: Esperar y recoger resultados simultáneamente
+    def wait_for_single_workflow(prompt_id, workflow_data):
+        """Espera el resultado de un workflow específico"""
+        try:
+            start_time = workflow_data["submit_time"]
+            workflow_info = workflow_data["workflow_info"]
+            index = workflow_data["index"]
+            
+            log_info(f"⏳ Esperando resultado {index+1}: {workflow_info['id']} (prompt_id: {prompt_id})")
+            
+            # Esperar completion de este workflow específico
+            outputs = wait_for_completion(prompt_id, timeout=600)  # 10 minutos timeout
+            
+            # Extraer imágenes generadas
+            generated_images = extract_generated_images(outputs)
+            
+            # Crear directorio de salida para este workflow
+            workflow_output_dir = create_output_directory(f"batch_{workflow_info['id'].replace('/', '_')}")
+            
+            # Copiar imágenes generadas
+            saved_images = []
+            for img_info in generated_images:
+                source_path = find_image_file(img_info['filename'], img_info['subfolder'])
+                if source_path:
+                    dest_path = os.path.join(workflow_output_dir, f"result_{img_info['filename']}")
+                    shutil.copy2(source_path, dest_path)
+                    saved_images.append({
+                        'filename': f"result_{img_info['filename']}",
+                        'url': f"/get-image/batch_{workflow_info['id'].replace('/', '_')}/result_{img_info['filename']}",
+                        'original_filename': img_info['filename']
+                    })
+            
+            # Guardar imagen original en el directorio del workflow
+            original_dest = os.path.join(workflow_output_dir, 'original.png')
+            image_file.seek(0)
+            image = Image.open(image_file.stream)
+            image.save(original_dest, format='PNG')
+            
+            processing_time = time.time() - start_time
+            
+            log_success(f"✅ Completado {index+1}: {workflow_info['id']} en {processing_time:.1f}s ({len(saved_images)} imágenes)")
+            
+            return {
+                "workflow_id": workflow_info["id"],
+                "workflow_info": workflow_info,
+                "success": True,
+                "generated_images": saved_images,
+                "original_image": {
+                    "filename": "original.png",
+                    "url": f"/get-image/batch_{workflow_info['id'].replace('/', '_')}/original.png"
+                },
+                "processing_time": round(processing_time, 2),
+                "prompt_id": prompt_id
+            }
+            
+        except Exception as e:
+            processing_time = time.time() - workflow_data["submit_time"]
+            log_error(f"❌ Error procesando {workflow_info['id']}: {str(e)}")
+            return {
+                "workflow_id": workflow_info["id"],
+                "workflow_info": workflow_info,
+                "success": False,
+                "error": str(e),
+                "processing_time": round(processing_time, 2),
+                "prompt_id": prompt_id
+            }
+    
+    # Usar ThreadPoolExecutor para esperar todos los workflows en paralelo
+    max_workers = min(len(submitted_prompts), 10)  # Máximo 10 hilos concurrentes
+    
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Enviar todas las tareas de espera
+        future_to_prompt = {
+            executor.submit(wait_for_single_workflow, prompt_id, workflow_data): prompt_id 
+            for prompt_id, workflow_data in submitted_prompts.items()
+        }
+        
+        # Recoger resultados conforme van completándose
+        for future in concurrent.futures.as_completed(future_to_prompt):
+            prompt_id = future_to_prompt[future]
+            try:
+                result = future.result()
+                results.append(result)
+                completed = len(results)
+                total = len(submitted_prompts)
+                log_info(f"📈 Progreso: {completed}/{total} workflows completados")
+            except Exception as e:
+                workflow_data = submitted_prompts[prompt_id]
+                workflow_info = workflow_data["workflow_info"]
+                log_error(f"❌ Error obteniendo resultado de {workflow_info['id']}: {str(e)}")
+                results.append({
+                    "workflow_id": workflow_info["id"],
+                    "workflow_info": workflow_info,
+                    "success": False,
+                    "error": f"Error obteniendo resultado: {str(e)}",
+                    "processing_time": 0,
+                    "prompt_id": prompt_id
+                })
+    
+    # Ordenar resultados por el índice original para mantener orden
+    results.sort(key=lambda x: next(
+        (data["index"] for prompt_id, data in submitted_prompts.items() 
+         if x.get("prompt_id") == prompt_id), 999
+    ))
+    
+    return results
+        
+# ==================== INICIO DEL SERVIDOR ====================
 
 if __name__ == '__main__':
-    log_info("=== INICIANDO COMFYUI API REST v2.0 ===")
-    log_info(f"ComfyUI URL: {COMFYUI_URL}")
-    log_info(f"Directorio de workflows: {WORKFLOWS_DIR}")
-    log_info(f"Directorio de input: {COMFYUI_INPUT_DIR}")
-    log_info(f"Directorio de output: {COMFYUI_OUTPUT_DIR}")
+    log_info("🚀 Iniciando ComfyUI API REST v2.0.0...")
+    log_info(f"📁 Directorio de workflows: {WORKFLOWS_DIR}")
+    log_info(f"📁 Directorio de input: {COMFYUI_INPUT_DIR}")
+    log_info(f"📁 Directorio de output: {COMFYUI_OUTPUT_DIR}")
+    log_info(f"🌐 ComfyUI URL: {COMFYUI_URL}")
     
-    # Verificar que los directorios existen
-    if os.path.exists(COMFYUI_INPUT_DIR):
-        log_success(f"✅ Directorio input existe: {COMFYUI_INPUT_DIR}")
-    else:
-        log_error(f"❌ Directorio input NO existe: {COMFYUI_INPUT_DIR}")
+    # Verificar conexión con ComfyUI
+    try:
+        response = requests.get(f"{COMFYUI_URL}/system_stats", timeout=5)
+        if response.status_code == 200:
+            log_success("✅ Conexión con ComfyUI establecida")
+        else:
+            log_warning("⚠️ ComfyUI no responde correctamente")
+    except Exception as e:
+        log_warning(f"⚠️ No se pudo conectar con ComfyUI: {str(e)}")
     
-    if os.path.exists(COMFYUI_OUTPUT_DIR):
-        log_success(f"✅ Directorio output existe: {COMFYUI_OUTPUT_DIR}")
-    else:
-        log_error(f"❌ Directorio output NO existe: {COMFYUI_OUTPUT_DIR}")
+    # Contar workflows disponibles
+    try:
+        workflows = get_available_workflows()
+        log_info(f"📊 {len(workflows)} workflows encontrados")
+    except Exception as e:
+        log_warning(f"⚠️ Error contando workflows: {str(e)}")
     
+    # Iniciar servidor
+    log_info("🌟 Servidor iniciado en http://localhost:5000")
+    log_info("📱 Cliente web disponible en: http://localhost:5000")
     app.run(host='0.0.0.0', port=5000, debug=True)
