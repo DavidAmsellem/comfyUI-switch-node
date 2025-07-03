@@ -294,6 +294,15 @@
             gap: 5px;
             font-size: 0.9em;
         }
+
+        /* Estilos para los modos de procesamiento */
+        .mode-panel {
+            display: none;
+        }
+
+        .mode-panel.active {
+            display: block;
+        }
         
         @media (max-width: 768px) {
             .main-content {
@@ -311,8 +320,18 @@
         </div>
 
         <div class="main-content">
-            <!-- Panel Izquierdo: Controles -->
+            <!-- Panel Izquierdo: Selector de Modo + Controles -->
             <div class="panel">
+                <!-- Selector de Modo de Procesamiento -->
+                <div class="section">
+                    <h3>🎯 Tipo de Procesamiento</h3>
+                    <select id="processMode" class="workflow-select">
+                        <option value="individual">🎨 Procesamiento Individual</option>
+                        <option value="batch">⚡ Procesamiento por Lotes</option>
+                    </select>
+                </div>
+
+                <!-- Sección de Upload (común para ambos modos) -->
                 <div class="section">
                     <h3>📁 Subir Imagen</h3>
                     <div class="upload-area" id="uploadArea">
@@ -326,142 +345,188 @@
                     <img id="previewImage" class="preview-image" alt="Vista previa">
                 </div>
 
-                <div class="section">
-                    <h3>🎨 Seleccionar Workflow</h3>
-                    
-                    <!-- Selector de Tipo de Habitación -->
-                    <div style="margin-bottom: 15px;">
-                        <label for="roomTypeSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">🏠 Tipo de Habitación:</label>
-                        <select id="roomTypeSelect" class="workflow-select" style="max-height: none;">
-                            <option value="">Selecciona un tipo...</option>
-                        </select>
+                <!-- Panel de Procesamiento Individual -->
+                <div id="individualControls" class="mode-panel active">
+                    <div class="section">
+                        <h3>🎨 Seleccionar Workflow</h3>
+                        
+                        <!-- Selector de Tipo de Habitación -->
+                        <div style="margin-bottom: 15px;">
+                            <label for="roomTypeSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">🏠 Tipo de Habitación:</label>
+                            <select id="roomTypeSelect" class="workflow-select" style="max-height: none;">
+                                <option value="">Selecciona un tipo...</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Selector de Orientación -->
+                        <div style="margin-bottom: 15px;">
+                            <label for="orientationSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">📐 Orientación:</label>
+                            <select id="orientationSelect" class="workflow-select" style="max-height: none;" disabled>
+                                <option value="">Primero selecciona un tipo...</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Selector de Workflow Específico -->
+                        <div style="margin-bottom: 15px;">
+                            <label for="workflowSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">🎯 Workflow Específico:</label>
+                            <select id="workflowSelect" class="workflow-select" style="max-height: none;" disabled>
+                                <option value="">Selecciona orientación primero...</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Info del workflow seleccionado -->
+                        <div id="workflowInfo" style="display: none; background: #e3f2fd; border-radius: 6px; padding: 10px; font-size: 0.9em; color: #1976d2;">
+                            <strong>✨ Workflow seleccionado:</strong>
+                            <div id="workflowInfoText"></div>
+                        </div>
                     </div>
-                    
-                    <!-- Selector de Orientación -->
-                    <div style="margin-bottom: 15px;">
-                        <label for="orientationSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">📐 Orientación:</label>
-                        <select id="orientationSelect" class="workflow-select" style="max-height: none;" disabled>
-                            <option value="">Primero selecciona un tipo...</option>
-                        </select>
+
+                    <div class="section">
+                        <h3>✨ Estilo Visual</h3>
+                        <div style="margin-bottom: 15px;">
+                            <label for="styleSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">🎨 Selecciona un estilo:</label>
+                            <select id="styleSelect" class="workflow-select" style="max-height: none;">
+                                <option value="default">🎨 Por defecto</option>
+                            </select>
+                            <div id="styleDescription" style="margin-top: 8px; padding: 8px; background: #f0f8ff; border-radius: 4px; font-size: 0.85em; color: #2c5aa0; display: none;"></div>
+                        </div>
+                        
+                        <!-- Selector de Nodo para Estilo (opcional) -->
+                        <div style="margin-bottom: 15px;" id="styleNodeSection" style="display: none;">
+                            <label for="styleNodeSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">⚙️ Nodo de Estilo (Opcional):</label>
+                            <select id="styleNodeSelect" class="workflow-select" style="max-height: none;">
+                                <option value="">🔧 Auto-detectar (recomendado)</option>
+                            </select>
+                            <div style="margin-top: 8px; padding: 8px; background: #fff3cd; border-radius: 4px; font-size: 0.85em; color: #856404;">
+                                💡 <strong>Opcional:</strong> Selecciona un nodo específico donde aplicar el estilo. Si no seleccionas ninguno, se detectará automáticamente el mejor nodo.
+                            </div>
+                            <div id="nodeDescription" style="margin-top: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px; font-size: 0.8em; color: #495057; display: none;"></div>
+                        </div>
                     </div>
-                    
-                    <!-- Selector de Workflow Específico -->
-                    <div style="margin-bottom: 15px;">
-                        <label for="workflowSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">🎯 Workflow Específico:</label>
-                        <select id="workflowSelect" class="workflow-select" style="max-height: none;" disabled>
-                            <option value="">Selecciona orientación primero...</option>
-                        </select>
+
+                    <div class="section">
+                        <h3>🎨 Color del Marco</h3>
+                        <div class="color-options">
+                            <div class="color-option">
+                                <input type="radio" id="color-black" name="frameColor" value="black" checked>
+                                <label for="color-black" style="background: #333; color: white;">⚫ Negro</label>
+                            </div>
+                            <div class="color-option">
+                                <input type="radio" id="color-white" name="frameColor" value="white">
+                                <label for="color-white" style="background: #fff; color: #333; border: 1px solid #ddd;">⚪ Blanco</label>
+                            </div>
+                            <div class="color-option">
+                                <input type="radio" id="color-brown" name="frameColor" value="brown">
+                                <label for="color-brown" style="background: #8B4513; color: white;">🤎 Marrón</label>
+                            </div>
+                            <div class="color-option">
+                                <input type="radio" id="color-gold" name="frameColor" value="gold">
+                                <label for="color-gold" style="background: #FFD700; color: #333;">🟡 Dorado</label>
+                            </div>
+                        </div>
                     </div>
-                    
-                    <!-- Info del workflow seleccionado -->
-                    <div id="workflowInfo" style="display: none; background: #e3f2fd; border-radius: 6px; padding: 10px; font-size: 0.9em; color: #1976d2;">
-                        <strong>✨ Workflow seleccionado:</strong>
-                        <div id="workflowInfoText"></div>
-                    </div>
+
+                    <button class="btn" id="processBtn" disabled>
+                        🚀 Procesar Individual
+                    </button>
                 </div>
 
-                <div class="section">
-                    <h3>✨ Estilo Visual</h3>
-                    <div style="margin-bottom: 15px;">
-                        <label for="styleSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">🎨 Selecciona un estilo:</label>
-                        <select id="styleSelect" class="workflow-select" style="max-height: none;">
-                            <option value="default">🎨 Por defecto</option>
-                        </select>
-                        <div id="styleDescription" style="margin-top: 8px; padding: 8px; background: #f0f8ff; border-radius: 4px; font-size: 0.85em; color: #2c5aa0; display: none;"></div>
-                    </div>
-                    
-                    <!-- Selector de Nodo para Estilo (opcional) -->
-                    <div style="margin-bottom: 15px;" id="styleNodeSection" style="display: none;">
-                        <label for="styleNodeSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">⚙️ Nodo de Estilo (Opcional):</label>
-                        <select id="styleNodeSelect" class="workflow-select" style="max-height: none;">
-                            <option value="">🔧 Auto-detectar (recomendado)</option>
-                        </select>
-                        <div style="margin-top: 8px; padding: 8px; background: #fff3cd; border-radius: 4px; font-size: 0.85em; color: #856404;">
-                            💡 <strong>Opcional:</strong> Selecciona un nodo específico donde aplicar el estilo. Si no seleccionas ninguno, se detectará automáticamente el mejor nodo.
+                <!-- Panel de Procesamiento por Lotes -->
+                <div id="batchControls" class="mode-panel">
+                    <div class="section">
+                        <h3>⚡ Configuración de Lote</h3>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                            <div>
+                                <label for="batchRoomTypes" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">🏠 Tipos de Habitación:</label>
+                                <select id="batchRoomTypes" class="workflow-select" multiple style="height: 100px;">
+                                </select>
+                                <div style="font-size: 0.8em; color: #666; margin-top: 5px;">
+                                    � Ctrl/Cmd para múltiple selección
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label for="batchOrientations" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">📐 Orientaciones:</label>
+                                <select id="batchOrientations" class="workflow-select" multiple style="height: 100px;">
+                                </select>
+                                <div style="font-size: 0.8em; color: #666; margin-top: 5px;">
+                                    💡 Ctrl/Cmd para múltiple selección
+                                </div>
+                            </div>
                         </div>
-                        <div id="nodeDescription" style="margin-top: 8px; padding: 8px; background: #e8f5e8; border-radius: 4px; font-size: 0.85em; color: #2d5a2d; display: none;"></div>
-                    </div>
-                </div>
 
-                <div class="section">
-                    <h3>🖼️ Color del Marco</h3>
-                    <div class="color-options" id="colorOptions">
-                        <div class="color-option">
-                            <input type="radio" id="black" name="frameColor" value="black" checked>
-                            <label for="black" style="background: #1a1a1a; color: white;">Negro</label>
+                        <div id="selectedWorkflowsPreview" style="margin-bottom: 15px; padding: 10px; background: #f0f8ff; border-radius: 6px; display: none;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                                <span style="font-weight: 600; color: #1976d2;">🎯 Workflows seleccionados:</span>
+                                <span id="workflowCount" style="background: #4facfe; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.9em;">0</span>
+                            </div>
+                            <div id="workflowList" style="max-height: 150px; overflow-y: auto; font-size: 0.85em; color: #333;"></div>
                         </div>
-                        <div class="color-option">
-                            <input type="radio" id="white" name="frameColor" value="white">
-                            <label for="white" style="background: #f5f5f5; color: #333; border: 1px solid #ddd;">Blanco</label>
-                        </div>
-                        <div class="color-option">
-                            <input type="radio" id="brown" name="frameColor" value="brown">
-                            <label for="brown" style="background: #8B4513; color: white;">Marrón</label>
-                        </div>
-                        <div class="color-option">
-                            <input type="radio" id="gold" name="frameColor" value="gold">
-                            <label for="gold" style="background: #FFD700; color: #333;">Dorado</label>
-                        </div>
-                        <div class="color-option">
-                            <input type="radio" id="red" name="frameColor" value="red">
-                            <label for="red" style="background: #DC143C; color: white;">Rojo</label>
-                        </div>
-                        <div class="color-option">
-                            <input type="radio" id="blue" name="frameColor" value="blue">
-                            <label for="blue" style="background: #1E90FF; color: white;">Azul</label>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="section">
-                    <h3>🎛️ Procesamiento en Lote</h3>
-                    <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">
-                        Procesa la misma imagen con múltiples workflows automáticamente
-                    </p>
-                    
-                    <!-- Filtros de Batch -->
-                    <div style="margin-bottom: 15px;">
-                        <label for="batchRoomTypes" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">🏠 Tipos de Habitación (múltiple):</label>
-                        <select id="batchRoomTypes" multiple class="workflow-select" style="height: 80px;">
-                            <!-- Se llenarán dinámicamente -->
-                        </select>
-                        <small style="color: #888;">Mantén Ctrl/Cmd para seleccionar múltiples</small>
+                        <div style="font-size: 0.8em; color: #666; margin-bottom: 15px;">
+                            💡 <strong>Tip:</strong> Deja los filtros vacíos para procesar TODOS los workflows disponibles
+                        </div>
                     </div>
-                    
-                    <div style="margin-bottom: 15px;">
-                        <label for="batchOrientations" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">📐 Orientaciones (múltiple):</label>
-                        <select id="batchOrientations" multiple class="workflow-select" style="height: 60px;">
-                            <!-- Se llenarán dinámicamente -->
-                        </select>
-                        <small style="color: #888;">Mantén Ctrl/Cmd para seleccionar múltiples</small>
+
+                    <div class="section">
+                        <h3>🎨 Configuración Común del Lote</h3>
+                        <div style="margin-bottom: 15px;">
+                            <label for="batchStyleSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">✨ Estilo:</label>
+                            <select id="batchStyleSelect" class="workflow-select">
+                                <option value="default">🎨 Por defecto</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Selector de Nodo para Estilo (Batch) -->
+                        <div style="margin-bottom: 15px;" id="batchStyleNodeSection">
+                            <label for="batchStyleNodeSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">⚙️ Nodo de Estilo (Opcional):</label>
+                            <select id="batchStyleNodeSelect" class="workflow-select" style="max-height: none;">
+                                <option value="">🔧 Auto-detectar (recomendado)</option>
+                            </select>
+                            <div style="margin-top: 8px; padding: 8px; background: #fff3cd; border-radius: 4px; font-size: 0.85em; color: #856404;">
+                                💡 <strong>Opcional:</strong> Selecciona un nodo específico donde aplicar el estilo. Si no seleccionas ninguno, se detectará automáticamente el mejor nodo para cada workflow.
+                            </div>
+                            <div id="batchNodeDescription" style="margin-top: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px; font-size: 0.8em; color: #495057; display: none;"></div>
+                        </div>
+                        
+                        <div>
+                            <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #555;">🎨 Color del Marco:</label>
+                            <div class="color-options">
+                                <div class="color-option">
+                                    <input type="radio" id="batch-color-black" name="batchFrameColor" value="black" checked>
+                                    <label for="batch-color-black" style="background: #333; color: white;">⚫ Negro</label>
+                                </div>
+                                <div class="color-option">
+                                    <input type="radio" id="batch-color-white" name="batchFrameColor" value="white">
+                                    <label for="batch-color-white" style="background: #fff; color: #333; border: 1px solid #ddd;">⚪ Blanco</label>
+                                </div>
+                                <div class="color-option">
+                                    <input type="radio" id="batch-color-brown" name="batchFrameColor" value="brown">
+                                    <label for="batch-color-brown" style="background: #8B4513; color: white;">🤎 Marrón</label>
+                                </div>
+                                <div class="color-option">
+                                    <input type="radio" id="batch-color-gold" name="batchFrameColor" value="gold">
+                                    <label for="batch-color-gold" style="background: #FFD700; color: #333;">🟡 Dorado</label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    
-                    <!-- Preview de workflows seleccionados -->
-                    <div id="selectedWorkflowsPreview" style="background: #f0f8ff; border-radius: 6px; padding: 10px; margin-bottom: 15px; display: none;">
-                        <strong>🎯 Workflows que se procesarán: <span id="workflowCount">0</span></strong>
-                        <div id="workflowList" style="max-height: 100px; overflow-y: auto; margin-top: 8px; font-size: 0.85em;"></div>
-                    </div>
-                    
-                    <!-- Botón de batch -->
-                    <button class="btn" id="processBatchBtn" disabled style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); margin-bottom: 10px;">
+
+                    <button class="btn" id="processBatchBtn" disabled>
                         ⚡ Procesar Lote
                     </button>
-                    
-                    <div style="font-size: 0.8em; color: #666;">
-                        💡 <strong>Tip:</strong> Deja los filtros vacíos para procesar TODOS los workflows disponibles
-                    </div>
                 </div>
-
-                <button class="btn" id="processBtn" disabled>
-                    🚀 Procesar Individual
-                </button>
             </div>
 
             <!-- Panel Derecho: Estado y Resultados -->
             <div class="panel">
                 <div class="section">
                     <h3>📊 Estado del Procesamiento</h3>
-                    <div style="margin-bottom: 10px; text-align: right;">
+                    <div style="margin-bottom: 10px; text-align: right; display: flex; gap: 5px; justify-content: flex-end;">
+                        <button id="debugSessionBtn" style="background: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
+                            🔍 Debug Sesión
+                        </button>
                         <button id="clearStateBtn" style="background: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
                             🗑️ Limpiar Estado
                         </button>
@@ -470,12 +535,12 @@
                 </div>
 
                 <div class="section" id="resultsSection" style="display: none;">
-                    <h3>✨ Resultados</h3>
+                    <h3>✨ Resultados Individuales</h3>
                     <div class="result-images" id="resultImages"></div>
                 </div>
 
                 <div class="section" id="batchResultsSection" style="display: none;">
-                    <h3>🖼️ Galería de Imágenes Generadas</h3>
+                    <h3>🖼️ Galería de Lotes</h3>
                     <div id="batchSummary" style="background: #e8f5e8; border-radius: 6px; padding: 10px; margin-bottom: 15px; font-size: 0.9em; color: #2d5a2d;">
                         📊 Los resultados de cada lote aparecerán aquí conforme se completen. Los lotes más recientes se muestran primero.
                     </div>
@@ -580,16 +645,76 @@
             location.reload(); // Recargar para limpiar todo
         }
 
+        // ===== FUNCIONES DE MANEJO DE MODOS =====
+        function switchMode(mode) {
+            const individualControls = document.getElementById('individualControls');
+            const batchControls = document.getElementById('batchControls');
+            
+            // Ocultar todos los paneles de control
+            [individualControls, batchControls].forEach(panel => {
+                if (panel) panel.classList.remove('active');
+            });
+            
+            // Mostrar el panel seleccionado
+            if (mode === 'individual' && individualControls) {
+                individualControls.classList.add('active');
+            } else if (mode === 'batch' && batchControls) {
+                batchControls.classList.add('active');
+                // Sincronizar estilos del batch con el individual
+                syncBatchStyles();
+            }
+            
+            // Limpiar resultados si es necesario
+            clearResults();
+        }
+
+        function syncBatchStyles() {
+            // Sincronizar el selector de estilos del batch con el individual
+            const styleSelect = document.getElementById('styleSelect');
+            const batchStyleSelect = document.getElementById('batchStyleSelect');
+            
+            if (styleSelect && batchStyleSelect) {
+                // Copiar opciones del selector individual al batch
+                batchStyleSelect.innerHTML = styleSelect.innerHTML;
+                batchStyleSelect.value = styleSelect.value;
+            }
+        }
+
+        function setupModeHandlers() {
+            const processMode = document.getElementById('processMode');
+            
+            // Event listener para cambio de modo
+            if (processMode) {
+                processMode.addEventListener('change', (e) => {
+                    switchMode(e.target.value);
+                });
+            }
+        }
+
         // Inicialización
         window.onload = function() {
             checkHealth();
             loadWorkflows();
             setupEventListeners();
+            setupModeHandlers(); // Configurar manejadores de modo
+            
+            // Inicializar en modo individual
+            switchMode('individual');
+            
+            // Cargar trabajos de sesión anterior
+            setTimeout(() => {
+                loadSessionJobs();
+            }, 500);
             
             // Restaurar estado después de cargar workflows
             setTimeout(() => {
                 restoreState();
             }, 1000);
+            
+            // Limpiar trabajos antiguos al inicializar (más de 24 horas)
+            setTimeout(() => {
+                cleanupOldJobs(24);
+            }, 2000);
         };
 
         // Limpieza cuando se cierra la página
@@ -661,8 +786,19 @@
                 saveState();
             });
             
+            // Selector de nodo de estilo (Batch)
+            document.getElementById('batchStyleNodeSelect').addEventListener('change', () => {
+                handleBatchStyleNodeChange();
+                saveState();
+            });
+            
             // Colores de marco
             document.querySelectorAll('input[name="frameColor"]').forEach(radio => {
+                radio.addEventListener('change', saveState);
+            });
+            
+            // Colores de marco (Batch)
+            document.querySelectorAll('input[name="batchFrameColor"]').forEach(radio => {
                 radio.addEventListener('change', saveState);
             });
             
@@ -685,6 +821,9 @@
             
             // Botón de limpiar estado
             document.getElementById('clearStateBtn').addEventListener('click', clearState);
+            
+            // Botón de debug de sesión
+            document.getElementById('debugSessionBtn').addEventListener('click', debugSession);
         }
 
         function checkProcessButtonState() {
@@ -692,11 +831,15 @@
             const processBatchBtn = document.getElementById('processBatchBtn');
             const workflowSelect = document.getElementById('workflowSelect');
             
-            // Habilitar solo si hay imagen Y workflow seleccionado
-            processBtn.disabled = !selectedFile || !workflowSelect.value;
+            // Habilitar botón individual solo si hay imagen Y workflow seleccionado
+            if (processBtn) {
+                processBtn.disabled = !selectedFile || !workflowSelect.value;
+            }
             
-            // Habilitar batch solo si hay imagen seleccionada (ya no se bloquea)
-            updateBatchButtonText();
+            // Habilitar batch solo si hay imagen seleccionada
+            if (processBatchBtn) {
+                updateBatchButtonText();
+            }
         }
 
         async function checkHealth() {
@@ -731,6 +874,14 @@
                 populateRoomTypes();
                 populateStyles();
                 populateBatchSelectors(); // Poblar selectores de batch
+                
+                // Cargar nodos del primer workflow disponible para el modo batch
+                // (ya que todos los workflows tienen la misma estructura)
+                if (availableWorkflows.length > 0) {
+                    const firstWorkflow = availableWorkflows[0];
+                    await loadWorkflowNodesForBatch(firstWorkflow.id);
+                }
+                
                 showStatus(`✅ ${data.total} workflows cargados`, 'success');
             } catch (error) {
                 console.error('Error cargando workflows:', error);
@@ -740,14 +891,26 @@
 
         function populateStyles() {
             const styleSelect = document.getElementById('styleSelect');
+            const batchStyleSelect = document.getElementById('batchStyleSelect');
+            
+            // Limpiar ambos selectores
             styleSelect.innerHTML = '';
+            batchStyleSelect.innerHTML = '';
 
             availableStyles.forEach(style => {
+                // Crear opción para el selector individual
                 const option = document.createElement('option');
                 option.value = style.id;
                 option.textContent = style.name;
                 option.dataset.description = style.description;
                 styleSelect.appendChild(option);
+                
+                // Crear opción para el selector de batch
+                const batchOption = document.createElement('option');
+                batchOption.value = style.id;
+                batchOption.textContent = style.name;
+                batchOption.dataset.description = style.description;
+                batchStyleSelect.appendChild(batchOption);
             });
         }
 
@@ -891,11 +1054,15 @@
 
             selectedFile = file;
 
-            // Mostrar vista previa
+            // Mostrar vista previa (solo hay una zona de preview común)
             const reader = new FileReader();
             reader.onload = (e) => {
-                document.getElementById('previewImage').src = e.target.result;
-                document.getElementById('previewSection').style.display = 'block';
+                const previewImage = document.getElementById('previewImage');
+                const previewSection = document.getElementById('previewSection');
+                if (previewImage && previewSection) {
+                    previewImage.src = e.target.result;
+                    previewSection.style.display = 'block';
+                }
             };
             reader.readAsDataURL(file);
 
@@ -1088,9 +1255,63 @@
             }
         }
 
+        async function loadWorkflowNodesForBatch(workflowId) {
+            if (!workflowId) {
+                return;
+            }
+
+            try {
+                showStatus(`🔄 Cargando nodos para modo batch...`, 'info');
+                const response = await fetch(`${API_BASE_URL}/workflow-nodes/${workflowId}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    currentWorkflowNodes = data.candidate_nodes || [];
+                    populateBatchStyleNodes();
+                    showStatus(`✅ Nodos cargados para modo batch (${currentWorkflowNodes.length} candidatos)`, 'success');
+                } else {
+                    console.error('Error cargando nodos para batch:', data.error);
+                    showStatus(`⚠️ Error cargando nodos para batch: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error cargando nodos para batch:', error);
+                showStatus('❌ Error de conexión al cargar nodos para batch', 'error');
+            }
+        }
+
         function populateStyleNodes() {
             const styleNodeSelect = document.getElementById('styleNodeSelect');
+            const batchStyleNodeSelect = document.getElementById('batchStyleNodeSelect');
+            
+            // Poblar selector individual
             styleNodeSelect.innerHTML = '<option value="">🔧 Auto-detectar (recomendado)</option>';
+            
+            // Poblar selector de batch
+            batchStyleNodeSelect.innerHTML = '<option value="">🔧 Auto-detectar (recomendado)</option>';
+
+            currentWorkflowNodes.forEach(node => {
+                // Crear opción para selector individual
+                const option = document.createElement('option');
+                option.value = node.id;
+                option.dataset.node = JSON.stringify(node);
+                
+                // Añadir emoji para nodos recomendados
+                const prefix = node.recommended ? '⭐' : '⚙️';
+                option.textContent = `${prefix} ${node.name}`;
+                
+                styleNodeSelect.appendChild(option);
+                
+                // Crear opción para selector de batch (clon)
+                const batchOption = option.cloneNode(true);
+                batchStyleNodeSelect.appendChild(batchOption);
+            });
+        }
+
+        function populateBatchStyleNodes() {
+            const batchStyleNodeSelect = document.getElementById('batchStyleNodeSelect');
+            
+            // Poblar solo el selector de batch
+            batchStyleNodeSelect.innerHTML = '<option value="">🔧 Auto-detectar (recomendado)</option>';
 
             currentWorkflowNodes.forEach(node => {
                 const option = document.createElement('option');
@@ -1101,17 +1322,29 @@
                 const prefix = node.recommended ? '⭐' : '⚙️';
                 option.textContent = `${prefix} ${node.name}`;
                 
-                styleNodeSelect.appendChild(option);
+                batchStyleNodeSelect.appendChild(option);
             });
         }
 
         function clearStyleNodes() {
             const styleNodeSelect = document.getElementById('styleNodeSelect');
-            styleNodeSelect.innerHTML = '<option value="">🔧 Auto-detectar (recomendado)</option>';
-            currentWorkflowNodes = [];
+            const batchStyleNodeSelect = document.getElementById('batchStyleNodeSelect');
             
+            // Solo limpiar el selector individual
+            styleNodeSelect.innerHTML = '<option value="">🔧 Auto-detectar (recomendado)</option>';
+            
+            // Para el batch, mantener los nodos ya que todos los workflows tienen la misma estructura
+            // Solo limpiar si no tiene opciones cargadas
+            if (batchStyleNodeSelect.children.length <= 1) {
+                batchStyleNodeSelect.innerHTML = '<option value="">🔧 Auto-detectar (recomendado)</option>';
+            }
+            
+            // Solo limpiar currentWorkflowNodes si estamos en modo individual
             const nodeDescription = document.getElementById('nodeDescription');
+            const batchNodeDescription = document.getElementById('batchNodeDescription');
+            
             nodeDescription.style.display = 'none';
+            batchNodeDescription.style.display = 'none';
         }
 
         function handleStyleNodeChange() {
@@ -1136,6 +1369,31 @@
             } else {
                 nodeDescription.style.display = 'none';
                 showStatus(`🔧 Usando auto-detección de nodo`, 'info');
+            }
+        }
+
+        function handleBatchStyleNodeChange() {
+            const batchStyleNodeSelect = document.getElementById('batchStyleNodeSelect');
+            const batchNodeDescription = document.getElementById('batchNodeDescription');
+            
+            const selectedOption = batchStyleNodeSelect.options[batchStyleNodeSelect.selectedIndex];
+            
+            if (selectedOption && selectedOption.value && selectedOption.dataset.node) {
+                const nodeData = JSON.parse(selectedOption.dataset.node);
+                
+                batchNodeDescription.innerHTML = `
+                    <strong>📝 Información del nodo:</strong><br>
+                    <strong>Tipo:</strong> ${nodeData.type}<br>
+                    <strong>Descripción:</strong> ${nodeData.description}<br>
+                    ${nodeData.current_value ? `<strong>Contenido actual:</strong> ${nodeData.current_value}` : ''}
+                `;
+                batchNodeDescription.style.display = 'block';
+                
+                const prefix = nodeData.recommended ? 'recomendado' : 'personalizado';
+                showStatus(`⚙️ Nodo ${prefix} seleccionado para batch: ${nodeData.name}`, 'info');
+            } else {
+                batchNodeDescription.style.display = 'none';
+                showStatus(`🔧 Usando auto-detección de nodo para batch`, 'info');
             }
         }
 
@@ -1249,13 +1507,15 @@
             
             const roomTypeSelect = document.getElementById('batchRoomTypes');
             const orientationSelect = document.getElementById('batchOrientations');
-            const styleSelect = document.getElementById('styleSelect');
-            const frameColorInputs = document.querySelectorAll('input[name="frameColor"]:checked');
+            const batchStyleSelect = document.getElementById('batchStyleSelect');
+            const batchStyleNodeSelect = document.getElementById('batchStyleNodeSelect');
+            const batchFrameColorInputs = document.querySelectorAll('input[name="batchFrameColor"]:checked');
             
             const selectedRoomTypes = Array.from(roomTypeSelect.selectedOptions).map(option => option.value);
             const selectedOrientations = Array.from(orientationSelect.selectedOptions).map(option => option.value);
-            const selectedStyle = styleSelect.value;
-            const selectedFrameColor = frameColorInputs.length > 0 ? frameColorInputs[0].value : 'black';
+            const selectedStyle = batchStyleSelect.value || 'default';
+            const selectedStyleNode = batchStyleNodeSelect.value || null;
+            const selectedFrameColor = batchFrameColorInputs.length > 0 ? batchFrameColorInputs[0].value : 'black';
             
             // Obtener workflows coincidentes
             const matchingWorkflows = getMatchingWorkflowsForBatch(selectedRoomTypes, selectedOrientations);
@@ -1275,6 +1535,13 @@
             
             showStatus(`🚀 Iniciando lote #${currentBatchId} con ${matchingWorkflows.length} workflows...`, 'info');
             
+            // Mostrar información del nodo de estilo si está seleccionado
+            if (selectedStyleNode) {
+                showStatus(`⚙️ Nodo de estilo para batch: ${selectedStyleNode}`, 'info');
+            } else {
+                showStatus(`🔧 Usando auto-detección de nodo para batch`, 'info');
+            }
+            
             try {
                 // Crear FormData
                 const formData = new FormData();
@@ -1287,6 +1554,11 @@
                     frame_color: selectedFrameColor,
                     style: selectedStyle
                 };
+                
+                // Agregar nodo de estilo si está seleccionado
+                if (selectedStyleNode) {
+                    batchConfig.style_node = selectedStyleNode;
+                }
                 
                 console.log('🔍 DEBUG - batchConfig antes de JSON.stringify:', batchConfig);
                 const batchConfigJSON = JSON.stringify(batchConfig);
@@ -1625,6 +1897,214 @@
             
             // Resto de la implementación original
             // (Se mantiene para compatibilidad pero no se documenta aquí por brevedad)
+        }
+
+        // ===== FUNCIONES DE PERSISTENCIA DE SESIÓN =====
+        
+        async function loadSessionJobs() {
+            // Carga los trabajos de la sesión actual al inicializar la página
+            try {
+                console.log('🔄 Cargando trabajos de sesión...');
+                const response = await fetch(`${API_BASE_URL}/session/jobs`);
+                const data = await response.json();
+                
+                console.log('📋 Respuesta del servidor:', data);
+                
+                if (data.success && data.jobs) {
+                    console.log('📋 Trabajos de sesión cargados:', data.jobs);
+                    console.log('📊 Resumen de sesión:', data.summary);
+                    
+                    let restoredCount = 0;
+                    
+                    // Procesar trabajos existentes
+                    Object.values(data.jobs).forEach(job => {
+                        console.log(`🔍 Procesando trabajo: ${job.id}, tipo: ${job.type}, estado: ${job.status}`);
+                        
+                        if (job.type === 'batch' && job.status === 'processing') {
+                            // Reanudar seguimiento de lotes en progreso
+                            restoreBatchJob(job);
+                            restoredCount++;
+                        } else if (job.type === 'individual' && job.status === 'completed') {
+                            // Mostrar trabajos individuales completados
+                            restoreIndividualJob(job);
+                            restoredCount++;
+                        } else {
+                            console.log(`⏭️ Saltando trabajo: tipo=${job.type}, estado=${job.status}`);
+                        }
+                    });
+                    
+                    if (restoredCount > 0) {
+                        showStatus(`💾 ${restoredCount} trabajos de sesión restaurados`, 'success');
+                    } else {
+                        showStatus(`📂 No hay trabajos previos para restaurar`, 'info');
+                    }
+                } else {
+                    console.log('⚠️ No se encontraron trabajos de sesión o error en respuesta:', data);
+                    showStatus('📂 No hay trabajos de sesión anteriores', 'info');
+                }
+            } catch (error) {
+                console.error('❌ Error cargando trabajos de sesión:', error);
+                showStatus('⚠️ Error cargando trabajos de sesión anterior', 'warning');
+            }
+        }
+        
+        function restoreBatchJob(job) {
+            // Restaura un trabajo de lote que estaba en progreso
+            const localBatchId = ++batchCounter;
+            activeBatches++;
+            
+            // Crear contenedor de resultados
+            createBatchResultsContainer(localBatchId, job.id, job.total_workflows || 0);
+            
+            // Continuar con el polling si está en progreso
+            if (job.status === 'processing') {
+                startBatchPolling(localBatchId, job.id);
+                showStatus(`🔄 Reanudando seguimiento del lote: ${job.id}`, 'info');
+            }
+            
+            updateBatchButtonText();
+        }
+        
+        function restoreIndividualJob(job) {
+            // Muestra los resultados de un trabajo individual completado
+            console.log('🔄 Restaurando trabajo individual:', job);
+            
+            if (job.response_data && job.response_data.generated_images) {
+                // Debug: mostrar datos originales
+                console.log('📊 Datos originales de respuesta:', job.response_data);
+                
+                // Actualizar las URLs para usar las imágenes de sesión
+                const updatedData = { ...job.response_data };
+                
+                // Actualizar URLs de imágenes generadas
+                if (updatedData.generated_images && updatedData.generated_images.length > 0) {
+                    updatedData.generated_images = updatedData.generated_images.map(img => {
+                        const updatedImg = { ...img };
+                        if (img.session_url) {
+                            updatedImg.url = img.session_url;
+                            console.log(`🖼️ URL actualizada: ${img.url} -> ${img.session_url}`);
+                        }
+                        return updatedImg;
+                    });
+                }
+                
+                // Actualizar URL de imagen original
+                if (updatedData.original_image && updatedData.original_image.session_url) {
+                    console.log(`📷 URL original actualizada: ${updatedData.original_image.url} -> ${updatedData.original_image.session_url}`);
+                    updatedData.original_image.url = updatedData.original_image.session_url;
+                }
+                
+                console.log('✅ Datos actualizados para restauración:', updatedData);
+                
+                displayResults(updatedData);
+                showStatus(`🖼️ Trabajo individual restaurado: ${job.config?.workflow || 'workflow desconocido'}`, 'success');
+            } else {
+                console.log('⚠️ No hay response_data o generated_images en el trabajo:', job);
+                showStatus(`⚠️ Trabajo sin resultados válidos: ${job.id}`, 'warning');
+            }
+        }
+        
+        async function cleanupOldJobs(hours = 24) {
+            // Limpia trabajos antiguos de la sesión
+            try {
+                const response = await fetch(`${API_BASE_URL}/session/cleanup`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ hours })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showStatus(`🧹 ${data.cleaned_count} trabajos antiguos limpiados`, 'info');
+                } else {
+                    showStatus('⚠️ Error limpiando trabajos antiguos', 'warning');
+                }
+            } catch (error) {
+                console.error('Error limpiando trabajos:', error);
+            }
+        }
+        
+        async function getSessionSummary() {
+            // Obtiene un resumen de la sesión actual
+            try {
+                const response = await fetch(`${API_BASE_URL}/session/jobs`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    console.log('📊 Resumen de sesión:', data.summary);
+                    return data.summary;
+                }
+            } catch (error) {
+                console.error('Error obteniendo resumen de sesión:', error);
+            }
+            return null;
+        }
+        
+        async function debugSession() {
+            // Función de debug para verificar el estado de la sesión
+            try {
+                showStatus('🔍 Iniciando debug de sesión...', 'info');
+                
+                // Obtener información de sesión
+                const response = await fetch(`${API_BASE_URL}/session/jobs`);
+                const data = await response.json();
+                
+                console.log('🔍 DEBUG - Datos de sesión completos:', data);
+                
+                if (data.success) {
+                    const jobCount = Object.keys(data.jobs).length;
+                    showStatus(`📊 Sesión debug: ${jobCount} trabajos encontrados`, 'info');
+                    
+                    // Mostrar información detallada de cada trabajo
+                    Object.entries(data.jobs).forEach(([jobId, job]) => {
+                        console.log(`📋 Trabajo ${jobId}:`, job);
+                        showStatus(`📋 ${jobId}: ${job.type} - ${job.status}`, 'info');
+                        
+                        if (job.type === 'individual' && job.status === 'completed') {
+                            if (job.response_data && job.response_data.generated_images) {
+                                job.response_data.generated_images.forEach((img, index) => {
+                                    console.log(`🖼️ Imagen ${index + 1}:`, img);
+                                    if (img.session_url) {
+                                        showStatus(`🖼️ Imagen ${index + 1}: ${img.session_url}`, 'info');
+                                        
+                                        // Verificar si la imagen es accesible
+                                        const testImg = new Image();
+                                        testImg.onload = () => {
+                                            console.log(`✅ Imagen accesible: ${img.session_url}`);
+                                            showStatus(`✅ Imagen ${index + 1} accesible`, 'success');
+                                        };
+                                        testImg.onerror = () => {
+                                            console.log(`❌ Imagen no accesible: ${img.session_url}`);
+                                            showStatus(`❌ Imagen ${index + 1} no accesible`, 'error');
+                                        };
+                                        testImg.src = img.session_url;
+                                    }
+                                });
+                            }
+                        }
+                    });
+                    
+                    // Intentar restaurar de nuevo
+                    setTimeout(() => {
+                        showStatus('🔄 Intentando restaurar trabajos...', 'info');
+                        Object.values(data.jobs).forEach(job => {
+                            if (job.type === 'individual' && job.status === 'completed') {
+                                restoreIndividualJob(job);
+                            }
+                        });
+                    }, 1000);
+                    
+                } else {
+                    showStatus('❌ Error en debug de sesión', 'error');
+                    console.error('❌ Error en respuesta de sesión:', data);
+                }
+                
+            } catch (error) {
+                console.error('❌ Error en debug de sesión:', error);
+                showStatus(`❌ Error en debug: ${error.message}`, 'error');
+            }
         }
 
         // ...existing code...

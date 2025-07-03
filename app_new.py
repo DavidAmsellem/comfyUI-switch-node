@@ -24,6 +24,9 @@ from werkzeug.utils import secure_filename
 # Importar configuración de estilos
 from style_presets import get_available_styles, apply_style_to_workflow, get_workflow_nodes_for_style
 
+# Importar sistema de persistencia de sesión
+from job_persistence import session_manager
+
 # Configuración básica
 app = Flask(__name__)
 CORS(app)
@@ -662,6 +665,7 @@ def list_workflows():
 @app.route('/process-image', methods=['POST'])
 def process_image():
     """Procesa una imagen usando un workflow especificado"""
+    job_id = None
     try:
         log_info("=== INICIANDO PROCESAMIENTO DE IMAGEN ===")
         
@@ -683,7 +687,24 @@ def process_image():
         style_node_id = request.form.get('style_node', None)  # Nodo personalizado para aplicar estilo
         original_filename = request.form.get('original_filename', file.filename)
         
+        # ===== CREAR TRABAJO DE SESIÓN =====
+        job_id = session_manager.create_job(
+            job_type='individual',
+            workflow=workflow_name,
+            frame_color=frame_color,
+            style=style_id,
+            style_node=style_node_id,
+            original_filename=original_filename
+        )
+        
+        log_info(f"Trabajo de sesión creado: {job_id}")
         log_info(f"Parámetros: workflow={workflow_name}, frame_color={frame_color}, style={style_id}, style_node={style_node_id}, file={original_filename}")
+        
+        # Actualizar estado del trabajo
+        session_manager.update_job(job_id, 
+            status='processing', 
+            current_operation='Validando parámetros...'
+        )
         
         # Validar color del marco
         if frame_color not in WORKFLOW_CONFIG['frame_colors']:
@@ -700,6 +721,8 @@ def process_image():
         base_name = secure_filename(original_filename.rsplit('.', 1)[0] if '.' in original_filename else 'image')
         output_dir = create_output_directory(base_name)
         
+        session_manager.update_job(job_id, current_operation='Guardando imagen original...')
+        
         # Guardar imagen original
         log_info("Guardando imagen original...")
         original_path = os.path.join(output_dir, 'original.png')
@@ -707,8 +730,16 @@ def process_image():
         image.save(original_path, format='PNG')
         file.stream.seek(0)
         
+        # Guardar también en el directorio de sesión
+        with open(original_path, 'rb') as img_file:
+            session_original_url = session_manager.save_job_image(job_id, img_file.read(), 'original.png')
+        
+        log_info(f"Imagen original guardada en sesión: {session_original_url}")
+        
         # Guardar en input de ComfyUI
         input_path, workflow_filename = save_uploaded_image(file, base_name)
+        
+        session_manager.update_job(job_id, current_operation='Verificando acceso a la imagen...')
         
         # Verificar que ComfyUI puede acceder al archivo (sin fallar si no puede)
         log_info("Verificando acceso a la imagen desde ComfyUI...")
@@ -718,42 +749,62 @@ def process_image():
             # Esperar un poco más para que el archivo se asiente
             time.sleep(1)
         
+        session_manager.update_job(job_id, current_operation='Cargando workflow...')
+        
         # Cargar y actualizar workflow
         log_info(f"Cargando workflow: {workflow_name}")
         workflow = load_workflow(workflow_name)
         updated_workflow = update_workflow(workflow, workflow_filename, frame_color, style_id, style_node_id, base_name)
         
+        session_manager.update_job(job_id, current_operation='Enviando a ComfyUI...')
+        
         # Enviar a ComfyUI
         log_info("Enviando a ComfyUI...")
         prompt_id = submit_workflow_to_comfyui(updated_workflow)
+        
+        session_manager.update_job(job_id, 
+            current_operation='Esperando resultados de ComfyUI...',
+            prompt_id=prompt_id
+        )
         
         # Esperar resultados
         log_info("Esperando resultados...")
         outputs = wait_for_completion(prompt_id)
         
+        session_manager.update_job(job_id, current_operation='Extrayendo imágenes generadas...')
+        
         # Extraer imágenes generadas
         log_info("Extrayendo imágenes...")
         generated_images = extract_generated_images(outputs)
         
-        # Copiar imágenes generadas al directorio de salida
+        # Copiar imágenes generadas al directorio de salida y sesión
         saved_images = []
         for img_info in generated_images:
             source_path = find_image_file(img_info['filename'], img_info['subfolder'])
             if source_path:
                 dest_path = os.path.join(output_dir, f"result_{img_info['filename']}")
                 shutil.copy2(source_path, dest_path)
+                
+                # Guardar también en el directorio de sesión
+                with open(dest_path, 'rb') as img_file:
+                    session_url = session_manager.save_job_image(job_id, img_file.read(), f"result_{img_info['filename']}")
+                
+                log_info(f"Imagen guardada en sesión: {session_url}")
+                
                 saved_images.append({
                     'filename': f"result_{img_info['filename']}",
                     'url': f"/get-image/{base_name}/result_{img_info['filename']}",
+                    'session_url': session_url,
                     'original_filename': img_info['filename']
                 })
-                log_success(f"Imagen copiada: {dest_path}")
+                log_success(f"Imagen copiada: {dest_path} -> sesión: {session_url}")
         
         # Crear respuesta
         processing_mode = "text2img + controlnet_0.85" if (style_id and style_id != 'default') else "img2img_preserving_original"
         
         response = {
             "success": True,
+            "job_id": job_id,  # Agregar ID del trabajo
             "prompt_id": prompt_id,
             "workflow_used": workflow_name,
             "processing_mode": processing_mode,
@@ -764,23 +815,38 @@ def process_image():
             "output_dir": output_dir,
             "original_image": {
                 "filename": "original.png",
-                "url": f"/get-image/{base_name}/original.png"
+                "url": f"/get-image/{base_name}/original.png",
+                "session_url": session_original_url
             },
             "generated_images": saved_images,
             "total_images": len(saved_images),
             "message": f"Procesamiento completado en modo {processing_mode}. {len(saved_images)} imágenes generadas."
         }
         
+        # Actualizar trabajo de sesión como completado
+        session_manager.update_job(job_id,
+            status='completed',
+            current_operation='Completado',
+            results=saved_images,
+            response_data=response
+        )
+        
         log_success("=== PROCESAMIENTO COMPLETADO ===")
         return jsonify(response)
         
     except FileNotFoundError as e:
+        if job_id:
+            session_manager.update_job(job_id, status='error', error=f"Workflow no encontrado: {str(e)}")
         log_error(f"Workflow no encontrado: {str(e)}")
         return jsonify({"error": f"Workflow no encontrado: {str(e)}"}), 404
     except TimeoutError as e:
+        if job_id:
+            session_manager.update_job(job_id, status='error', error=f"Timeout en procesamiento: {str(e)}")
         log_error(f"Timeout en procesamiento: {str(e)}")
         return jsonify({"error": f"Timeout en procesamiento: {str(e)}"}), 408
     except Exception as e:
+        if job_id:
+            session_manager.update_job(job_id, status='error', error=str(e))
         log_error(f"Error en procesamiento: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
@@ -895,6 +961,86 @@ def get_active_batches():
                   for bid, info in ACTIVE_BATCHES.items()}
     
     return jsonify({"active_batches": batches, "count": len(batches)})
+
+# ===== ENDPOINTS DE PERSISTENCIA DE SESIÓN =====
+
+@app.route('/session/jobs', methods=['GET'])
+def get_session_jobs():
+    """Obtiene todos los trabajos de la sesión actual"""
+    try:
+        jobs = session_manager.get_all_active_jobs()
+        summary = session_manager.get_session_summary()
+        
+        return jsonify({
+            "success": True,
+            "jobs": jobs,
+            "summary": summary
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/session/jobs/<job_id>', methods=['GET'])
+def get_session_job(job_id):
+    """Obtiene un trabajo específico de la sesión"""
+    try:
+        job = session_manager.get_job(job_id)
+        if job:
+            # Agregar URLs de imágenes si existen
+            job['image_urls'] = session_manager.get_job_images(job_id)
+            return jsonify({"success": True, "job": job})
+        else:
+            return jsonify({"success": False, "error": "Trabajo no encontrado"}), 404
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/session/jobs/<job_id>', methods=['DELETE'])
+def delete_session_job(job_id):
+    """Elimina un trabajo de la sesión"""
+    try:
+        success = session_manager.delete_job(job_id)
+        if success:
+            return jsonify({"success": True, "message": "Trabajo eliminado"})
+        else:
+            return jsonify({"success": False, "error": "Trabajo no encontrado"}), 404
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/session/images/<job_id>/<filename>', methods=['GET'])
+def serve_session_image(job_id, filename):
+    """Sirve imágenes de trabajos de sesión"""
+    try:
+        # Sanitizar parámetros
+        job_id = secure_filename(job_id)
+        filename = secure_filename(filename)
+        
+        image_path = os.path.join(session_manager.session_dir, job_id, filename)
+        
+        log_info(f"Buscando imagen de sesión: {image_path}")
+        
+        if os.path.exists(image_path):
+            log_success(f"Imagen de sesión encontrada: {image_path}")
+            return send_file(image_path)
+        else:
+            log_error(f"Imagen de sesión no encontrada: {image_path}")
+            return jsonify({"error": "Imagen no encontrada"}), 404
+    except Exception as e:
+        log_error(f"Error sirviendo imagen de sesión: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/session/cleanup', methods=['POST'])
+def cleanup_session():
+    """Limpia trabajos antiguos de la sesión"""
+    try:
+        hours = request.json.get('hours', 24) if request.is_json else 24
+        cleaned_count = session_manager.cleanup_old_jobs(hours)
+        
+        return jsonify({
+            "success": True,
+            "message": f"Se limpiaron {cleaned_count} trabajos antiguos",
+            "cleaned_count": cleaned_count
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/')
 def serve_client():
@@ -1548,30 +1694,35 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
 # ==================== INICIO DEL SERVIDOR ====================
 
 if __name__ == '__main__':
-    log_info("🚀 Iniciando ComfyUI API REST v2.0.0...")
-    log_info(f"📁 Directorio de workflows: {WORKFLOWS_DIR}")
-    log_info(f"📁 Directorio de input: {COMFYUI_INPUT_DIR}")
-    log_info(f"📁 Directorio de output: {COMFYUI_OUTPUT_DIR}")
-    log_info(f"🌐 ComfyUI URL: {COMFYUI_URL}")
-    
-    # Verificar conexión con ComfyUI
-    try:
-        response = requests.get(f"{COMFYUI_URL}/system_stats", timeout=5)
-        if response.status_code == 200:
-            log_success("✅ Conexión con ComfyUI establecida")
-        else:
-            log_warning("⚠️ ComfyUI no responde correctamente")
-    except Exception as e:
-        log_warning(f"⚠️ No se pudo conectar con ComfyUI: {str(e)}")
-    
-    # Contar workflows disponibles
-    try:
-        workflows = get_available_workflows()
-        log_info(f"📊 {len(workflows)} workflows encontrados")
-    except Exception as e:
-        log_warning(f"⚠️ Error contando workflows: {str(e)}")
-    
-    # Iniciar servidor
-    log_info("🌟 Servidor iniciado en http://localhost:5000")
-    log_info("📱 Cliente web disponible en: http://localhost:5000")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    import os
+    # Solo ejecutar el arranque si es el proceso principal del reloader
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
+        log_info("🚀 Iniciando ComfyUI API REST v2.0.0...")
+        log_info(f"📁 Directorio de workflows: {WORKFLOWS_DIR}")
+        log_info(f"📁 Directorio de input: {COMFYUI_INPUT_DIR}")
+        log_info(f"📁 Directorio de output: {COMFYUI_OUTPUT_DIR}")
+        log_info(f"🌐 ComfyUI URL: {COMFYUI_URL}")
+        # Verificar conexión con ComfyUI
+        try:
+            response = requests.get(f"{COMFYUI_URL}/system_stats", timeout=5)
+            if response.status_code == 200:
+                log_success("Conexión exitosa con ComfyUI")
+            else:
+                log_warning(f"No se pudo conectar con ComfyUI: status {response.status_code}")
+        except Exception as e:
+            log_warning(f"⚠️ No se pudo conectar con ComfyUI: {str(e)}")
+        # Contar workflows disponibles
+        try:
+            workflows = []
+            if os.path.exists(WORKFLOWS_DIR):
+                for root, dirs, files in os.walk(WORKFLOWS_DIR):
+                    for filename in files:
+                        if filename.endswith('.json'):
+                            workflows.append(filename)
+            log_info(f"📊 {len(workflows)} workflows encontrados")
+        except Exception as e:
+            log_warning(f"⚠️ Error contando workflows: {str(e)}")
+        # Iniciar servidor
+        log_info("🌟 Servidor iniciado en http://localhost:5000")
+        log_info("📱 Cliente web disponible en: http://localhost:5000")
+        app.run(host='0.0.0.0', port=5000, debug=True)
