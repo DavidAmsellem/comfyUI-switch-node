@@ -55,7 +55,15 @@ WORKFLOW_CONFIG = {
     'save_image_node_id': '704',  # ID del nodo SaveImage principal
     'frame_node_id': '692',       # ID del nodo DynamicFrameNode
     'allowed_extensions': ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'],
-    'frame_colors': ['black', 'white', 'brown', 'gold', 'red', 'blue']
+     'frame_colors': ['black', 'white', 'brown', 'gold'],  # Solo los colores soportados por DynamicFrameNode
+    # Parámetros por defecto para DynamicFrameNode (para asegurar todos los inputs requeridos)
+    'frame_node_defaults': {
+        'frame_width': 50,         # Ancho del marco (10-200)
+        'shadow_enabled': True,    # Habilitar sombra del marco
+        'shadow_opacity': 0.3,     # Opacidad de la sombra (0.1-0.8)
+        'wall_color': 220,         # Color de pared (180-250)
+        'shadow_size': 15          # Tamaño de la sombra (5-50)
+    }
 }
 
 # ==================== FUNCIONES UTILITARIAS ====================
@@ -265,13 +273,27 @@ def update_workflow(workflow, image_filename, frame_color='black', style_id='def
     else:
         log_warning(f"Nodo LoadImage ({load_node_id}) no encontrado en el workflow")
     
-    # Actualizar nodo DynamicFrameNode (color del marco)
+    # Actualizar nodo DynamicFrameNode (color del marco y otros parámetros)
     frame_node_id = WORKFLOW_CONFIG['frame_node_id']
-    if frame_node_id in workflow_copy and frame_color in WORKFLOW_CONFIG['frame_colors']:
-        workflow_copy[frame_node_id]['inputs']['preset'] = frame_color
-        log_success(f"Color del marco actualizado a: {frame_color}")
+    if frame_node_id in workflow_copy:
+        frame_node = workflow_copy[frame_node_id]
+        
+        # Asegurar que el nodo tiene la estructura inputs
+        if 'inputs' not in frame_node:
+            frame_node['inputs'] = {}
+        
+        # Actualizar todos los parámetros requeridos
+        frame_defaults = WORKFLOW_CONFIG['frame_node_defaults']
+        frame_node['inputs']['preset'] = frame_color if frame_color in WORKFLOW_CONFIG['frame_colors'] else 'black'
+        frame_node['inputs']['wall_color'] = frame_defaults['wall_color']
+        frame_node['inputs']['shadow_size'] = frame_defaults['shadow_size']
+        frame_node['inputs']['shadow_opacity'] = frame_defaults['shadow_opacity']
+        frame_node['inputs']['shadow_enabled'] = frame_defaults['shadow_enabled']
+        frame_node['inputs']['frame_width'] = frame_defaults['frame_width']
+        
+        log_success(f"DynamicFrameNode ({frame_node_id}) actualizado: preset={frame_color}, wall_color={frame_defaults['wall_color']}, shadow_enabled={frame_defaults['shadow_enabled']}")
     else:
-        log_warning(f"No se pudo actualizar el color del marco")
+        log_warning(f"Nodo DynamicFrameNode ({frame_node_id}) no encontrado en el workflow")
     
     # CONFIGURAR MODO DE WORKFLOW Y CONTROLNET SEGÚN ESTILO
     if forces_text2img:
@@ -784,27 +806,58 @@ def get_image(base_name, filename):
         log_error(f"Error al obtener imagen: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/workflow-nodes/<workflow_name>', methods=['GET'])
+@app.route('/workflow-nodes/<path:workflow_name>', methods=['GET'])
 def get_workflow_nodes(workflow_name):
     """Obtiene los nodos candidatos para aplicar estilos en un workflow específico"""
     try:
-        # Cargar el workflow
-        workflow = load_workflow(workflow_name)
+        log_info(f"🔍 Buscando nodos para workflow: {workflow_name}")
         
-        # Obtener nodos candidatos
-        candidate_nodes = get_workflow_nodes_for_style(workflow)
+        # Use the existing load_workflow function that handles path resolution
+        workflow_data = load_workflow(workflow_name)
         
+        # Collect SeargeTextInputV2 nodes as style candidates
+        candidates = []
+        for node_id, node in workflow_data.items():
+            if node.get('class_type') == 'SeargeTextInputV2':
+                title = node.get('_meta', {}).get('title', '')
+                current_prompt = node.get('inputs', {}).get('prompt', '')
+                
+                # Determine if this is a recommended style node
+                is_recommended = 'style' in title.lower() or node_id == '6'
+                
+                # Create node info with all properties the client expects
+                node_info = {
+                    'id': node_id,
+                    'title': title,
+                    'name': title or f'Nodo {node_id}',
+                    'type': 'SeargeTextInputV2',
+                    'description': f'Nodo de texto para prompts ({title})' if title else f'Nodo de texto {node_id}',
+                    'recommended': is_recommended,
+                    'current_value': current_prompt[:100] + '...' if len(current_prompt) > 100 else current_prompt,
+                    'class_type': node.get('class_type')
+                }
+                
+                candidates.append(node_info)
+                log_info(f"📝 Nodo encontrado: {node_id} - {title} (recomendado: {is_recommended})")
+        
+        # Sort candidates: recommended first, then by node ID
+        candidates.sort(key=lambda x: (not x['recommended'], int(x['id']) if x['id'].isdigit() else x['id']))
+        
+        log_success(f"✅ {len(candidates)} nodos candidatos encontrados para {workflow_name}")
         return jsonify({
-            "workflow_name": workflow_name,
-            "candidate_nodes": candidate_nodes,
-            "total": len(candidate_nodes),
-            "message": f"Se encontraron {len(candidate_nodes)} nodos candidatos para aplicar estilos"
+            'success': True,
+            'workflow_name': workflow_name, 
+            'nodes': candidates,
+            'candidate_nodes': candidates,  # For client compatibility
+            'total_nodes': len(candidates)
         })
+        
     except FileNotFoundError:
-        return jsonify({"error": f"Workflow no encontrado: {workflow_name}"}), 404
+        log_error(f"❌ Workflow no encontrado: {workflow_name}")
+        return jsonify({'success': False, 'error': 'Workflow not found'}), 404
     except Exception as e:
-        log_error(f"Error obteniendo nodos del workflow {workflow_name}: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        log_error(f"❌ Error getting workflow nodes for {workflow_name}: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/batch-status/<batch_id>', methods=['GET'])
 def get_batch_status(batch_id):
@@ -1355,7 +1408,7 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
                     ACTIVE_BATCHES[batch_id]["current_operation"] = f"Procesando: {workflow_info['id']}"
             
             # Esperar completion de este workflow específico
-            outputs = wait_for_completion(prompt_id, timeout=600)  # 10 minutos timeout
+            outputs = wait_for_completion(prompt_id, timeout=600) # 10 minutos timeout
             
             # Extraer imágenes generadas
             generated_images = extract_generated_images(outputs)
