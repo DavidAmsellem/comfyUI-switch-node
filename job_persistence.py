@@ -200,6 +200,36 @@ class SessionJobManager:
             summary['newest_job'] = max(job_times).isoformat()
         
         return summary
+    
+    def clear_all_session(self) -> Dict:
+        """Limpia completamente toda la sesión - todos los trabajos e imágenes"""
+        try:
+            # Obtener conteo actual antes de limpiar
+            active_jobs = self._load_active_jobs()
+            job_count = len(active_jobs)
+            
+            # Limpiar archivo de trabajos activos
+            self._save_active_jobs({})
+            
+            # Limpiar completamente el directorio de sesión
+            if os.path.exists(self.session_dir):
+                shutil.rmtree(self.session_dir)
+                os.makedirs(self.session_dir, exist_ok=True)
+            
+            return {
+                "success": True,
+                "message": f"Sesión limpiada completamente. Se eliminaron {job_count} trabajos.",
+                "jobs_cleared": job_count,
+                "session_reset": True
+            }
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Error limpiando sesión: {str(e)}",
+                "jobs_cleared": 0,
+                "session_reset": False
+            }
 
 # Instancia global
 session_manager = SessionJobManager()

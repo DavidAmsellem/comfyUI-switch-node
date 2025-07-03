@@ -1042,6 +1042,30 @@ def cleanup_session():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route('/session/clear', methods=['POST'])
+def clear_session():
+    """Limpia completamente toda la sesión - todos los trabajos e imágenes"""
+    try:
+        log_info("🧹 Iniciando limpieza completa de sesión...")
+        
+        result = session_manager.clear_all_session()
+        
+        if result["success"]:
+            log_success(f"✅ {result['message']}")
+        else:
+            log_error(f"❌ Error limpiando sesión: {result['error']}")
+            
+        return jsonify(result)
+        
+    except Exception as e:
+        log_error(f"❌ Error en endpoint clear_session: {str(e)}")
+        return jsonify({
+            "success": False, 
+            "error": str(e),
+            "jobs_cleared": 0,
+            "session_reset": False
+        }), 500
+
 @app.route('/')
 def serve_client():
     """Sirve el cliente web principal"""

@@ -527,6 +527,9 @@
                         <button id="debugSessionBtn" style="background: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
                             🔍 Debug Sesión
                         </button>
+                        <button id="clearSessionBtn" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
+                            🧹 Limpiar Sesión
+                        </button>
                         <button id="clearStateBtn" style="background: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
                             🗑️ Limpiar Estado
                         </button>
@@ -821,6 +824,9 @@
             
             // Botón de limpiar estado
             document.getElementById('clearStateBtn').addEventListener('click', clearState);
+            
+            // Botón de limpiar sesión
+            document.getElementById('clearSessionBtn').addEventListener('click', clearSession);
             
             // Botón de debug de sesión
             document.getElementById('debugSessionBtn').addEventListener('click', debugSession);
@@ -2104,6 +2110,51 @@
             } catch (error) {
                 console.error('❌ Error en debug de sesión:', error);
                 showStatus(`❌ Error en debug: ${error.message}`, 'error');
+            }
+        }
+
+        async function clearSession() {
+            // Confirmación antes de limpiar la sesión
+            if (!confirm('⚠️ ¿Estás seguro de que quieres limpiar toda la sesión?\n\nEsto eliminará:\n• Todos los trabajos activos\n• Todas las imágenes generadas\n• El historial de la sesión\n\nEsta acción no se puede deshacer.')) {
+                return;
+            }
+            
+            try {
+                showStatus('🧹 Limpiando sesión completa...', 'info');
+                
+                // Llamar al endpoint del backend para limpiar la sesión
+                const response = await fetch(`${API_BASE_URL}/session/clear`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showStatus('✅ Sesión limpiada exitosamente', 'success');
+                    
+                    // Limpiar también el estado local
+                    localStorage.removeItem('comfyui_client_state');
+                    
+                    // Limpiar la interfaz
+                    clearResults();
+                    clearBatchResults();
+                    
+                    // Recargar la página después de 1 segundo
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                    
+                } else {
+                    showStatus('❌ Error limpiando sesión: ' + (data.error || 'Error desconocido'), 'error');
+                    console.error('Error limpiando sesión:', data);
+                }
+                
+            } catch (error) {
+                console.error('Error en clearSession:', error);
+                showStatus(`❌ Error limpiando sesión: ${error.message}`, 'error');
             }
         }
 
