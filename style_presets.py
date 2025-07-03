@@ -16,62 +16,92 @@ STYLE_PRESETS = {
     
    "minimalist": {
     "name": "⚪ Minimalista",
-    "description": "Estilo minimalista moderno con líneas limpias y espacios despejados",
-    "style_prompt": "minimalist modern interior, clean white surfaces, geometric simple furniture, natural lighting, uncluttered space, zen atmosphere, pure lines, nordic influences, photorealistic, architectural photography",
-    "negative_prompt": "cluttered, ornate decorations, busy patterns, excessive furniture, dark colors, vintage elements, baroque style, multiple objects, crowded space, cartoon, anime, illustration, artwork on walls, paintings, prints, frames on walls",
+    "description": "Estilo minimalista moderno con líneas limpias y paredes despejadas",
+    "style_prompt": "minimalist modern interior, clean white painted walls, smooth wall texture, geometric simple furniture, natural lighting, uncluttered space, zen atmosphere, pure lines, nordic influences, plain solid colored background walls, photorealistic, architectural photography",
+    "negative_prompt": "cluttered walls, ornate wall decorations, busy wall patterns, textured walls, wallpaper, wall art, excessive furniture, dark wall colors, vintage wall elements, baroque wall style, multiple wall objects, crowded wall space, artwork on walls, paintings, prints, frames on walls, wall mounted decorations, wall textures, brick walls, concrete walls",
     "display_order": 2,
     "denoise_override": 0.85,
-    "force_text2img": True
+    "force_text2img": True,
+    "controlnet_config": {
+        "canny_strength": 0.35,
+        "depth_strength": 0.40,
+        "conditioning_scale": 2.0
+    }
 },
 
 "luxury": {
     "name": "✨ Lujoso",
-    "description": "Estilo de lujo premium con materiales de alta gama y elegancia",
-    "style_prompt": "luxury premium interior, marble surfaces, gold accents, crystal elements, velvet furniture, silk textures, elegant lighting, sophisticated atmosphere, high-end materials, opulent design, photorealistic, professional interior photography",
-    "negative_prompt": "cheap materials, plastic furniture, fluorescent lighting, cluttered space, industrial elements, rough textures, budget design, casual style, basic finishes, cartoon, anime, illustration, artwork on walls, paintings, prints, frames on walls",
+    "description": "Estilo de lujo premium con paredes elegantes y materiales de alta gama",
+    "style_prompt": "luxury premium interior, elegant marble wall panels, sophisticated wall finishes, gold accent walls, velvet wall textures, silk wall coverings, high-end wall materials, opulent wall design, refined wall surfaces, premium wall treatments, crystal wall elements, photorealistic, professional interior photography",
+    "negative_prompt": "cheap wall materials, plastic wall panels, basic painted walls, fluorescent lighting, cluttered wall space, industrial wall elements, rough wall textures, budget wall design, casual wall style, basic wall finishes, plain white walls, bare walls, artwork on walls, paintings, prints, frames on walls, wall mounted decorations",
     "display_order": 3,
     "denoise_override": 0.85,
-    "force_text2img": True
+    "force_text2img": True,
+    "controlnet_config": {
+        "canny_strength": 0.30,
+        "depth_strength": 0.45,
+        "conditioning_scale": 2.0
+    }
 },
 
 "industrial": {
     "name": "🏭 Industrial",
-    "description": "Estilo industrial urbano con materiales crudos y acabados metálicos",
-    "style_prompt": "industrial loft interior, exposed concrete, steel beams, metal fixtures, raw materials, urban atmosphere, Edison bulb lighting, weathered textures, factory aesthetic, brick walls, photorealistic, architectural photography",
-    "negative_prompt": "ornate decorations, soft fabrics, pastel colors, delicate materials, classical elements, fancy furniture, decorative moldings, elegant finishes, luxury textures, cartoon, anime, illustration, artwork on walls, paintings, prints, frames on walls",
+    "description": "Estilo industrial urbano con paredes de materiales crudos y acabados metálicos",
+    "style_prompt": "industrial loft interior, exposed concrete walls, raw brick wall texture, steel beam walls, metal wall fixtures, weathered wall surfaces, factory aesthetic walls, urban wall atmosphere, Edison bulb wall lighting, industrial wall materials, unfinished wall concrete, photorealistic, architectural photography",
+    "negative_prompt": "ornate wall decorations, soft wall fabrics, pastel wall colors, delicate wall materials, classical wall elements, fancy wall furniture, decorative wall moldings, elegant wall finishes, luxury wall textures, painted smooth walls, wallpaper, artwork on walls, paintings, prints, frames on walls, wall mounted decorations",
     "display_order": 4,
     "denoise_override": 0.85,
-    "force_text2img": True
+    "force_text2img": True,
+    "controlnet_config": {
+        "canny_strength": 0.40,
+        "depth_strength": 0.35,
+        "conditioning_scale": 2.0
+    }
 },
 
 "warm_cozy": {
     "name": "🔥 Cálido y Acogedor",
-    "description": "Estilo cálido y acogedor con tonos tierra y materiales naturales",
-    "style_prompt": "warm cozy interior, natural wood textures, warm earth tones, soft lighting, comfortable furniture, wool textures, amber glow, fireplace atmosphere, rustic elements, inviting space, photorealistic, interior photography",
-    "negative_prompt": "cold colors, steel materials, harsh lighting, clinical atmosphere, stark white surfaces, modern minimalism, glass furniture, fluorescent lights, sterile environment, cartoon, anime, illustration, artwork on walls, paintings, prints, frames on walls",
+    "description": "Estilo cálido y acogedor con paredes en tonos tierra y materiales naturales",
+    "style_prompt": "warm cozy interior, natural wood wall paneling, warm earth tone wall colors, textured wall surfaces, rustic wall elements, inviting wall atmosphere, amber wall lighting, wood wall textures, comfortable wall finishes, natural wall materials, fireplace wall accent, soft warm wall tones, photorealistic, interior photography",
+    "negative_prompt": "cold wall colors, steel wall materials, harsh wall lighting, clinical wall atmosphere, stark white wall surfaces, modern minimalist walls, glass wall panels, fluorescent wall lights, sterile wall environment, concrete walls, industrial wall finishes, artwork on walls, paintings, prints, frames on walls, wall mounted decorations",
     "display_order": 5,
     "denoise_override": 0.85,
-    "force_text2img": True
+    "force_text2img": True,
+    "controlnet_config": {
+        "canny_strength": 0.25,
+        "depth_strength": 0.40,
+        "conditioning_scale": 1.8
+    }
 },
 
 "futuristic": {
     "name": "🚀 Futurista",
-    "description": "Estilo futurista high-tech con tecnología avanzada y materiales innovadores",
-    "style_prompt": "futuristic sci-fi interior, sleek surfaces, LED lighting, holographic elements, chrome finishes, glass panels, high-tech atmosphere, digital displays, cyberpunk influences, advanced materials, photorealistic, modern architecture",
-    "negative_prompt": "vintage elements, natural wood, rustic materials, traditional furniture, antique decorations, warm colors, organic textures, classical design, aged surfaces, cartoon, anime, illustration, artwork on walls, paintings, prints, frames on walls",
+    "description": "Estilo futurista high-tech con paredes tecnológicas avanzadas y materiales innovadores",
+    "style_prompt": "futuristic sci-fi interior, sleek metallic wall surfaces, LED wall lighting panels, holographic wall elements, chrome wall finishes, glass wall panels, high-tech wall atmosphere, digital wall displays, cyberpunk wall influences, advanced wall materials, glowing wall accents, seamless wall design, photorealistic, modern architecture",
+    "negative_prompt": "vintage wall elements, natural wood walls, rustic wall materials, traditional wall furniture, antique wall decorations, warm wall colors, organic wall textures, classical wall design, aged wall surfaces, brick walls, concrete walls, wallpaper, artwork on walls, paintings, prints, frames on walls, wall mounted decorations",
     "display_order": 6,
     "denoise_override": 0.85,
-    "force_text2img": True
+    "force_text2img": True,
+    "controlnet_config": {
+        "canny_strength": 0.45,
+        "depth_strength": 0.35,
+        "conditioning_scale": 2.0
+    }
 },
 
 "artistic_bohemian": {
     "name": "🎭 Artístico Bohemio",
-    "description": "Estilo artístico bohemio con colores vibrantes y elementos creativos",
-    "style_prompt": "artistic bohemian interior, vibrant colors, eclectic furniture, creative textures, artistic elements, colorful fabrics, unique lighting, expressive atmosphere, gallery vibe, creative chaos, photorealistic, interior design photography",
-    "negative_prompt": "minimalist design, corporate style, sterile environment, monochrome colors, uniform furniture, stark lighting, conservative design, bland surfaces, business atmosphere, cartoon, anime, illustration, artwork on walls, paintings, prints, frames on walls",
+    "description": "Estilo artístico bohemio con paredes coloridas y elementos creativos",
+    "style_prompt": "artistic bohemian interior, vibrant colored walls, eclectic wall textures, creative wall surfaces, artistic wall elements, colorful wall fabrics, unique wall lighting, expressive wall atmosphere, gallery wall vibe, creative wall chaos, textured wall finishes, bold wall colors, photorealistic, interior design photography",
+    "negative_prompt": "minimalist wall design, corporate wall style, sterile wall environment, monochrome wall colors, uniform wall surfaces, stark wall lighting, conservative wall design, bland wall surfaces, business wall atmosphere, plain white walls, smooth painted walls, artwork on walls, paintings, prints, frames on walls, wall mounted decorations",
     "display_order": 7,
     "denoise_override": 0.85,
-    "force_text2img": True
+    "force_text2img": True,
+    "controlnet_config": {
+        "canny_strength": 0.20,
+        "depth_strength": 0.45,
+        "conditioning_scale": 1.9
+    }
 }
 }
 
@@ -145,6 +175,14 @@ def style_forces_text2img(style_id):
     if style_id in STYLE_PRESETS:
         return STYLE_PRESETS[style_id].get("force_text2img", False)
     return False
+
+def get_style_controlnet_config(style_id):
+    """
+    Obtiene la configuración de ControlNet para un estilo específico
+    """
+    if style_id in STYLE_PRESETS:
+        return STYLE_PRESETS[style_id].get("controlnet_config", {})
+    return {}
 
 def detect_workflow_type(workflow):
     """
@@ -227,6 +265,10 @@ def apply_style_to_workflow(workflow, style_id, custom_node_id=None):
     # 4. Aplicar denoise_override si el estilo lo especifica
     if "denoise_override" in style_data:
         workflow = apply_denoise_override(workflow, style_data["denoise_override"], workflow_type)
+    
+    # 5. Aplicar configuraciones de ControlNet mejoradas
+    if "controlnet_config" in style_data:
+        workflow = apply_controlnet_optimizations(workflow, style_data["controlnet_config"], workflow_type)
     
     return workflow
 
@@ -509,6 +551,48 @@ def adjust_conditioning_parameters_for_style(workflow, style_id, workflow_type):
             "base_conditioning_scale": 2.0,
             "target_conditioning_scale": 2.0,
             "precondition_strength": 0.8  # Valor alto para hacer visible el efecto
+        },
+        "minimalist": {
+            # Configuración optimizada para estilo minimalista
+            "positive_conditioning_scale": 2.0,
+            "base_conditioning_scale": 2.0,
+            "target_conditioning_scale": 2.0,
+            "precondition_strength": 0.4
+        },
+        "luxury": {
+            # Configuración optimizada para estilo lujoso
+            "positive_conditioning_scale": 2.0,
+            "base_conditioning_scale": 2.0,
+            "target_conditioning_scale": 2.0,
+            "precondition_strength": 0.5
+        },
+        "industrial": {
+            # Configuración optimizada para estilo industrial
+            "positive_conditioning_scale": 2.0,
+            "base_conditioning_scale": 2.0,
+            "target_conditioning_scale": 2.0,
+            "precondition_strength": 0.6
+        },
+        "warm_cozy": {
+            # Configuración optimizada para estilo cálido
+            "positive_conditioning_scale": 1.8,
+            "base_conditioning_scale": 2.0,
+            "target_conditioning_scale": 2.0,
+            "precondition_strength": 0.3
+        },
+        "futuristic": {
+            # Configuración optimizada para estilo futurista
+            "positive_conditioning_scale": 2.0,
+            "base_conditioning_scale": 2.0,
+            "target_conditioning_scale": 2.0,
+            "precondition_strength": 0.7
+        },
+        "artistic_bohemian": {
+            # Configuración optimizada para estilo artístico bohemio
+            "positive_conditioning_scale": 1.9,
+            "base_conditioning_scale": 2.0,
+            "target_conditioning_scale": 2.0,
+            "precondition_strength": 0.5
         }
     }
     
@@ -574,6 +658,64 @@ def apply_denoise_override(workflow, denoise_value, workflow_type):
     print(f"🎨 Denoise ajustado para mayor creatividad: {old_denoise} → {denoise_value}")
     print(f"   ✨ Esto permitirá transformaciones más dramáticas manteniendo la estructura")
     
+    return workflow
+
+def apply_controlnet_optimizations(workflow, controlnet_config, workflow_type):
+    """
+    Aplica configuraciones optimizadas de ControlNet basadas en el estilo
+    
+    Args:
+        workflow: El workflow JSON
+        controlnet_config: Configuración específica del ControlNet para el estilo
+        workflow_type: Tipo de workflow (searge, basic)
+    """
+    if workflow_type != "searge":
+        print("⚠️ Optimizaciones de ControlNet solo soportadas para workflows Searge")
+        return workflow
+    
+    # IDs de nodos ControlNet según el análisis del workflow
+    canny_node_id = "677"  # ControlNetApplyAdvanced para Canny
+    depth_node_id = "676"  # ControlNetApplyAdvanced para Depth
+    
+    # Aplicar configuración de Canny ControlNet
+    canny_strength = controlnet_config.get("canny_strength", 0.35)
+    if canny_node_id in workflow:
+        old_canny = workflow[canny_node_id]["inputs"].get("strength", "N/A")
+        workflow[canny_node_id]["inputs"]["strength"] = canny_strength
+        print(f"🎯 ControlNet Canny strength: {old_canny} → {canny_strength}")
+    else:
+        print(f"⚠️ Nodo ControlNet Canny {canny_node_id} no encontrado")
+    
+    # Aplicar configuración de Depth ControlNet
+    depth_strength = controlnet_config.get("depth_strength", 0.40)
+    if depth_node_id in workflow:
+        old_depth = workflow[depth_node_id]["inputs"].get("strength", "N/A")
+        workflow[depth_node_id]["inputs"]["strength"] = depth_strength
+        print(f"🎯 ControlNet Depth strength: {old_depth} → {depth_strength}")
+    else:
+        print(f"⚠️ Nodo ControlNet Depth {depth_node_id} no encontrado")
+    
+    # Mejorar configuración de conditioning general para ControlNet
+    conditioning_scale = controlnet_config.get("conditioning_scale", 2.0)
+    
+    # Buscar nodos de conditioning y optimizarlos
+    for node_id, node_data in workflow.items():
+        if isinstance(node_data, dict) and "inputs" in node_data:
+            class_type = node_data.get("class_type", "")
+            
+            # Optimizar negative conditioning que estaba muy bajo
+            if class_type == "SeargeConditioningParameters":
+                # Mejorar negative conditioning que estaba en 0.8 (muy bajo)
+                old_negative = workflow[node_id]["inputs"].get("negative_conditioning_scale", "N/A")
+                workflow[node_id]["inputs"]["negative_conditioning_scale"] = 1.5  # Mejorado de 0.8
+                print(f"🔧 Negative conditioning mejorado: {old_negative} → 1.5")
+                
+                # Asegurar positive conditioning en el máximo
+                old_positive = workflow[node_id]["inputs"].get("positive_conditioning_scale", "N/A")
+                workflow[node_id]["inputs"]["positive_conditioning_scale"] = conditioning_scale
+                print(f"🔧 Positive conditioning optimizado: {old_positive} → {conditioning_scale}")
+    
+    print(f"✅ Configuraciones de ControlNet aplicadas para mejor control de paredes")
     return workflow
 
 def determine_real_workflow_mode(workflow, style_id):
