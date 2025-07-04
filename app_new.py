@@ -928,7 +928,7 @@ def get_workflow_nodes(workflow_name):
 @app.route('/batch-status/<batch_id>', methods=['GET'])
 def get_batch_status(batch_id):
     """
-    Obtiene el status actual de un batch en progreso
+    Obtiene el status actual de un batch en progreso con información de sesión
     """
     with BATCH_LOCK:
         if batch_id not in ACTIVE_BATCHES:
@@ -936,17 +936,40 @@ def get_batch_status(batch_id):
         
         batch_info = ACTIVE_BATCHES[batch_id].copy()
     
+    # Agregar información del job de sesión si está disponible
+    session_job_id = batch_info.get('session_job_id')
+    if session_job_id:
+        session_job = session_manager.get_job(session_job_id)
+        if session_job:
+            batch_info['session_job'] = {
+                'id': session_job_id,
+                'status': session_job.get('status'),
+                'created_at': session_job.get('created_at'),
+                'original_image_url': f"/session/images/{session_job_id}/original.png",
+                'results_count': len(session_job.get('results', []))
+            }
+    
     return jsonify(batch_info)
 
 @app.route('/batch-status/<batch_id>', methods=['DELETE'])
 def clear_batch_status(batch_id):
     """
-    Limpia un batch completado del tracking
+    Limpia un batch completado del tracking (mantiene la sesión persistente)
     """
     with BATCH_LOCK:
         if batch_id in ACTIVE_BATCHES:
+            session_job_id = ACTIVE_BATCHES[batch_id].get('session_job_id')
             del ACTIVE_BATCHES[batch_id]
-            return jsonify({"success": True, "message": f"Batch {batch_id} eliminado del tracking"})
+            
+            message = f"Batch {batch_id} eliminado del tracking"
+            if session_job_id:
+                message += f". Job de sesión {session_job_id} mantenido para persistencia"
+            
+            return jsonify({
+                "success": True, 
+                "message": message,
+                "session_job_id": session_job_id
+            })
         else:
             return jsonify({"error": "Batch no encontrado"}), 404
 
@@ -1151,8 +1174,9 @@ def get_available_workflows():
 @app.route('/process-batch', methods=['POST'])
 def process_batch():
     """
-    Procesa una imagen con múltiples workflows simultáneamente
+    Procesa una imagen con múltiples workflows simultáneamente con persistencia
     """
+    batch_job_id = None
     try:
         log_info("📦 Iniciando procesamiento en lote...")
         
@@ -1192,30 +1216,78 @@ def process_batch():
         # Parámetros comunes (pueden venir del JSON o del form)
         frame_color = batch_config.get('frame_color') or request.form.get('frame_color', 'black')
         style = batch_config.get('style') or request.form.get('style', 'default')
+        original_filename = request.form.get('original_filename', image_file.filename)
+        
+        # ===== CREAR TRABAJO DE SESIÓN PARA BATCH =====
+        batch_job_id = session_manager.create_job(
+            job_type='batch',
+            batch_config=batch_config,
+            frame_color=frame_color,
+            style=style,
+            original_filename=original_filename,
+            total_workflows=0,  # Se actualizará después
+            completed_workflows=0,
+            successful=0,
+            failed=0
+        )
+        
+        log_info(f"🆔 Trabajo de sesión batch creado: {batch_job_id}")
+        
+        # Actualizar estado del trabajo
+        session_manager.update_job(batch_job_id, 
+            status='processing', 
+            current_operation='Validando parámetros del batch...'
+        )
         
         log_info(f"📋 Configuración del batch: {batch_config}")
         log_info(f"🎨 Parámetros: frame_color={frame_color}, style={style}")
+        
+        # Actualizar estado del trabajo
+        session_manager.update_job(batch_job_id, current_operation='Validando estilo...')
         
         # Validar estilo
         available_styles = get_available_styles()
         available_style_ids = [style['id'] for style in available_styles]
         if style not in available_style_ids:
+            session_manager.update_job(batch_job_id, status='error', error=f"Estilo no encontrado: {style}")
             return jsonify({"error": f"Estilo no encontrado: {style}. Estilos disponibles: {available_style_ids}"}), 400
+        
+        # Actualizar estado del trabajo
+        session_manager.update_job(batch_job_id, current_operation='Obteniendo workflows disponibles...')
         
         # Obtener workflows disponibles
         available_workflows = get_available_workflows()
+        
+        # Actualizar estado del trabajo
+        session_manager.update_job(batch_job_id, current_operation='Filtrando workflows...')
         
         # Filtrar workflows según criterios del batch
         filtered_workflows = filter_workflows_for_batch(batch_config, available_workflows)
         
         if not filtered_workflows:
+            error_msg = "No se encontraron workflows que coincidan con los criterios especificados"
+            session_manager.update_job(batch_job_id, status='error', error=error_msg)
             return jsonify({
-                "error": "No se encontraron workflows que coincidan con los criterios especificados",
+                "error": error_msg,
                 "available_workflows": len(available_workflows),
                 "criteria": batch_config
             }), 400
         
+        # Actualizar total de workflows en el job de sesión
+        session_manager.update_job(batch_job_id, 
+            total_workflows=len(filtered_workflows),
+            workflows=[w["id"] for w in filtered_workflows],
+            current_operation=f'Preparando procesamiento de {len(filtered_workflows)} workflows...'
+        )
+        
         log_info(f"🎯 Workflows seleccionados: {len(filtered_workflows)}/{len(available_workflows)}")
+        
+        # Guardar imagen original en la sesión inmediatamente
+        session_manager.update_job(batch_job_id, current_operation='Guardando imagen original...')
+        image_file.seek(0)
+        original_image_data = image_file.read()
+        session_original_url = session_manager.save_job_image(batch_job_id, original_image_data, 'original.png')
+        log_info(f"🖼️ Imagen original guardada en sesión: {session_original_url}")
         
         # Preparar parámetros comunes
         common_params = {
@@ -1230,13 +1302,17 @@ def process_batch():
             if style_nodes:
                 common_params["style_node"] = style_nodes[0]["id"]
         
-        # Generar ID único para este batch
+        # Generar ID único para este batch (diferente del job_id de sesión)
         batch_id = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + str(uuid.uuid4())[:8]
+        
+        # Almacenar referencia entre batch_id y job_id de sesión
+        session_manager.update_job(batch_job_id, batch_tracking_id=batch_id)
         
         # Inicializar tracking del batch
         with BATCH_LOCK:
             ACTIVE_BATCHES[batch_id] = {
                 "batch_id": batch_id,
+                "session_job_id": batch_job_id,  # Referencia al job de sesión
                 "status": "starting",
                 "total_workflows": len(filtered_workflows),
                 "completed_workflows": 0,
@@ -1251,6 +1327,7 @@ def process_batch():
         
         log_info(f"🚀 Iniciando procesamiento simultáneo de {len(filtered_workflows)} workflows...")
         log_info(f"📊 Batch ID para tracking: {batch_id}")
+        log_info(f"🆔 Session Job ID: {batch_job_id}")
         
         # Guardar el contenido de la imagen en memoria antes de iniciar el thread
         image_file.seek(0)
@@ -1261,16 +1338,30 @@ def process_batch():
         def process_batch_async():
             try:
                 results = process_all_workflows_simultáneamente_with_tracking(
-                    image_data, filtered_workflows, common_params, batch_id
+                    image_data, filtered_workflows, common_params, batch_id, batch_job_id
                 )
                 
-                # Finalizar batch
+                # Finalizar batch Y sesión
                 with BATCH_LOCK:
                     if batch_id in ACTIVE_BATCHES:
                         batch_info = ACTIVE_BATCHES[batch_id]
                         batch_info["status"] = "completed"
                         batch_info["total_processing_time"] = round(time.time() - batch_info["start_time"], 2)
                         batch_info["final_results"] = results
+                
+                # Finalizar job de sesión
+                successful_results = [r for r in results if r.get('success', False)]
+                failed_results = [r for r in results if not r.get('success', False)]
+                
+                session_manager.update_job(batch_job_id,
+                    status='completed',
+                    successful=len(successful_results),
+                    failed=len(failed_results),
+                    results=results,
+                    current_operation=f'Completado: {len(successful_results)} exitosos, {len(failed_results)} fallidos'
+                )
+                
+                log_success(f"✅ Batch {batch_id} completado: {len(successful_results)}/{len(results)} exitosos")
                         
             except Exception as e:
                 log_error(f"❌ Error en procesamiento async de batch {batch_id}: {str(e)}")
@@ -1278,6 +1369,13 @@ def process_batch():
                     if batch_id in ACTIVE_BATCHES:
                         ACTIVE_BATCHES[batch_id]["status"] = "error"
                         ACTIVE_BATCHES[batch_id]["error"] = str(e)
+                
+                # Actualizar job de sesión con error
+                session_manager.update_job(batch_job_id, 
+                    status='error', 
+                    error=str(e),
+                    current_operation=f'Error: {str(e)}'
+                )
         
         # Iniciar thread
         thread = threading.Thread(target=process_batch_async)
@@ -1288,22 +1386,31 @@ def process_batch():
         return jsonify({
             "success": True,
             "batch_id": batch_id,
+            "session_job_id": batch_job_id,  # También devolver el job ID de sesión
             "processing_mode": "asynchronous_with_tracking",
             "status": "processing",
             "total_workflows": len(filtered_workflows),
-            "message": "Batch iniciado. Use GET /batch-status/{batch_id} para consultar progreso",
+            "message": "Batch iniciado. Use GET /batch-status/{batch_id} para consultar progreso o /session/jobs/{session_job_id} para persistencia",
             "status_endpoint": f"/batch-status/{batch_id}",
+            "session_endpoint": f"/session/jobs/{batch_job_id}",
             "workflow_list": [w["id"] for w in filtered_workflows],
             "batch_config": batch_config,
-            "common_params": common_params
+            "common_params": common_params,
+            "original_image_url": session_original_url
         })
         
     except Exception as e:
         log_error(f"❌ Error en procesamiento batch: {str(e)}")
+        
+        # Actualizar job de sesión si existe
+        if batch_job_id:
+            session_manager.update_job(batch_job_id, status='error', error=str(e))
+        
         return jsonify({
             "success": False, 
             "error": str(e),
-            "processing_mode": "simultaneous"
+            "processing_mode": "simultaneous",
+            "session_job_id": batch_job_id
         }), 500
 
 def filter_workflows_for_batch(batch_config, available_workflows):
@@ -1419,10 +1526,11 @@ def process_single_workflow_for_batch(image_file, workflow_info, common_params):
             "processing_time": 0
         }
 
-def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, common_params, batch_id):
+def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, common_params, batch_id, session_job_id=None):
     """
-    Procesa todos los workflows simultáneamente con tracking en tiempo real
+    Procesa todos los workflows simultáneamente con tracking en tiempo real y persistencia
     image_data: BytesIO object con el contenido de la imagen
+    session_job_id: ID del job de sesión para persistencia
     """
     import concurrent.futures
     
@@ -1434,6 +1542,13 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
         if batch_id in ACTIVE_BATCHES:
             ACTIVE_BATCHES[batch_id]["status"] = "submitting"
             ACTIVE_BATCHES[batch_id]["current_operation"] = "Enviando workflows a ComfyUI..."
+    
+    # Actualizar también el job de sesión
+    if session_job_id:
+        session_manager.update_job(session_job_id, 
+            status='processing',
+            current_operation="Enviando workflows a ComfyUI..."
+        )
     
     log_info(f"🚀 Enviando {len(workflows)} workflows simultáneamente a ComfyUI...")
     
@@ -1460,12 +1575,20 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
             log_info(f"📏 Imagen redimensionada a: {master_image.width}x{master_image.height}")
             
         log_success("✅ Imagen pre-cargada correctamente")
+        
     except Exception as e:
         log_error(f"❌ Error pre-cargando imagen: {str(e)}")
         with BATCH_LOCK:
             if batch_id in ACTIVE_BATCHES:
                 ACTIVE_BATCHES[batch_id]["status"] = "error"
                 ACTIVE_BATCHES[batch_id]["error"] = f"Error pre-cargando imagen: {str(e)}"
+        
+        # Actualizar también el job de sesión
+        if session_job_id:
+            session_manager.update_job(session_job_id, 
+                status='error',
+                error=f"Error pre-cargando imagen: {str(e)}"
+            )
         return []
 
     # Fase 1: Preparar y enviar todos los workflows a ComfyUI
@@ -1552,6 +1675,13 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
             if batch_id in ACTIVE_BATCHES:
                 ACTIVE_BATCHES[batch_id]["status"] = "error"
                 ACTIVE_BATCHES[batch_id]["error"] = "No se pudo enviar ningún workflow"
+        
+        # Actualizar también el job de sesión
+        if session_job_id:
+            session_manager.update_job(session_job_id, 
+                status='error',
+                error="No se pudo enviar ningún workflow"
+            )
         return results
     
     # Actualizar status: procesando
@@ -1559,6 +1689,12 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
         if batch_id in ACTIVE_BATCHES:
             ACTIVE_BATCHES[batch_id]["status"] = "processing"
             ACTIVE_BATCHES[batch_id]["current_operation"] = f"Procesando {len(submitted_prompts)} workflows..."
+    
+    # Actualizar también el job de sesión
+    if session_job_id:
+        session_manager.update_job(session_job_id, 
+            current_operation=f"Procesando {len(submitted_prompts)} workflows..."
+        )
     
     log_info(f"🏁 {len(submitted_prompts)} workflows enviados a ComfyUI. Esperando resultados...")
     
@@ -1588,20 +1724,46 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
             
             # Copiar imágenes generadas
             saved_images = []
+            session_images = []  # Para URLs de sesión
             for img_info in generated_images:
                 source_path = find_image_file(img_info['filename'], img_info['subfolder'])
                 if source_path:
                     dest_path = os.path.join(workflow_output_dir, f"result_{img_info['filename']}")
                     shutil.copy2(source_path, dest_path)
+                    
+                    # Guardar también en la sesión si tenemos session_job_id
+                    session_url = None
+                    if session_job_id:
+                        try:
+                            with open(source_path, 'rb') as img_file:
+                                session_filename = f"{workflow_info['id'].replace('/', '_')}_result_{img_info['filename']}"
+                                session_url = session_manager.save_job_image(session_job_id, img_file.read(), session_filename)
+                        except Exception as e:
+                            log_warning(f"⚠️ No se pudo guardar imagen en sesión: {str(e)}")
+                    
                     saved_images.append({
                         'filename': f"result_{img_info['filename']}",
                         'url': f"/get-image/batch_{workflow_info['id'].replace('/', '_')}/result_{img_info['filename']}",
+                        'session_url': session_url,  # URL de sesión persistente
                         'original_filename': img_info['filename']
                     })
+                    
+                    if session_url:
+                        session_images.append(session_url)
             
             # Guardar imagen original en el directorio del workflow
             original_dest = os.path.join(workflow_output_dir, 'original.png')
             master_image.save(original_dest, format='PNG')
+            
+            # Guardar también imagen original en la sesión
+            original_session_url = None
+            if session_job_id:
+                try:
+                    with open(original_dest, 'rb') as img_file:
+                        original_session_filename = f"{workflow_info['id'].replace('/', '_')}_original.png"
+                        original_session_url = session_manager.save_job_image(session_job_id, img_file.read(), original_session_filename)
+                except Exception as e:
+                    log_warning(f"⚠️ No se pudo guardar imagen original en sesión: {str(e)}")
             
             processing_time = time.time() - start_time
             
@@ -1610,9 +1772,11 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
                 "workflow_info": workflow_info,
                 "success": True,
                 "generated_images": saved_images,
+                "session_images": session_images,  # URLs de sesión persistentes
                 "original_image": {
                     "filename": "original.png",
-                    "url": f"/get-image/batch_{workflow_info['id'].replace('/', '_')}/original.png"
+                    "url": f"/get-image/batch_{workflow_info['id'].replace('/', '_')}/original.png",
+                    "session_url": original_session_url  # URL de sesión para imagen original
                 },
                 "processing_time": round(processing_time, 2),
                 "prompt_id": prompt_id,
@@ -1639,6 +1803,20 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
                     
                     batch_info["current_operation"] = f"Completado: {workflow_info['id']} ({batch_info['completed_workflows']}/{batch_info['total_workflows']})"
             
+            # *** ACTUALIZAR TAMBIÉN EL JOB DE SESIÓN ***
+            if session_job_id:
+                # Obtener estado actual del batch
+                with BATCH_LOCK:
+                    if batch_id in ACTIVE_BATCHES:
+                        batch_info = ACTIVE_BATCHES[batch_id]
+                        session_manager.update_job(session_job_id,
+                            completed_workflows=batch_info["completed_workflows"],
+                            successful=batch_info["successful"],
+                            failed=batch_info["failed"],
+                            current_operation=batch_info["current_operation"],
+                            results=batch_info["results"][:10]  # Solo los últimos 10 para no sobrecargar
+                        )
+            
             return result
             
         except Exception as e:
@@ -1663,6 +1841,20 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
                     batch_info["failed"] += 1
                     batch_info["results"].append(result)
                     batch_info["current_operation"] = f"Error en: {workflow_info['id']} ({batch_info['completed_workflows']}/{batch_info['total_workflows']})"
+            
+            # *** ACTUALIZAR TAMBIÉN EL JOB DE SESIÓN EN CASO DE ERROR ***
+            if session_job_id:
+                # Obtener estado actual del batch
+                with BATCH_LOCK:
+                    if batch_id in ACTIVE_BATCHES:
+                        batch_info = ACTIVE_BATCHES[batch_id]
+                        session_manager.update_job(session_job_id,
+                            completed_workflows=batch_info["completed_workflows"],
+                            successful=batch_info["successful"],
+                            failed=batch_info["failed"],
+                            current_operation=batch_info["current_operation"],
+                            results=batch_info["results"][:10]  # Solo los últimos 10 para no sobrecargar
+                        )
             
             return result
     

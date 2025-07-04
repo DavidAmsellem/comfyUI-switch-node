@@ -295,6 +295,87 @@
             font-size: 0.9em;
         }
 
+        /* Individual Jobs Styles */
+        .individual-results {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .individual-job-result {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border-left: 4px solid #4facfe;
+        }
+        
+        .individual-job-result.error {
+            border-left-color: #f44336;
+            background: #fff5f5;
+        }
+        
+        .individual-job-result.success {
+            border-left-color: #4caf50;
+        }
+        
+        .individual-job-result.processing {
+            border-left-color: #ff9800;
+            background: #fff8e1;
+        }
+        
+        .individual-job-header {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .individual-job-time {
+            font-size: 0.8em;
+            color: #666;
+            background: #f5f5f5;
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+        
+        .individual-job-stats {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+        
+        .individual-stat {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9em;
+        }
+        
+        .individual-job-operation {
+            background: #e3f2fd;
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin: 10px 0;
+            font-size: 0.9em;
+            color: #1976d2;
+            font-style: italic;
+        }
+        
+        .individual-job-images {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .individual-job-images img {
+            width: 100%;
+            border-radius: 4px;
+        }
+
         /* Estilos para los modos de procesamiento */
         .mode-panel {
             display: none;
@@ -537,8 +618,16 @@
                     <div class="status-messages" id="statusMessages"></div>
                 </div>
 
+                <div class="section" id="individualJobsSection" style="display: none;">
+                    <h3>🖼️ Galería Individual</h3>
+                    <div id="individualSummary" style="background: #e3f2fd; border-radius: 6px; padding: 10px; margin-bottom: 15px; font-size: 0.9em; color: #1976d2;">
+                        📊 Los resultados de workflows individuales aparecerán aquí conforme se completen. Los más recientes se muestran primero.
+                    </div>
+                    <div class="individual-results" id="individualResults"></div>
+                </div>
+
                 <div class="section" id="resultsSection" style="display: none;">
-                    <h3>✨ Resultados Individuales</h3>
+                    <h3>✨ Resultados Rápidos</h3>
                     <div class="result-images" id="resultImages"></div>
                 </div>
 
@@ -561,6 +650,11 @@
         let workflowsStructure = {};
         let availableStyles = [];
         let currentWorkflowNodes = [];
+
+        // Variables para tracking de trabajos individuales
+        let activeIndividualJobs = new Map(); // jobId -> jobInfo
+        let individualJobCounter = 0;
+        let individualPollingIntervals = new Map(); // jobId -> intervalId
 
         // ===== PERSISTENCE FUNCTIONS =====
         function saveState() {
@@ -722,11 +816,17 @@
 
         // Limpieza cuando se cierra la página
         window.addEventListener('beforeunload', function() {
-            // Limpiar todos los intervalos de polling
+            // Limpiar todos los intervalos de polling de lotes
             pollingIntervals.forEach((intervalId) => {
                 clearInterval(intervalId);
             });
             pollingIntervals.clear();
+            
+            // Limpiar todos los intervalos de polling de trabajos individuales
+            individualPollingIntervals.forEach((intervalId) => {
+                clearInterval(intervalId);
+            });
+            individualPollingIntervals.clear();
         });
 
         function setupEventListeners() {
@@ -1125,6 +1225,11 @@
             const styleNodeSelect = document.getElementById('styleNodeSelect');
             const selectedStyleNode = styleNodeSelect.value || null;
 
+            // Crear ID local para el trabajo individual
+            individualJobCounter++;
+            const localJobId = `individual_${individualJobCounter}`;
+            const startTime = new Date();
+
             // Deshabilitar botón
             const processBtn = document.getElementById('processBtn');
             processBtn.disabled = true;
@@ -1141,6 +1246,24 @@
             }
             showStatus(`⏱️ Esto puede tardar varios minutos`, 'info');
 
+            // Crear entrada en el tracking de trabajos individuales
+            activeIndividualJobs.set(localJobId, {
+                localId: localJobId,
+                serverId: null,
+                status: 'starting',
+                startTime: startTime,
+                workflow: selectedWorkflow,
+                frameColor: selectedFrameColor,
+                style: selectedStyle,
+                styleNode: selectedStyleNode,
+                currentOperation: 'Iniciando procesamiento...',
+                images: 0,
+                totalImages: 1
+            });
+
+            // Crear contenedor de resultados inmediatamente
+            createIndividualJobContainer(localJobId, startTime);
+
             try {
                 // Crear FormData
                 const formData = new FormData();
@@ -1152,6 +1275,11 @@
                     formData.append('style_node', selectedStyleNode);
                 }
 
+                // Actualizar estado
+                activeIndividualJobs.get(localJobId).status = 'submitting';
+                activeIndividualJobs.get(localJobId).currentOperation = 'Enviando a ComfyUI...';
+                updateIndividualJobDisplay(localJobId);
+
                 // Enviar petición
                 const response = await fetch(`${API_BASE_URL}/process-image`, {
                     method: 'POST',
@@ -1161,19 +1289,49 @@
                 const data = await response.json();
 
                 if (response.ok && data.success) {
+                    // Actualizar con el ID del servidor
+                    const jobInfo = activeIndividualJobs.get(localJobId);
+                    jobInfo.serverId = data.job_id;
+                    jobInfo.status = 'completed';
+                    jobInfo.currentOperation = 'Completado';
+                    jobInfo.images = data.total_images || 1;
+                    
                     showStatus(`✅ Procesamiento completado exitosamente`, 'success');
+                    
+                    // Mostrar resultados en ambas secciones
                     displayResults(data);
+                    displayIndividualJobResult(localJobId, data);
+                    
+                    // Iniciar polling para obtener más detalles si es necesario
+                    if (data.job_id) {
+                        startIndividualJobPolling(localJobId, data.job_id);
+                    }
                 } else {
+                    // Marcar como error
+                    const jobInfo = activeIndividualJobs.get(localJobId);
+                    jobInfo.status = 'error';
+                    jobInfo.currentOperation = `Error: ${data.error || 'Error desconocido'}`;
+                    updateIndividualJobDisplay(localJobId);
+                    
                     showStatus(`❌ Error: ${data.error || 'Error desconocido'}`, 'error');
                 }
 
             } catch (error) {
                 console.error('Error procesando imagen:', error);
+                
+                // Marcar como error de conexión
+                const jobInfo = activeIndividualJobs.get(localJobId);
+                if (jobInfo) {
+                    jobInfo.status = 'error';
+                    jobInfo.currentOperation = `Error de conexión: ${error.message}`;
+                    updateIndividualJobDisplay(localJobId);
+                }
+                
                 showStatus(`❌ Error de conexión: ${error.message}`, 'error');
             } finally {
                 // Rehabilitar botón
                 processBtn.disabled = false;
-                processBtn.textContent = '🚀 Procesar Imagen';
+                processBtn.textContent = '🚀 Procesar Individual';
             }
         }
 
@@ -1401,6 +1559,154 @@
                 batchNodeDescription.style.display = 'none';
                 showStatus(`🔧 Usando auto-detección de nodo para batch`, 'info');
             }
+        }
+
+        // ===== INDIVIDUAL JOB PROCESSING FUNCTIONS =====
+        
+        function createIndividualJobContainer(localJobId, startTime) {
+            const individualJobsSection = document.getElementById('individualJobsSection');
+            const individualResults = document.getElementById('individualResults');
+            
+            // Mostrar la sección si está oculta
+            individualJobsSection.style.display = 'block';
+            
+            const timestamp = startTime.toLocaleTimeString();
+            const dateId = startTime.toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '_');
+            const shortId = localJobId.slice(-8);
+            
+            const jobContainer = document.createElement('div');
+            jobContainer.className = 'individual-job-result processing';
+            jobContainer.id = `individual-job-${localJobId}`;
+            
+            jobContainer.innerHTML = `
+                <div class="individual-job-header">
+                    🎯 Trabajo Individual #${individualJobCounter}
+                    <span class="individual-job-time">${timestamp}</span>
+                    <span class="individual-job-time">(${dateId}_${shortId})</span>
+                </div>
+                <div class="individual-job-stats">
+                    <div class="individual-stat">📊 Estado: <span id="status-${localJobId}">starting</span></div>
+                    <div class="individual-stat">🖼️ Imágenes: <span id="images-${localJobId}">0</span></div>
+                    <div class="individual-stat">⏱️ Tiempo: <span id="time-${localJobId}">0.0s</span></div>
+                </div>
+                <div class="individual-job-operation" id="operation-${localJobId}">
+                    Iniciando procesamiento...
+                </div>
+                <div class="individual-job-images" id="images-container-${localJobId}">
+                    <!-- Las imágenes aparecerán aquí -->
+                </div>
+            `;
+            
+            // Insertar al principio (más recientes primero)
+            if (individualResults.firstChild) {
+                individualResults.insertBefore(jobContainer, individualResults.firstChild);
+            } else {
+                individualResults.appendChild(jobContainer);
+            }
+        }
+        
+        function updateIndividualJobDisplay(localJobId) {
+            const jobInfo = activeIndividualJobs.get(localJobId);
+            if (!jobInfo) return;
+            
+            const jobContainer = document.getElementById(`individual-job-${localJobId}`);
+            if (!jobContainer) return;
+            
+            // Actualizar estado visual del contenedor
+            jobContainer.className = `individual-job-result ${jobInfo.status}`;
+            
+            // Calcular tiempo transcurrido
+            const elapsed = (new Date() - jobInfo.startTime) / 1000;
+            
+            // Actualizar elementos
+            const statusElement = document.getElementById(`status-${localJobId}`);
+            const imagesElement = document.getElementById(`images-${localJobId}`);
+            const timeElement = document.getElementById(`time-${localJobId}`);
+            const operationElement = document.getElementById(`operation-${localJobId}`);
+            
+            if (statusElement) statusElement.textContent = jobInfo.status;
+            if (imagesElement) imagesElement.textContent = jobInfo.images;
+            if (timeElement) timeElement.textContent = `${elapsed.toFixed(1)}s`;
+            if (operationElement) operationElement.textContent = jobInfo.currentOperation;
+        }
+        
+        function displayIndividualJobResult(localJobId, resultData) {
+            const jobInfo = activeIndividualJobs.get(localJobId);
+            if (!jobInfo) return;
+            
+            const imagesContainer = document.getElementById(`images-container-${localJobId}`);
+            if (!imagesContainer) return;
+            
+            // Limpiar contenedor de imágenes
+            imagesContainer.innerHTML = '';
+            
+            // Mostrar imagen original si está disponible
+            if (resultData.original_image) {
+                const img = document.createElement('img');
+                img.src = resultData.original_image.session_url || resultData.original_image.url;
+                img.alt = 'Imagen Original';
+                img.title = 'Imagen Original';
+                imagesContainer.appendChild(img);
+            }
+            
+            // Mostrar imágenes generadas
+            if (resultData.generated_images && resultData.generated_images.length > 0) {
+                resultData.generated_images.forEach(image => {
+                    const img = document.createElement('img');
+                    img.src = image.session_url || image.url;
+                    img.alt = image.filename;
+                    img.title = `Resultado: ${image.filename}`;
+                    imagesContainer.appendChild(img);
+                });
+                
+                // Actualizar contador de imágenes
+                jobInfo.images = resultData.generated_images.length;
+            }
+            
+            updateIndividualJobDisplay(localJobId);
+        }
+        
+        function startIndividualJobPolling(localJobId, serverJobId) {
+            // Polling cada 2 segundos para obtener detalles actualizados
+            const intervalId = setInterval(async () => {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/session/jobs/${serverJobId}`);
+                    const jobData = await response.json();
+                    
+                    const jobInfo = activeIndividualJobs.get(localJobId);
+                    if (!jobInfo) {
+                        clearInterval(intervalId);
+                        return;
+                    }
+                    
+                    // Actualizar información del trabajo
+                    jobInfo.status = jobData.status;
+                    jobInfo.currentOperation = jobData.current_operation || 'Procesando...';
+                    
+                    if (jobData.results && jobData.results.length > 0) {
+                        jobInfo.images = jobData.results.length;
+                        
+                        // Actualizar imágenes si hay nuevas
+                        displayIndividualJobResult(localJobId, {
+                            original_image: jobData.response_data?.original_image,
+                            generated_images: jobData.results
+                        });
+                    }
+                    
+                    updateIndividualJobDisplay(localJobId);
+                    
+                    // Detener polling si el trabajo está completado o tiene error
+                    if (jobData.status === 'completed' || jobData.status === 'error') {
+                        clearInterval(intervalId);
+                        individualPollingIntervals.delete(localJobId);
+                    }
+                } catch (error) {
+                    console.error(`Error polling individual job ${localJobId}:`, error);
+                    // Continuar el polling en caso de error temporal
+                }
+            }, 2000);
+            
+            individualPollingIntervals.set(localJobId, intervalId);
         }
 
         // ===== BATCH PROCESSING FUNCTIONS =====
@@ -1926,14 +2232,26 @@
                     Object.values(data.jobs).forEach(job => {
                         console.log(`🔍 Procesando trabajo: ${job.id}, tipo: ${job.type}, estado: ${job.status}`);
                         
-                        if (job.type === 'batch' && job.status === 'processing') {
-                            // Reanudar seguimiento de lotes en progreso
-                            restoreBatchJob(job);
-                            restoredCount++;
-                        } else if (job.type === 'individual' && job.status === 'completed') {
-                            // Mostrar trabajos individuales completados
-                            restoreIndividualJob(job);
-                            restoredCount++;
+                        if (job.type === 'batch') {
+                            if (job.status === 'processing') {
+                                // Reanudar seguimiento de lotes en progreso
+                                restoreBatchJob(job);
+                                restoredCount++;
+                            } else if (job.status === 'completed' || job.status === 'error') {
+                                // Mostrar lotes completados o con error
+                                restoreBatchJob(job);
+                                restoredCount++;
+                            }
+                        } else if (job.type === 'individual') {
+                            if (job.status === 'processing') {
+                                // Reanudar seguimiento de trabajos individuales en progreso
+                                restoreIndividualJobInProgress(job);
+                                restoredCount++;
+                            } else if (job.status === 'completed' || job.status === 'error') {
+                                // Mostrar trabajos individuales completados o con error
+                                restoreIndividualJob(job);
+                                restoredCount++;
+                            }
                         } else {
                             console.log(`⏭️ Saltando trabajo: tipo=${job.type}, estado=${job.status}`);
                         }
@@ -1975,6 +2293,39 @@
             // Muestra los resultados de un trabajo individual completado
             console.log('🔄 Restaurando trabajo individual:', job);
             
+            // Crear entrada en la galería individual
+            individualJobCounter++;
+            const localJobId = `restored_${individualJobCounter}`;
+            const startTime = new Date(job.created_at);
+            
+            // Agregar al tracking de trabajos individuales
+            activeIndividualJobs.set(localJobId, {
+                localId: localJobId,
+                serverId: job.id,
+                status: job.status,
+                startTime: startTime,
+                workflow: job.config?.workflow || 'unknown',
+                frameColor: job.config?.frame_color || 'black',
+                style: job.config?.style || 'default',
+                styleNode: job.config?.style_node,
+                currentOperation: job.current_operation || 'Completado',
+                images: job.results?.length || 0,
+                totalImages: job.results?.length || 0
+            });
+            
+            // Crear contenedor de resultados
+            createIndividualJobContainer(localJobId, startTime);
+            
+            // Mostrar resultados si están disponibles
+            if (job.results && job.results.length > 0) {
+                const resultData = {
+                    original_image: job.response_data?.original_image,
+                    generated_images: job.results
+                };
+                displayIndividualJobResult(localJobId, resultData);
+            }
+            
+            // También mostrar en la sección de resultados rápidos (legacy)
             if (job.response_data && job.response_data.generated_images) {
                 // Debug: mostrar datos originales
                 console.log('📊 Datos originales de respuesta:', job.response_data);
