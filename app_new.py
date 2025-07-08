@@ -58,14 +58,19 @@ WORKFLOW_CONFIG = {
     'save_image_node_id': '704',  # ID del nodo SaveImage principal
     'frame_node_id': '692',       # ID del nodo DynamicFrameNode
     'allowed_extensions': ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'],
-     'frame_colors': ['black', 'white', 'brown', 'gold'],  # Solo los colores soportados por DynamicFrameNode
+     'frame_colors': ['none', 'black', 'white', 'brown', 'gold'],  # Incluir 'none' para sin marco
     # Parámetros por defecto para DynamicFrameNode (para asegurar todos los inputs requeridos)
     'frame_node_defaults': {
-        'frame_width': 50,         # Ancho del marco (10-200)
+        'frame_width': 20,         # Ancho del marco (10-200)
         'shadow_enabled': True,    # Habilitar sombra del marco
-        'shadow_opacity': 0.3,     # Opacidad de la sombra (0.1-0.8)
+        'shadow_opacity': 0.5,     # Opacidad de la sombra (0.1-0.8) - más intensa para efecto dramático
         'wall_color': 220,         # Color de pared (180-250)
-        'shadow_size': 15          # Tamaño de la sombra (5-50)
+        'shadow_size': 25,         # Tamaño de la sombra (5-50) - más grande para efecto picudo
+        'shadow_color': 0,         # Color de sombra (0=negro, 255=blanco) - NEGRO INTENSO
+        'shadow_angle': 270,       # Ángulo de la sombra en grados (270° = DIRECTAMENTE hacia abajo, efecto picudo)
+        'shadow_blur': 2,          # Difuminado de la sombra (1-10) - menos difuso para bordes más definidos
+        'shadow_offset_x': 0,      # Sin desplazamiento horizontal - sombra centrada
+        'shadow_offset_y': 15      # Desplazamiento vertical mayor (píxeles) - sombra más pronunciada hacia abajo
     }
 }
 
@@ -285,16 +290,42 @@ def update_workflow(workflow, image_filename, frame_color='black', style_id='def
         if 'inputs' not in frame_node:
             frame_node['inputs'] = {}
         
-        # Actualizar todos los parámetros requeridos
-        frame_defaults = WORKFLOW_CONFIG['frame_node_defaults']
-        frame_node['inputs']['preset'] = frame_color if frame_color in WORKFLOW_CONFIG['frame_colors'] else 'black'
-        frame_node['inputs']['wall_color'] = frame_defaults['wall_color']
-        frame_node['inputs']['shadow_size'] = frame_defaults['shadow_size']
-        frame_node['inputs']['shadow_opacity'] = frame_defaults['shadow_opacity']
-        frame_node['inputs']['shadow_enabled'] = frame_defaults['shadow_enabled']
-        frame_node['inputs']['frame_width'] = frame_defaults['frame_width']
-        
-        log_success(f"DynamicFrameNode ({frame_node_id}) actualizado: preset={frame_color}, wall_color={frame_defaults['wall_color']}, shadow_enabled={frame_defaults['shadow_enabled']}")
+        # Configuración especial para "none" (sin marco pero CON sombra)
+        if frame_color == 'none':
+            frame_defaults = WORKFLOW_CONFIG['frame_node_defaults']
+            frame_node['inputs']['preset'] = 'black'  # Usar preset black como base
+            frame_node['inputs']['wall_color'] = frame_defaults['wall_color']
+            frame_node['inputs']['frame_width'] = 0  # Sin marco (ancho 0)
+            
+            # MANTENER LA SOMBRA HABILITADA para el efecto sin marco
+            frame_node['inputs']['shadow_enabled'] = frame_defaults['shadow_enabled']
+            frame_node['inputs']['shadow_size'] = frame_defaults['shadow_size']
+            frame_node['inputs']['shadow_opacity'] = frame_defaults['shadow_opacity']
+            frame_node['inputs']['shadow_color'] = frame_defaults['shadow_color']  # Negro
+            frame_node['inputs']['shadow_angle'] = frame_defaults['shadow_angle']  # 270° hacia abajo
+            frame_node['inputs']['shadow_blur'] = frame_defaults['shadow_blur']
+            frame_node['inputs']['shadow_offset_x'] = frame_defaults['shadow_offset_x']
+            frame_node['inputs']['shadow_offset_y'] = frame_defaults['shadow_offset_y']
+            
+            log_success(f"🚫 DynamicFrameNode ({frame_node_id}) configurado SIN MARCO pero CON SOMBRA NEGRA")
+        else:
+            # Configuración normal con marco y sombra personalizada (negra y picuda)
+            frame_defaults = WORKFLOW_CONFIG['frame_node_defaults']
+            frame_node['inputs']['preset'] = frame_color if frame_color in WORKFLOW_CONFIG['frame_colors'] else 'black'
+            frame_node['inputs']['wall_color'] = frame_defaults['wall_color']
+            frame_node['inputs']['frame_width'] = frame_defaults['frame_width']
+            
+            # Configuración de sombra personalizada: negra y picuda hacia abajo
+            frame_node['inputs']['shadow_enabled'] = frame_defaults['shadow_enabled']
+            frame_node['inputs']['shadow_size'] = frame_defaults['shadow_size']
+            frame_node['inputs']['shadow_opacity'] = frame_defaults['shadow_opacity']
+            frame_node['inputs']['shadow_color'] = frame_defaults['shadow_color']  # 0 = negro
+            frame_node['inputs']['shadow_angle'] = frame_defaults['shadow_angle']  # 270° = picuda directamente hacia abajo
+            frame_node['inputs']['shadow_blur'] = frame_defaults['shadow_blur']    # Difuminado controlado
+            frame_node['inputs']['shadow_offset_x'] = frame_defaults['shadow_offset_x']  # Desplazamiento horizontal
+            frame_node['inputs']['shadow_offset_y'] = frame_defaults['shadow_offset_y']  # Desplazamiento hacia abajo
+            
+            log_success(f"🖼️ DynamicFrameNode ({frame_node_id}) configurado: marco={frame_color}, sombra=NEGRA PICUDA directamente hacia abajo (ángulo={frame_defaults['shadow_angle']}°)")
     else:
         log_warning(f"Nodo DynamicFrameNode ({frame_node_id}) no encontrado en el workflow")
     
@@ -391,7 +422,19 @@ def update_workflow(workflow, image_filename, frame_color='black', style_id='def
                 node_data['inputs']['strength'] = 0.71  # Strength actual para img2img
                 log_success(f"ControlNet Canny strength mantenido en 0.71 para IMG2IMG en nodo {node_id}")
     
-    # Actualizar nodos SaveImage (subfolder si se especifica)
+    # Actualizar nodos SaveImage (subfolder si se especifica Y configurar prefijo descriptivo)
+    save_node_id = WORKFLOW_CONFIG['save_image_node_id']
+    
+    # Actualizar el nodo SaveImage principal con un prefijo más descriptivo
+    if save_node_id in workflow_copy:
+        save_node = workflow_copy[save_node_id]
+        if 'inputs' in save_node:
+            # Crear prefijo basado en la imagen y frame_color
+            base_image_name = image_filename.split('.')[0] if '.' in image_filename else image_filename
+            descriptive_prefix = f"{base_image_name}_{frame_color}"
+            save_node['inputs']['filename_prefix'] = descriptive_prefix
+            log_success(f"SaveImage {save_node_id}: prefijo actualizado a '{descriptive_prefix}'")
+    
     if output_subfolder:
         for node_id, node_data in workflow_copy.items():
             if isinstance(node_data, dict) and node_data.get('class_type') == 'SaveImage':
@@ -518,42 +561,168 @@ def wait_for_completion(prompt_id, timeout=300):
 
 # ==================== PROCESAMIENTO DE RESULTADOS ====================
 
-def extract_generated_images(outputs):
+def extract_generated_images(outputs, original_image_filename=None):
     """
-    Extrae las imágenes generadas de los outputs de ComfyUI
-    Retorna: lista de información de imágenes
+    Extrae exactamente 3 imágenes generadas de los outputs de ComfyUI:
+    1. Original (imagen procesada sin upscale)
+    2. Upscale (imagen escalada)
+    3. Composición (imagen final combinada)
+    Retorna: lista de exactamente 3 imágenes filtradas
     """
-    images = []
+    # Contenedores para los 3 tipos de imágenes
+    original_image = None
+    upscale_image = None
+    composition_image = None
+    
     save_node_id = WORKFLOW_CONFIG['save_image_node_id']
     
-    # Buscar en el nodo SaveImage principal
-    if save_node_id in outputs and 'images' in outputs[save_node_id]:
-        for image_info in outputs[save_node_id]['images']:
-            if 'filename' in image_info:
-                images.append({
-                    'filename': image_info['filename'],
+    def classify_image_type(filename):
+        """Clasifica el tipo de imagen basado en el nombre del archivo"""
+        filename_lower = filename.lower()
+        
+        # Excluir archivos temporales
+        temporal_patterns = ['tmp_', 'temp_', '_temp']
+        for pattern in temporal_patterns:
+            if pattern in filename_lower:
+                return None
+        
+        # Clasificar tipos específicos
+        if 'original-upscale' in filename_lower:
+            return 'composition'  # Composición de original + upscale
+        elif 'upscale' in filename_lower and 'original' not in filename_lower:
+            return 'upscale'  # Solo upscale
+        elif 'original' in filename_lower and 'upscale' not in filename_lower:
+            return 'original'  # Solo original
+        elif filename_lower.startswith('comfyui') and any(char.isdigit() for char in filename_lower):
+            return 'composition'  # Resultado final del workflow
+        else:
+            # Usar keywords de habitaciones como fallback para original
+            room_keywords = ['bathroom', 'bedroom', 'office', 'salon', 'kitchen', 'living']
+            if any(keyword in filename_lower for keyword in room_keywords):
+                return 'original'
+        
+        return None
+    
+    def add_image_if_better(current_image, new_image_info, image_type):
+        """Añade la imagen si es mejor que la actual o si no hay una actual"""
+        if current_image is None:
+            log_info(f"✅ Primera imagen {image_type}: {new_image_info['filename']}")
+            return new_image_info
+        
+        # Preferir imágenes que contengan el nombre original
+        if original_image_filename:
+            original_base = original_image_filename.split('.')[0].lower() if '.' in original_image_filename else original_image_filename.lower()
+            current_has_original = original_base in current_image['filename'].lower()
+            new_has_original = original_base in new_image_info['filename'].lower()
+            
+            if new_has_original and not current_has_original:
+                log_info(f"✅ Mejor imagen {image_type} (contiene nombre original): {new_image_info['filename']}")
+                return new_image_info
+            elif current_has_original and not new_has_original:
+                log_info(f"⚠️ Manteniendo imagen {image_type} actual (contiene nombre original): {current_image['filename']}")
+                return current_image
+        
+        # Si ambas son similares, preferir la más reciente (por nombre)
+        if new_image_info['filename'] > current_image['filename']:
+            log_info(f"✅ Mejor imagen {image_type} (más reciente): {new_image_info['filename']}")
+            return new_image_info
+        
+        log_info(f"⚠️ Manteniendo imagen {image_type} actual: {current_image['filename']}")
+        return current_image
+    
+    # Buscar en todos los nodos SaveImage
+    all_save_nodes = [save_node_id] + ['696', '704']  # Nodos SaveImage específicos
+    
+    for node_id in all_save_nodes:
+        if node_id in outputs and isinstance(outputs[node_id], dict) and 'images' in outputs[node_id]:
+            for image_info in outputs[node_id]['images']:
+                if 'filename' not in image_info:
+                    continue
+                
+                filename = image_info['filename']
+                image_type = classify_image_type(filename)
+                
+                if image_type is None:
+                    log_info(f"❌ Archivo excluido (no clasificado): {filename}")
+                    continue
+                
+                # Crear info de imagen
+                img_info = {
+                    'filename': filename,
                     'subfolder': image_info.get('subfolder', ''),
                     'type': image_info.get('type', 'output'),
-                    'node_id': save_node_id
-                })
-                log_info(f"Imagen encontrada: {image_info['filename']}")
+                    'node_id': node_id,
+                    'image_type': image_type
+                }
+                
+                # Asignar a la categoría correspondiente
+                if image_type == 'original':
+                    original_image = add_image_if_better(original_image, img_info, 'original')
+                elif image_type == 'upscale':
+                    upscale_image = add_image_if_better(upscale_image, img_info, 'upscale')
+                elif image_type == 'composition':
+                    composition_image = add_image_if_better(composition_image, img_info, 'composition')
     
-    # Buscar en otros nodos SaveImage si no se encontró nada
-    if not images:
+    # Buscar en otros nodos si no se encontraron todas las imágenes
+    if not all([original_image, upscale_image, composition_image]):
+        log_info("🔍 Buscando imágenes faltantes en otros nodos...")
+        
         for node_id, node_data in outputs.items():
+            if node_id in all_save_nodes:
+                continue  # Ya procesado
+            
             if isinstance(node_data, dict) and 'images' in node_data:
                 for image_info in node_data['images']:
-                    if 'filename' in image_info:
-                        images.append({
-                            'filename': image_info['filename'],
-                            'subfolder': image_info.get('subfolder', ''),
-                            'type': image_info.get('type', 'output'),
-                            'node_id': node_id
-                        })
-                        log_info(f"Imagen encontrada en nodo {node_id}: {image_info['filename']}")
+                    if 'filename' not in image_info:
+                        continue
+                    
+                    filename = image_info['filename']
+                    image_type = classify_image_type(filename)
+                    
+                    if image_type is None:
+                        continue
+                    
+                    img_info = {
+                        'filename': filename,
+                        'subfolder': image_info.get('subfolder', ''),
+                        'type': image_info.get('type', 'output'),
+                        'node_id': node_id,
+                        'image_type': image_type
+                    }
+                    
+                    # Solo asignar si no tenemos una imagen de ese tipo
+                    if image_type == 'original' and original_image is None:
+                        original_image = img_info
+                        log_info(f"✅ Imagen original encontrada en nodo {node_id}: {filename}")
+                    elif image_type == 'upscale' and upscale_image is None:
+                        upscale_image = img_info
+                        log_info(f"✅ Imagen upscale encontrada en nodo {node_id}: {filename}")
+                    elif image_type == 'composition' and composition_image is None:
+                        composition_image = img_info
+                        log_info(f"✅ Imagen composición encontrada en nodo {node_id}: {filename}")
     
-    log_success(f"Total de imágenes encontradas: {len(images)}")
-    return images
+    # Ensamblar resultado final - exactamente 3 imágenes
+    final_images = []
+    
+    if original_image:
+        final_images.append(original_image)
+    if upscale_image:
+        final_images.append(upscale_image)
+    if composition_image:
+        final_images.append(composition_image)
+    
+    # Si no tenemos exactamente 3, usar lo que tengamos y logear advertencia
+    if len(final_images) != 3:
+        log_warning(f"⚠️ Se esperaban 3 imágenes, pero se encontraron {len(final_images)}")
+        log_warning(f"   Original: {'✅' if original_image else '❌'}")
+        log_warning(f"   Upscale: {'✅' if upscale_image else '❌'}")
+        log_warning(f"   Composición: {'✅' if composition_image else '❌'}")
+    
+    log_success(f"✅ Total de imágenes seleccionadas: {len(final_images)}/3")
+    for img in final_images:
+        log_info(f"   {img['image_type']}: {img['filename']} (nodo {img['node_id']})")
+    
+    return final_images
 
 def find_image_file(filename, subfolder=''):
     """
@@ -775,29 +944,67 @@ def process_image():
         
         # Extraer imágenes generadas
         log_info("Extrayendo imágenes...")
-        generated_images = extract_generated_images(outputs)
+        generated_images = extract_generated_images(outputs, original_filename)
         
         # Copiar imágenes generadas al directorio de salida y sesión
         saved_images = []
         for img_info in generated_images:
             source_path = find_image_file(img_info['filename'], img_info['subfolder'])
             if source_path:
-                dest_path = os.path.join(output_dir, f"result_{img_info['filename']}")
+                # Crear nombre unificado: workflow_estilo_fecha_numero.extension
+                style_name = style_id if style_id != 'default' else 'default'
+                workflow_clean = workflow_name.replace('/', '_').replace('-', '_')
+                
+                # Obtener extensión original
+                if '.' in img_info['filename']:
+                    original_ext = img_info['filename'].rsplit('.', 1)[1]
+                else:
+                    original_ext = 'png'
+                
+                # Generar nombre único: workflow_estilo_fechahora_numero.extension
+                img_number = len(saved_images) + 1
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                new_filename = f"{workflow_clean}_{style_name}_{timestamp}_{img_number:03d}.{original_ext}"
+                
+                dest_path = os.path.join(output_dir, new_filename)
+                
+                # ✅ VERIFICAR SI YA EXISTE PARA EVITAR DUPLICADOS
+                if os.path.exists(dest_path):
+                    log_warning(f"⚠️ Archivo ya existe, saltando: {new_filename}")
+                    # Aún así lo agregamos a la lista con la info existente
+                    with open(dest_path, 'rb') as img_file:
+                        session_url = session_manager.save_job_image(job_id, img_file.read(), new_filename)
+                    
+                    saved_images.append({
+                        'filename': new_filename,
+                        'url': f"/get-image/{base_name}/{new_filename}",
+                        'session_url': session_url,
+                        'original_filename': img_info['filename'],
+                        'workflow': workflow_name,
+                        'style': style_name,
+                        'status': 'existing'  # Marcar como existente
+                    })
+                    continue
+                
+                # Copiar archivo si no existe
                 shutil.copy2(source_path, dest_path)
                 
                 # Guardar también en el directorio de sesión
                 with open(dest_path, 'rb') as img_file:
-                    session_url = session_manager.save_job_image(job_id, img_file.read(), f"result_{img_info['filename']}")
+                    session_url = session_manager.save_job_image(job_id, img_file.read(), new_filename)
                 
                 log_info(f"Imagen guardada en sesión: {session_url}")
                 
                 saved_images.append({
-                    'filename': f"result_{img_info['filename']}",
-                    'url': f"/get-image/{base_name}/result_{img_info['filename']}",
+                    'filename': new_filename,
+                    'url': f"/get-image/{base_name}/{new_filename}",
                     'session_url': session_url,
-                    'original_filename': img_info['filename']
+                    'original_filename': img_info['filename'],
+                    'workflow': workflow_name,
+                    'style': style_name,
+                    'status': 'new'  # Marcar como nuevo
                 })
-                log_success(f"Imagen copiada: {dest_path} -> sesión: {session_url}")
+                log_success(f"✅ Imagen nueva copiada: {dest_path} -> sesión: {session_url}")
         
         # Crear respuesta
         processing_mode = "text2img + controlnet_0.85" if (style_id and style_id != 'default') else "img2img_preserving_original"
@@ -1218,6 +1425,13 @@ def process_batch():
         style = batch_config.get('style') or request.form.get('style', 'default')
         original_filename = request.form.get('original_filename', image_file.filename)
         
+        # Verificar que tenemos un nombre válido
+        if not original_filename or original_filename.strip() == '':
+            original_filename = image_file.filename
+            log_warning(f"⚠️ original_filename vacío, usando filename del archivo: '{original_filename}'")
+        
+        log_info(f"📋 Nombre archivo original para batch: '{original_filename}' (de form: '{request.form.get('original_filename')}', filename: '{image_file.filename}')")
+        
         # ===== CREAR TRABAJO DE SESIÓN PARA BATCH =====
         batch_job_id = session_manager.create_job(
             job_type='batch',
@@ -1292,8 +1506,11 @@ def process_batch():
         # Preparar parámetros comunes
         common_params = {
             "frame_color": frame_color,
-            "style": style
+            "style": style,
+            "original_filename": original_filename  # Agregar nombre de imagen original
         }
+        
+        log_info(f"🔧 Parámetros comunes para batch: {common_params}")
         
         # Obtener nodos de estilo si es necesario
         if filtered_workflows:
@@ -1478,29 +1695,73 @@ def process_single_workflow_for_batch(image_file, workflow_info, common_params):
             raise Exception("Error esperando resultados de ComfyUI")
         
         # Extraer imágenes generadas
-        generated_images = extract_generated_images(outputs)
+        original_image_name = common_params.get('original_filename', 'batch_image')
+        generated_images = extract_generated_images(outputs, original_image_name)
         
-        # Crear directorio de salida para este workflow
-        workflow_output_dir = create_output_directory(f"batch_{workflow_info['id'].replace('/', '_')}")
+        # Crear directorio de salida basado en nombre de imagen original
+        # Usar la misma lógica que en process_image individual
+        original_image_name = common_params.get('original_filename', 'batch_image')
+        base_image_name = secure_filename(original_image_name.rsplit('.', 1)[0] if '.' in original_image_name else 'image')
         
-        # Copiar imágenes generadas
+        log_info(f"📁 Creando directorio para batch: original_filename='{original_image_name}' -> base_name='{base_image_name}'")
+        
+        # Crear carpeta con nombre de imagen original
+        batch_output_dir = create_output_directory(base_image_name)
+        
+        # Copiar imágenes generadas con nombre unificado (evitando duplicados)
         saved_images = []
         for img_info in generated_images:
             source_path = find_image_file(img_info['filename'], img_info['subfolder'])
             if source_path:
-                dest_path = os.path.join(workflow_output_dir, f"result_{img_info['filename']}")
+                # Crear nombre unificado: workflow_estilo_fecha_numero.extension
+                style_name = common_params.get('style', 'default')
+                workflow_clean = workflow_info['id'].replace('/', '_').replace('-', '_')
+                
+                # Obtener extensión original
+                if '.' in img_info['filename']:
+                    original_ext = img_info['filename'].rsplit('.', 1)[1]
+                else:
+                    original_ext = 'png'
+                
+                # Generar nombre unificado: workflow_estilo_fechahora_numero.extension
+                img_number = len(saved_images) + 1
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                new_filename = f"{workflow_clean}_{style_name}_{timestamp}_{img_number:03d}.{original_ext}"
+                
+                dest_path = os.path.join(batch_output_dir, new_filename)
+                
+                # ✅ VERIFICAR SI YA EXISTE PARA EVITAR DUPLICADOS
+                if os.path.exists(dest_path):
+                    log_warning(f"⚠️ Archivo de lote ya existe, saltando: {new_filename}")
+                    # Aún así lo agregamos a la lista con la info existente
+                    saved_images.append({
+                        'filename': new_filename,
+                        'url': f"/get-image/{base_image_name}/{new_filename}",
+                        'original_filename': img_info['filename'],
+                        'workflow': workflow_info['id'],
+                        'style': style_name,
+                        'status': 'existing'  # Marcar como existente
+                    })
+                    continue
+                
+                # Copiar archivo si no existe
                 shutil.copy2(source_path, dest_path)
                 saved_images.append({
-                    'filename': f"result_{img_info['filename']}",
-                    'url': f"/get-image/batch_{workflow_info['id'].replace('/', '_')}/result_{img_info['filename']}",
-                    'original_filename': img_info['filename']
+                    'filename': new_filename,
+                    'url': f"/get-image/{base_image_name}/{new_filename}",
+                    'original_filename': img_info['filename'],
+                    'workflow': workflow_info['id'],
+                    'style': style_name,
+                    'status': 'new'  # Marcar como nuevo
                 })
+                log_success(f"✅ Imagen de lote nueva copiada: {dest_path}")
         
-        # Guardar imagen original en el directorio del workflow
-        original_dest = os.path.join(workflow_output_dir, 'original.png')
-        image_file.seek(0)
-        image = Image.open(image_file.stream)
-        image.save(original_dest, format='PNG')
+        # Guardar imagen original solo una vez por batch (no por workflow)
+        original_dest = os.path.join(batch_output_dir, 'original.png')
+        if not os.path.exists(original_dest):  # Solo si no existe ya
+            image_file.seek(0)
+            image = Image.open(image_file.stream)
+            image.save(original_dest, format='PNG')
         
         processing_time = time.time() - start_time
         
@@ -1511,7 +1772,7 @@ def process_single_workflow_for_batch(image_file, workflow_info, common_params):
             "generated_images": saved_images,
             "original_image": {
                 "filename": "original.png",
-                "url": f"/get-image/batch_{workflow_info['id'].replace('/', '_')}/original.png"
+                "url": f"/get-image/{base_image_name}/original.png"
             },
             "processing_time": round(processing_time, 2)
         }
@@ -1611,6 +1872,12 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
             master_image.save(input_path, format='PNG', optimize=False)
             
             # Cargar y actualizar workflow
+            # Usar el nombre base de la imagen original para mantener consistencia
+            original_image_name = common_params.get('original_filename', 'batch_image')
+            base_image_name = secure_filename(original_image_name.rsplit('.', 1)[0] if '.' in original_image_name else 'image')
+            
+            log_info(f"🔧 Workflow {i+1}/{len(workflows)} - original: '{original_image_name}' -> base: '{base_image_name}'")
+            
             workflow = load_workflow(workflow_info["id"])
             workflow = update_workflow(
                 workflow, 
@@ -1618,7 +1885,7 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
                 common_params["frame_color"], 
                 common_params["style"], 
                 common_params.get("style_node"),
-                f"batch_{workflow_info['id'].replace('/', '_')}"  # output_subfolder
+                base_image_name  # output_subfolder basado en imagen original, no en workflow
             )
             
             # Enviar a ComfyUI (sin esperar)
@@ -1714,21 +1981,71 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
                     ACTIVE_BATCHES[batch_id]["current_operation"] = f"Procesando: {workflow_info['id']}"
             
             # Esperar completion de este workflow específico
-            outputs = wait_for_completion(prompt_id, timeout=600) # 10 minutos timeout
+            outputs = wait_for_completion(prompt_id, timeout=60000) # 10 minutos timeout
             
             # Extraer imágenes generadas
-            generated_images = extract_generated_images(outputs)
+            original_image_name = common_params.get('original_filename', 'batch_image')
+            generated_images = extract_generated_images(outputs, original_image_name)
             
-            # Crear directorio de salida para este workflow
-            workflow_output_dir = create_output_directory(f"batch_{workflow_info['id'].replace('/', '_')}")
+            # Obtener nombre base de la imagen original usando la misma lógica que process_image individual
+            original_image_name = common_params.get('original_filename', 'batch_image')
+            base_image_name = secure_filename(original_image_name.rsplit('.', 1)[0] if '.' in original_image_name else 'image')
             
-            # Copiar imágenes generadas
+            log_info(f"📁 Procesando batch - original: '{original_image_name}' -> base: '{base_image_name}'")
+            
+            # Crear directorio de salida basado en nombre de imagen original (shared)
+            batch_output_dir = create_output_directory(base_image_name)
+            
+            # Copiar imágenes generadas con nombre de workflow y estilo (evitando duplicados)
             saved_images = []
             session_images = []  # Para URLs de sesión
             for img_info in generated_images:
                 source_path = find_image_file(img_info['filename'], img_info['subfolder'])
                 if source_path:
-                    dest_path = os.path.join(workflow_output_dir, f"result_{img_info['filename']}")
+                    # Crear nombre descriptivo: workflow_estilo_numeroImagen.extension
+                    style_name = common_params.get('style', 'default')
+                    workflow_clean = workflow_info['id'].replace('/', '_').replace('-', '_')
+                    
+                    # Obtener extensión original
+                    if '.' in img_info['filename']:
+                        original_ext = img_info['filename'].rsplit('.', 1)[1]
+                    else:
+                        original_ext = 'png'
+                    
+                    # Generar nombre unificado: workflow_estilo_fechahora_numero.extension
+                    img_number = len(saved_images) + 1
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    new_filename = f"{workflow_clean}_{style_name}_{timestamp}_{img_number:03d}.{original_ext}"
+                    
+                    dest_path = os.path.join(batch_output_dir, new_filename)
+                    
+                    # ✅ VERIFICAR SI YA EXISTE PARA EVITAR DUPLICADOS
+                    if os.path.exists(dest_path):
+                        log_warning(f"⚠️ Archivo de tracking ya existe, saltando: {new_filename}")
+                        # Intentar guardarlo en sesión si no está ya guardado
+                        session_url = None
+                        if session_job_id:
+                            try:
+                                with open(dest_path, 'rb') as img_file:
+                                    session_url = session_manager.save_job_image(session_job_id, img_file.read(), new_filename)
+                            except Exception as e:
+                                log_warning(f"⚠️ No se pudo guardar archivo existente en sesión: {str(e)}")
+                        
+                        saved_images.append({
+                            'filename': new_filename,
+                            'url': f"/get-image/{base_image_name}/{new_filename}",
+                            'session_url': session_url,
+                            'original_filename': img_info['filename'],
+                            'workflow': workflow_info['id'],
+                            'style': style_name,
+                            'status': 'existing'  # Marcar como existente
+                        })
+                        
+                        if session_url:
+                            session_images.append(session_url)
+                        continue
+                    
+                    # Copiar archivo si no existe
                     shutil.copy2(source_path, dest_path)
                     
                     # Guardar también en la sesión si tenemos session_job_id
@@ -1736,32 +2053,45 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
                     if session_job_id:
                         try:
                             with open(source_path, 'rb') as img_file:
-                                session_filename = f"{workflow_info['id'].replace('/', '_')}_result_{img_info['filename']}"
-                                session_url = session_manager.save_job_image(session_job_id, img_file.read(), session_filename)
+                                session_url = session_manager.save_job_image(session_job_id, img_file.read(), new_filename)
                         except Exception as e:
-                            log_warning(f"⚠️ No se pudo guardar imagen en sesión: {str(e)}")
+                            log_warning(f"⚠️ No se pudo guardar imagen nueva en sesión: {str(e)}")
                     
                     saved_images.append({
-                        'filename': f"result_{img_info['filename']}",
-                        'url': f"/get-image/batch_{workflow_info['id'].replace('/', '_')}/result_{img_info['filename']}",
+                        'filename': new_filename,
+                        'url': f"/get-image/{base_image_name}/{new_filename}",
                         'session_url': session_url,  # URL de sesión persistente
-                        'original_filename': img_info['filename']
+                        'original_filename': img_info['filename'],
+                        'workflow': workflow_info['id'],
+                        'style': style_name,
+                        'status': 'new'  # Marcar como nuevo
                     })
                     
                     if session_url:
                         session_images.append(session_url)
+                    
+                    log_success(f"✅ Imagen de tracking nueva copiada: {dest_path}")
+                    
+                    if session_url:
+                        session_images.append(session_url)
             
-            # Guardar imagen original en el directorio del workflow
-            original_dest = os.path.join(workflow_output_dir, 'original.png')
-            master_image.save(original_dest, format='PNG')
+            # Guardar imagen original solo una vez (check si ya existe)
+            original_dest = os.path.join(batch_output_dir, 'original.png')
+            if not os.path.exists(original_dest):  # Solo si no existe ya
+                master_image.save(original_dest, format='PNG')
+                log_info(f"💾 Imagen original guardada: {original_dest}")
             
-            # Guardar también imagen original en la sesión
+            # Guardar también imagen original en la sesión (solo una vez por batch)
             original_session_url = None
             if session_job_id:
                 try:
-                    with open(original_dest, 'rb') as img_file:
-                        original_session_filename = f"{workflow_info['id'].replace('/', '_')}_original.png"
-                        original_session_url = session_manager.save_job_image(session_job_id, img_file.read(), original_session_filename)
+                    # Verificar si ya se guardó la original en sesión
+                    existing_images = session_manager.get_job_images(session_job_id)
+                    original_already_saved = any('original.png' in img for img in existing_images)
+                    
+                    if not original_already_saved:
+                        with open(original_dest, 'rb') as img_file:
+                            original_session_url = session_manager.save_job_image(session_job_id, img_file.read(), 'original.png')
                 except Exception as e:
                     log_warning(f"⚠️ No se pudo guardar imagen original en sesión: {str(e)}")
             
@@ -1775,7 +2105,7 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
                 "session_images": session_images,  # URLs de sesión persistentes
                 "original_image": {
                     "filename": "original.png",
-                    "url": f"/get-image/batch_{workflow_info['id'].replace('/', '_')}/original.png",
+                    "url": f"/get-image/{base_image_name}/original.png",
                     "session_url": original_session_url  # URL de sesión para imagen original
                 },
                 "processing_time": round(processing_time, 2),
