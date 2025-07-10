@@ -507,6 +507,19 @@
                         </div>
                     </div>
 
+                    <div class="section">
+                        <h3>📈 Opciones de Resultado</h3>
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; color: #555;">
+                                <input type="checkbox" id="includeUpscale" checked style="transform: scale(1.2);">
+                                <span>📈 Incluir imagen escalada (upscale) en resultados</span>
+                            </label>
+                            <div style="margin-top: 8px; padding: 8px; background: #e8f5e8; border-radius: 4px; font-size: 0.85em; color: #2e7d32;">
+                                💡 <strong>Tip:</strong> Desmarca para mostrar solo la imagen de composición final, sin la versión escalada
+                            </div>
+                        </div>
+                    </div>
+
                     <button class="btn" id="processBtn" disabled>
                         🚀 Procesar Individual
                     </button>
@@ -590,6 +603,16 @@
                                     <input type="radio" id="batch-color-gold" name="batchFrameColor" value="gold">
                                     <label for="batch-color-gold" style="background: #FFD700; color: #333;">🟡 Dorado</label>
                                 </div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; color: #555;">
+                                <input type="checkbox" id="batchIncludeUpscale" checked style="transform: scale(1.2);">
+                                <span>📈 Incluir imagen escalada (upscale) en resultados</span>
+                            </label>
+                            <div style="margin-top: 8px; padding: 8px; background: #e8f5e8; border-radius: 4px; font-size: 0.85em; color: #2e7d32;">
+                                💡 <strong>Tip:</strong> Desmarca para mostrar solo la imagen de composición final en todos los workflows del lote
                             </div>
                         </div>
                     </div>
@@ -1225,6 +1248,10 @@
             const styleNodeSelect = document.getElementById('styleNodeSelect');
             const selectedStyleNode = styleNodeSelect.value || null;
 
+            // Obtener opción de incluir upscale
+            const includeUpscaleCheckbox = document.getElementById('includeUpscale');
+            const includeUpscale = includeUpscaleCheckbox.checked;
+
             // Crear ID local para el trabajo individual
             individualJobCounter++;
             const localJobId = `individual_${individualJobCounter}`;
@@ -1244,6 +1271,7 @@
             } else {
                 showStatus(`🔧 Nodo de estilo: auto-detectar`, 'info');
             }
+            showStatus(`📈 Incluir upscale: ${includeUpscale ? 'Sí' : 'No'}`, 'info');
             showStatus(`⏱️ Esto puede tardar varios minutos`, 'info');
 
             // Crear entrada en el tracking de trabajos individuales
@@ -1271,6 +1299,7 @@
                 formData.append('workflow', selectedWorkflow);
                 formData.append('frame_color', selectedFrameColor);
                 formData.append('style', selectedStyle);
+                formData.append('include_upscale', includeUpscale.toString());
                 if (selectedStyleNode) {
                     formData.append('style_node', selectedStyleNode);
                 }
@@ -1822,12 +1851,14 @@
             const batchStyleSelect = document.getElementById('batchStyleSelect');
             const batchStyleNodeSelect = document.getElementById('batchStyleNodeSelect');
             const batchFrameColorInputs = document.querySelectorAll('input[name="batchFrameColor"]:checked');
+            const batchIncludeUpscaleCheckbox = document.getElementById('batchIncludeUpscale');
             
             const selectedRoomTypes = Array.from(roomTypeSelect.selectedOptions).map(option => option.value);
             const selectedOrientations = Array.from(orientationSelect.selectedOptions).map(option => option.value);
             const selectedStyle = batchStyleSelect.value || 'default';
             const selectedStyleNode = batchStyleNodeSelect.value || null;
             const selectedFrameColor = batchFrameColorInputs.length > 0 ? batchFrameColorInputs[0].value : 'black';
+            const batchIncludeUpscale = batchIncludeUpscaleCheckbox.checked;
             
             // Obtener workflows coincidentes
             const matchingWorkflows = getMatchingWorkflowsForBatch(selectedRoomTypes, selectedOrientations);
@@ -1846,6 +1877,7 @@
             updateBatchButtonText();
             
             showStatus(`🚀 Iniciando lote #${currentBatchId} con ${matchingWorkflows.length} workflows...`, 'info');
+            showStatus(`📈 Incluir upscale en lote: ${batchIncludeUpscale ? 'Sí' : 'No'}`, 'info');
             
             // Mostrar información del nodo de estilo si está seleccionado
             if (selectedStyleNode) {
@@ -1864,7 +1896,8 @@
                     room_types: selectedRoomTypes,
                     orientations: selectedOrientations,
                     frame_color: selectedFrameColor,
-                    style: selectedStyle
+                    style: selectedStyle,
+                    include_upscale: batchIncludeUpscale
                 };
                 
                 // Agregar nodo de estilo si está seleccionado

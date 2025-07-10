@@ -564,14 +564,20 @@ def wait_for_completion(prompt_id, timeout=300):
 
 # ==================== PROCESAMIENTO DE RESULTADOS ====================
 
-def extract_generated_images(outputs, original_image_filename=None):
+def extract_generated_images(outputs, original_image_filename=None, include_upscale=True):
     """
     Extrae las imágenes GENERADAS de los outputs de ComfyUI para mostrar en el frontend:
-    1. Upscale (imagen escalada del nodo 696)
-    2. Composición (imagen final combinada del nodo 704)
+    1. Upscale (imagen escalada del nodo 696) - OPCIONAL según include_upscale
+    2. Composición (imagen final combinada del nodo 704) - SIEMPRE incluida
     
     NOTA: La imagen original NO se incluye en el resultado para evitar mostrarla en el frontend.
-    Retorna: lista de 2 imágenes generadas filtradas (upscale + composición)
+    
+    Args:
+        outputs: Outputs de ComfyUI
+        original_image_filename: Nombre del archivo original para mejor clasificación
+        include_upscale: Si True incluye imagen upscale, si False solo composición
+    
+    Retorna: lista de imágenes generadas filtradas (composición + upscale opcional)
     """
     # Contenedores para los 3 tipos de imágenes
     original_image = None
@@ -734,18 +740,19 @@ def extract_generated_images(outputs, original_image_filename=None):
     # Ensamblar resultado final - SOLO IMÁGENES GENERADAS (sin la original)
     final_images = []
     
-    # 🎯 CAMBIO: NO incluir la imagen original en generated_images para el frontend
-    # Solo incluir las imágenes realmente generadas: upscale y composition
-    if upscale_image:
-        final_images.append(upscale_image)
+    # 🎯 COMPOSICIÓN: Siempre incluir la imagen de composición (nodo 704)
     if composition_image:
         final_images.append(composition_image)
     
-    # Si no tenemos las 2 imágenes generadas esperadas, logear advertencia
-    expected_generated = 2  # Solo upscale y composition
+    # 📈 UPSCALE: Incluir solo si el usuario lo solicita
+    if include_upscale and upscale_image:
+        final_images.append(upscale_image)
+    
+    # Calcular imágenes esperadas según configuración
+    expected_generated = 1 + (1 if include_upscale else 0)  # Composición + upscale opcional
     if len(final_images) != expected_generated:
         log_warning(f"⚠️ Se esperaban {expected_generated} imágenes generadas, pero se encontraron {len(final_images)}")
-        log_warning(f"   Upscale: {'✅' if upscale_image else '❌'}")
+        log_warning(f"   Upscale: {'✅' if upscale_image else '❌'} {'(incluido)' if include_upscale else '(excluido por usuario)'}")
         log_warning(f"   Composición: {'✅' if composition_image else '❌'}")
         if original_image:
             log_info(f"   Original encontrada pero excluida del frontend: {original_image['filename']}")
@@ -754,6 +761,13 @@ def extract_generated_images(outputs, original_image_filename=None):
     log_info(f"📋 RESUMEN DE IMÁGENES GENERADAS PARA FRONTEND:")
     for img in final_images:
         log_info(f"   📷 {img['image_type'].upper()}: {img['filename']} (nodo {img['node_id']})")
+    
+    # Log especial para indicar estado del upscale
+    if upscale_image:
+        if include_upscale:
+            log_info(f"📈 IMAGEN UPSCALE INCLUIDA: {upscale_image['filename']} (nodo {upscale_image['node_id']})")
+        else:
+            log_info(f"🚫 IMAGEN UPSCALE EXCLUIDA POR USUARIO: {upscale_image['filename']} (nodo {upscale_image['node_id']})")
     
     # Log especial para indicar que la original se excluye
     if original_image:
@@ -898,6 +912,7 @@ def process_image():
         style_id = request.form.get('style', 'default')
         style_node_id = request.form.get('style_node', None)  # Nodo personalizado para aplicar estilo
         original_filename = request.form.get('original_filename', file.filename)
+        include_upscale = request.form.get('include_upscale', 'true').lower() == 'true'  # Incluir imagen upscale en resultados
         
         # ===== CREAR TRABAJO DE SESIÓN =====
         job_id = session_manager.create_job(
@@ -906,11 +921,12 @@ def process_image():
             frame_color=frame_color,
             style=style_id,
             style_node=style_node_id,
-            original_filename=original_filename
+            original_filename=original_filename,
+            include_upscale=include_upscale  # Agregar parámetro de upscale
         )
         
         log_info(f"Trabajo de sesión creado: {job_id}")
-        log_info(f"Parámetros: workflow={workflow_name}, frame_color={frame_color}, style={style_id}, style_node={style_node_id}, file={original_filename}")
+        log_info(f"Parámetros: workflow={workflow_name}, frame_color={frame_color}, style={style_id}, style_node={style_node_id}, file={original_filename}, include_upscale={include_upscale}")
         
         # Actualizar estado del trabajo
         session_manager.update_job(job_id, 
@@ -988,7 +1004,7 @@ def process_image():
         
         # Extraer imágenes generadas
         log_info("Extrayendo imágenes...")
-        generated_images = extract_generated_images(outputs, original_filename)
+        generated_images = extract_generated_images(outputs, original_filename, include_upscale)
         
         # Copiar imágenes generadas al directorio de salida y sesión
         saved_images = []
@@ -1092,6 +1108,7 @@ def process_image():
             "frame_color": frame_color,
             "style_used": style_id,
             "style_node_used": style_node_id if style_node_id else "auto-detectado",
+            "include_upscale": include_upscale,  # Incluir configuración de upscale
             "base_name": base_name,
             "output_dir": output_dir,
             # 🚫 ORIGINAL_IMAGE ELIMINADO: No enviar al frontend para evitar que se muestre
@@ -1101,9 +1118,9 @@ def process_image():
             # },
             "final_image_url": final_image_url,  # Nueva imagen final para el frontend
             "final_image": final_image_info,  # Información completa de la imagen final
-            "generated_images": saved_images,  # Solo contiene upscale y composition
+            "generated_images": saved_images,  # Contiene composición + upscale opcional
             "total_images": len(saved_images),
-            "message": f"Procesamiento completado en modo {processing_mode}. {len(saved_images)} imágenes generadas (original excluida del frontend)."
+            "message": f"Procesamiento completado en modo {processing_mode}. {len(saved_images)} imágenes generadas {'(composición + upscale)' if include_upscale else '(solo composición)'} - original excluida del frontend."
         }
         
         # Actualizar trabajo de sesión como completado
@@ -1499,6 +1516,9 @@ def process_batch():
         # Parámetros comunes (pueden venir del JSON o del form)
         frame_color = batch_config.get('frame_color') or request.form.get('frame_color', 'black')
         style = batch_config.get('style') or request.form.get('style', 'default')
+        include_upscale = batch_config.get('include_upscale', True)  # Default True para compatibilidad
+        if isinstance(include_upscale, str):
+            include_upscale = include_upscale.lower() == 'true'
         original_filename = request.form.get('original_filename', image_file.filename)
         
         # Verificar que tenemos un nombre válido
@@ -1507,6 +1527,7 @@ def process_batch():
             log_warning(f"⚠️ original_filename vacío, usando filename del archivo: '{original_filename}'")
         
         log_info(f"📋 Nombre archivo original para batch: '{original_filename}' (de form: '{request.form.get('original_filename')}', filename: '{image_file.filename}')")
+        log_info(f"📈 Incluir upscale en batch: {include_upscale}")
         
         # ===== CREAR TRABAJO DE SESIÓN PARA BATCH =====
         batch_job_id = session_manager.create_job(
@@ -1514,6 +1535,7 @@ def process_batch():
             batch_config=batch_config,
             frame_color=frame_color,
             style=style,
+            include_upscale=include_upscale,
             original_filename=original_filename,
             total_workflows=0,  # Se actualizará después
             completed_workflows=0,
@@ -1583,6 +1605,7 @@ def process_batch():
         common_params = {
             "frame_color": frame_color,
             "style": style,
+            "include_upscale": include_upscale,
             "original_filename": original_filename  # Agregar nombre de imagen original
         }
         
@@ -1772,7 +1795,8 @@ def process_single_workflow_for_batch(image_file, workflow_info, common_params):
         
         # Extraer imágenes generadas
         original_image_name = common_params.get('original_filename', 'batch_image')
-        generated_images = extract_generated_images(outputs, original_image_name)
+        include_upscale = common_params.get('include_upscale', True)
+        generated_images = extract_generated_images(outputs, original_image_name, include_upscale)
         
         # Crear directorio de salida basado en nombre de imagen original
         # Usar la misma lógica que en process_image individual
@@ -2061,7 +2085,8 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
             
             # Extraer imágenes generadas
             original_image_name = common_params.get('original_filename', 'batch_image')
-            generated_images = extract_generated_images(outputs, original_image_name)
+            include_upscale = common_params.get('include_upscale', True)
+            generated_images = extract_generated_images(outputs, original_image_name, include_upscale)
             
             # Obtener nombre base de la imagen original usando la misma lógica que process_image individual
             original_image_name = common_params.get('original_filename', 'batch_image')
