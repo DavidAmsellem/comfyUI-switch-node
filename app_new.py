@@ -44,12 +44,15 @@ BATCH_LOCK = threading.Lock()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 COMFYUI_ROOT = os.path.abspath(os.path.join(BASE_DIR, '..', '..'))
 COMFYUI_INPUT_DIR = os.path.join(COMFYUI_ROOT, 'input')
-COMFYUI_OUTPUT_DIR = os.path.join(COMFYUI_ROOT, 'output')
+COMFYUI_OUTPUT_DIR = os.path.join(COMFYUI_ROOT, 'output')  # ComfyUI output (solo para leer)
 WORKFLOWS_DIR = os.path.join(BASE_DIR, 'workflows')
 TEMP_UPLOADS_DIR = os.path.join(BASE_DIR, 'temp_uploads')
 
+# 🎯 NUESTRO DIRECTORIO DE SALIDA PERSONALIZADO (independiente de ComfyUI)
+OUR_OUTPUT_DIR = os.path.join(os.path.dirname(COMFYUI_ROOT), 'output')  # C:\Users\david_qskhc9c\Documents\ComfyUI_windows_portable\output
+
 # Crear directorios necesarios
-for directory in [COMFYUI_INPUT_DIR, COMFYUI_OUTPUT_DIR, TEMP_UPLOADS_DIR]:
+for directory in [COMFYUI_INPUT_DIR, COMFYUI_OUTPUT_DIR, TEMP_UPLOADS_DIR, OUR_OUTPUT_DIR]:
     os.makedirs(directory, exist_ok=True)
 
 # Configuración del workflow (actualizar según tu nuevo workflow)
@@ -177,12 +180,12 @@ def save_uploaded_image(file, base_name=None):
 
 def create_output_directory(base_name):
     """
-    Crea directorio de salida para las imágenes procesadas
+    Crea directorio de salida para las imágenes procesadas en NUESTRO directorio personalizado
     Retorna: ruta del directorio creado
     """
-    output_dir = os.path.join(COMFYUI_OUTPUT_DIR, base_name)
+    output_dir = os.path.join(OUR_OUTPUT_DIR, base_name)
     os.makedirs(output_dir, exist_ok=True)
-    log_info(f"Directorio de salida creado: {output_dir}")
+    log_info(f"📁 Directorio de salida personalizado creado: {output_dir}")
     return output_dir
 
 # ==================== GESTIÓN DE WORKFLOWS ====================
@@ -765,9 +768,11 @@ def extract_generated_images(outputs, original_image_filename=None, include_upsc
     # Log especial para indicar estado del upscale
     if upscale_image:
         if include_upscale:
-            log_info(f"📈 IMAGEN UPSCALE INCLUIDA: {upscale_image['filename']} (nodo {upscale_image['node_id']})")
+            log_info(f"📈 IMAGEN UPSCALE INCLUIDA EN FRONTEND Y GUARDADO: {upscale_image['filename']} (nodo {upscale_image['node_id']})")
         else:
-            log_info(f"🚫 IMAGEN UPSCALE EXCLUIDA POR USUARIO: {upscale_image['filename']} (nodo {upscale_image['node_id']})")
+            log_info(f"🚫 IMAGEN UPSCALE EXCLUIDA DEL FRONTEND Y GUARDADO: {upscale_image['filename']} (nodo {upscale_image['node_id']})")
+    else:
+        log_warning(f"⚠️ No se encontró imagen upscale en los outputs de ComfyUI")
     
     # Log especial para indicar que la original se excluye
     if original_image:
@@ -783,7 +788,8 @@ def extract_generated_images(outputs, original_image_filename=None, include_upsc
 
 def find_image_file(filename, subfolder=''):
     """
-    Busca un archivo de imagen en el directorio de output de ComfyUI
+    Busca un archivo de imagen en el directorio de output DE COMFYUI (para leer las imágenes generadas)
+    NOTA: ComfyUI siempre guardará todas las imágenes aquí, nosotros solo leemos de aquí
     Retorna: ruta completa del archivo o None
     """
     possible_paths = [
@@ -798,11 +804,146 @@ def find_image_file(filename, subfolder=''):
     
     for path in possible_paths:
         if os.path.exists(path):
-            log_success(f"Imagen encontrada en: {path}")
+            log_success(f"📖 Imagen encontrada en ComfyUI output: {path}")
             return path
     
-    log_error(f"Imagen no encontrada: {filename}")
+    log_error(f"❌ Imagen no encontrada en ComfyUI output: {filename}")
     return None
+
+def save_images_to_our_output(output_dir, original_file, generated_images, original_filename, include_upscale, job_id):
+    """
+    Guarda las imágenes en nuestro directorio personalizado de manera organizada
+    
+    Args:
+        output_dir: Directorio de salida personalizado para esta imagen
+        original_file: Archivo original subido
+        generated_images: Lista de imágenes generadas (ya filtradas)
+        original_filename: Nombre del archivo original
+        include_upscale: Si incluir upscale en el guardado
+        job_id: ID del trabajo de sesión
+    
+    Returns:
+        (original_info, saved_images) - Información de imagen original y lista de generadas guardadas
+    """
+    log_info(f"💾 Guardando en directorio personalizado: {output_dir}")
+    
+    saved_images = []
+    
+    # 1. 📷 GUARDAR IMAGEN ORIGINAL
+    log_info("📷 Guardando imagen original...")
+    original_filename_clean = secure_filename(original_filename.rsplit('.', 1)[0] if '.' in original_filename else 'image')
+    original_ext = original_filename.rsplit('.', 1)[1] if '.' in original_filename else 'png'
+    original_dest_filename = f"original.{original_ext}"
+    original_dest_path = os.path.join(output_dir, original_dest_filename)
+    
+    try:
+        # Guardar imagen original desde el archivo subido
+        original_file.stream.seek(0)  # Reset stream
+        image = Image.open(original_file.stream)
+        
+        # Convertir a RGB si es necesario
+        if image.mode in ('RGBA', 'LA', 'P'):
+            background = Image.new('RGB', image.size, (255, 255, 255))
+            if image.mode == 'P':
+                image = image.convert('RGBA')
+            background.paste(image, mask=image.split()[-1] if image.mode in ('RGBA', 'LA') else None)
+            image = background
+        elif image.mode != 'RGB':
+            image = image.convert('RGB')
+        
+        image.save(original_dest_path, format='PNG', optimize=False)
+        
+        # Guardar también en sesión
+        with open(original_dest_path, 'rb') as img_file:
+            session_original_url = session_manager.save_job_image(job_id, img_file.read(), original_dest_filename)
+        
+        original_info = {
+            'filename': original_dest_filename,
+            'url': f"/get-image/{os.path.basename(output_dir)}/{original_dest_filename}",
+            'session_url': session_original_url,
+            'image_type': 'original',
+            'status': 'saved'
+        }
+        
+        log_success(f"✅ Imagen original guardada: {original_dest_path}")
+        
+    except Exception as e:
+        log_error(f"❌ Error guardando imagen original: {str(e)}")
+        original_info = {
+            'filename': original_dest_filename,
+            'error': str(e),
+            'status': 'error'
+        }
+    
+    # 2. 🎯 GUARDAR IMÁGENES GENERADAS (ya filtradas según include_upscale)
+    log_info(f"🎯 Guardando {len(generated_images)} imágenes generadas...")
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    for i, img_info in enumerate(generated_images):
+        try:
+            # Buscar archivo fuente en ComfyUI output
+            source_path = find_image_file(img_info['filename'], img_info['subfolder'])
+            if not source_path:
+                log_error(f"❌ No se pudo encontrar: {img_info['filename']}")
+                continue
+            
+            # Crear nombre descriptivo
+            img_type = img_info.get('image_type', 'generated')
+            original_ext = img_info['filename'].rsplit('.', 1)[1] if '.' in img_info['filename'] else 'png'
+            
+            # Nombres descriptivos según tipo
+            if img_type == 'composition':
+                dest_filename = f"composition_{timestamp}.{original_ext}"
+            elif img_type == 'upscale':
+                dest_filename = f"upscale_{timestamp}.{original_ext}"
+            else:
+                dest_filename = f"generated_{i+1}_{timestamp}.{original_ext}"
+            
+            dest_path = os.path.join(output_dir, dest_filename)
+            
+            # Verificar si ya existe para evitar duplicados
+            if os.path.exists(dest_path):
+                log_warning(f"⚠️ Archivo ya existe, saltando: {dest_filename}")
+                continue
+            
+            # Copiar archivo
+            shutil.copy2(source_path, dest_path)
+            
+            # Guardar también en sesión
+            with open(dest_path, 'rb') as img_file:
+                session_url = session_manager.save_job_image(job_id, img_file.read(), dest_filename)
+            
+            # Agregar a lista de guardadas
+            saved_image_info = {
+                'filename': dest_filename,
+                'url': f"/get-image/{os.path.basename(output_dir)}/{dest_filename}",
+                'session_url': session_url,
+                'original_filename': img_info['filename'],
+                'node_id': img_info.get('node_id'),
+                'image_type': img_type,
+                'status': 'saved'
+            }
+            
+            saved_images.append(saved_image_info)
+            log_success(f"✅ {img_type.upper()} guardada: {dest_path}")
+            
+        except Exception as e:
+            log_error(f"❌ Error guardando imagen {img_info['filename']}: {str(e)}")
+            # Agregar entrada de error
+            saved_images.append({
+                'filename': img_info['filename'],
+                'error': str(e),
+                'image_type': img_info.get('image_type', 'unknown'),
+                'status': 'error'
+            })
+    
+    # 3. 📊 RESUMEN FINAL
+    successful_saves = len([img for img in saved_images if img.get('status') == 'saved'])
+    log_success(f"✅ Guardado completado: {successful_saves}/{len(generated_images)} imágenes generadas + 1 original")
+    log_info(f"📁 Directorio: {output_dir}")
+    
+    return original_info, saved_images
 
 # ==================== RUTAS DEL API ====================
 
@@ -949,23 +1090,12 @@ def process_image():
         base_name = secure_filename(original_filename.rsplit('.', 1)[0] if '.' in original_filename else 'image')
         output_dir = create_output_directory(base_name)
         
-        session_manager.update_job(job_id, current_operation='Guardando imagen original...')
+        session_manager.update_job(job_id, current_operation='Preparando archivos...')
         
-        # Guardar imagen original (solo para referencia del backend, NO para el frontend)
-        log_info("Guardando imagen original (solo para referencia del backend)...")
-        original_path = os.path.join(output_dir, 'original.png')
-        image = Image.open(file.stream)
-        image.save(original_path, format='PNG')
-        file.stream.seek(0)
+        # 🚫 NO guardar imagen original aquí - se guardará después con las demás de manera organizada
+        log_info("💾 Imagen original se guardará después junto con las generadas en nuestro directorio personalizado")
         
-        # 🚫 NO GUARDAR la imagen original en la sesión para evitar que el frontend la muestre
-        # with open(original_path, 'rb') as img_file:
-        #     session_original_url = session_manager.save_job_image(job_id, img_file.read(), 'original.png')
-        # log_info(f"Imagen original guardada en sesión: {session_original_url}")
-        
-        log_info("🚫 Imagen original NO guardada en sesión para evitar mostrarla en el frontend")
-        
-        # Guardar en input de ComfyUI
+        # Guardar en input de ComfyUI (para que ComfyUI pueda procesarla)
         input_path, workflow_filename = save_uploaded_image(file, base_name)
         
         session_manager.update_job(job_id, current_operation='Verificando acceso a la imagen...')
@@ -1006,95 +1136,45 @@ def process_image():
         log_info("Extrayendo imágenes...")
         generated_images = extract_generated_images(outputs, original_filename, include_upscale)
         
-        # Copiar imágenes generadas al directorio de salida y sesión
-        saved_images = []
-        for img_info in generated_images:
-            source_path = find_image_file(img_info['filename'], img_info['subfolder'])
-            if source_path:
-                # Crear nombre unificado: workflow_estilo_fecha_numero.extension
-                style_name = style_id if style_id != 'default' else 'default'
-                workflow_clean = workflow_name.replace('/', '_').replace('-', '_')
-                
-                # Obtener extensión original
-                if '.' in img_info['filename']:
-                    original_ext = img_info['filename'].rsplit('.', 1)[1]
-                else:
-                    original_ext = 'png'
-                
-                # Generar nombre único: workflow_estilo_fechahora_numero.extension
-                img_number = len(saved_images) + 1
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                new_filename = f"{workflow_clean}_{style_name}_{timestamp}_{img_number:03d}.{original_ext}"
-                
-                dest_path = os.path.join(output_dir, new_filename)
-                
-                # ✅ VERIFICAR SI YA EXISTE PARA EVITAR DUPLICADOS
-                if os.path.exists(dest_path):
-                    log_warning(f"⚠️ Archivo ya existe, saltando: {new_filename}")
-                    # Aún así lo agregamos a la lista con la info existente
-                    with open(dest_path, 'rb') as img_file:
-                        session_url = session_manager.save_job_image(job_id, img_file.read(), new_filename)
-                    
-                    saved_images.append({
-                        'filename': new_filename,
-                        'url': f"/get-image/{base_name}/{new_filename}",
-                        'session_url': session_url,
-                        'original_filename': img_info['filename'],
-                        'node_id': img_info.get('node_id'),  # Añadir node_id para identificación
-                        'image_type': img_info.get('image_type'),  # Añadir tipo de imagen
-                        'workflow': workflow_name,
-                        'style': style_name,
-                        'status': 'existing'  # Marcar como existente
-                    })
-                    continue
-                
-                # Copiar archivo si no existe
-                shutil.copy2(source_path, dest_path)
-                
-                # Guardar también en el directorio de sesión
-                with open(dest_path, 'rb') as img_file:
-                    session_url = session_manager.save_job_image(job_id, img_file.read(), new_filename)
-                
-                log_info(f"Imagen guardada en sesión: {session_url}")
-                
-                saved_images.append({
-                    'filename': new_filename,
-                    'url': f"/get-image/{base_name}/{new_filename}",
-                    'session_url': session_url,
-                    'original_filename': img_info['filename'],
-                    'node_id': img_info.get('node_id'),  # Añadir node_id para identificación
-                    'image_type': img_info.get('image_type'),  # Añadir tipo de imagen
-                    'workflow': workflow_name,
-                    'style': style_name,
-                    'status': 'new'  # Marcar como nuevo
-                })
-                log_success(f"✅ Imagen nueva copiada: {dest_path} -> sesión: {session_url}")
+        log_info(f"📊 Resumen de imágenes extraídas: {len(generated_images)} imágenes (include_upscale={include_upscale})")
+        for i, img in enumerate(generated_images):
+            log_info(f"   {i+1}. Tipo: {img.get('image_type', 'unknown')}, Archivo: {img['filename']}, Nodo: {img.get('node_id', 'N/A')}")
+        
+        session_manager.update_job(job_id, current_operation='Guardando imágenes en nuestro directorio personalizado...')
+        
+        # 🎯 USAR NUESTRO NUEVO SISTEMA DE GUARDADO ORGANIZADO
+        log_info("💾 Guardando imágenes de manera organizada en nuestro directorio personalizado...")
+        original_info, saved_images = save_images_to_our_output(
+            output_dir=output_dir,
+            original_file=file,
+            generated_images=generated_images,
+            original_filename=original_filename,
+            include_upscale=include_upscale,
+            job_id=job_id
+        )
+        
+        # Agregar información adicional a las imágenes guardadas
+        for img in saved_images:
+            img['workflow'] = workflow_name
+            img['style'] = style_id if style_id != 'default' else 'default'
         
         # Crear respuesta
         processing_mode = "text2img + controlnet_0.85" if (style_id and style_id != 'default') else "img2img_preserving_original"
         
-        # Seleccionar imagen final principal (priorizar nodo 704)
+        # Seleccionar imagen final principal (priorizar composición)
         final_image_info = None
         final_image_url = None
         if saved_images:
-            # 1. PRIORIDAD MÁXIMA: Imágenes del nodo 704 (composición final)
-            node_704_images = [img for img in saved_images if img.get('node_id') == '704']
+            # 1. PRIORIDAD MÁXIMA: Imagen de composición (nodo 704)
+            composition_images = [img for img in saved_images if img.get('image_type') == 'composition']
             
-            if node_704_images:
-                final_image_info = node_704_images[0]
-                log_info(f"🎯 Imagen final del nodo 704 (composición): {final_image_info['filename']}")
+            if composition_images:
+                final_image_info = composition_images[0]
+                log_info(f"🎯 Imagen final (composición): {final_image_info['filename']}")
             else:
-                # 2. FALLBACK: Imágenes que contienen "composition" en el tipo o nombre
-                composition_images = [img for img in saved_images if 
-                                    img.get('image_type') == 'composition' or 
-                                    'composition' in img.get('filename', '').lower()]
-                if composition_images:
-                    final_image_info = composition_images[0]
-                    log_info(f"🖼️ Imagen final por tipo composition: {final_image_info['filename']}")
-                else:
-                    # 3. ÚLTIMO RECURSO: La primera imagen disponible
-                    final_image_info = saved_images[0]
-                    log_info(f"📷 Imagen final (primera disponible): {final_image_info['filename']}")
+                # 2. FALLBACK: La primera imagen disponible
+                final_image_info = saved_images[0]
+                log_info(f"📷 Imagen final (primera disponible): {final_image_info['filename']}")
             
             final_image_url = final_image_info['session_url']  # Usar URL de sesión para acceso directo
             log_success(f"✅ Imagen final seleccionada: {final_image_info['filename']} (nodo: {final_image_info.get('node_id', 'N/A')}) -> {final_image_url}")
@@ -1111,16 +1191,16 @@ def process_image():
             "include_upscale": include_upscale,  # Incluir configuración de upscale
             "base_name": base_name,
             "output_dir": output_dir,
-            # 🚫 ORIGINAL_IMAGE ELIMINADO: No enviar al frontend para evitar que se muestre
-            # "original_image": {
-            #     "filename": "original.png",
-            #     "url": f"/get-image/{base_name}/original.png"
-            # },
+            # � IMAGEN ORIGINAL: Incluir información de la imagen original guardada
+            "original_image": original_info,
             "final_image_url": final_image_url,  # Nueva imagen final para el frontend
             "final_image": final_image_info,  # Información completa de la imagen final
-            "generated_images": saved_images,  # Contiene composición + upscale opcional
+            "generated_images": saved_images,  # Contiene composición + upscale opcional (ya filtradas)
             "total_images": len(saved_images),
-            "message": f"Procesamiento completado en modo {processing_mode}. {len(saved_images)} imágenes generadas {'(composición + upscale)' if include_upscale else '(solo composición)'} - original excluida del frontend."
+            "total_files_saved": len(saved_images) + 1,  # +1 por la original
+            "include_upscale": include_upscale,  # Indicar si se incluyó upscale
+            "our_output_dir": OUR_OUTPUT_DIR,  # Información del directorio personalizado
+            "message": f"✅ Procesamiento completado en modo {processing_mode}. {len(saved_images) + 1} archivos guardados en directorio personalizado: 1 original + {len(saved_images)} generadas {'(composición + upscale)' if include_upscale else '(solo composición)'}."
         }
         
         # Actualizar trabajo de sesión como completado
@@ -1152,24 +1232,29 @@ def process_image():
 
 @app.route('/get-image/<base_name>/<filename>', methods=['GET'])
 def get_image(base_name, filename):
-    """Descarga una imagen del directorio de salida"""
+    """Descarga una imagen del directorio de salida (mantener compatibilidad)"""
     try:
         # Sanitizar parámetros
         base_name = secure_filename(base_name)
         filename = secure_filename(filename)
         
-        # Buscar archivo
-        file_path = os.path.join(COMFYUI_OUTPUT_DIR, base_name, filename)
+        # 1. Buscar primero en nuestro directorio personalizado
+        our_file_path = os.path.join(OUR_OUTPUT_DIR, base_name, filename)
+        if os.path.exists(our_file_path):
+            log_success(f"📤 Enviando archivo desde nuestro directorio: {our_file_path}")
+            return send_file(our_file_path, as_attachment=True, download_name=filename)
         
-        if not os.path.exists(file_path):
-            log_error(f"Archivo no encontrado: {file_path}")
-            return jsonify({"error": "Archivo no encontrado"}), 404
+        # 2. Buscar en el directorio de ComfyUI como respaldo
+        comfyui_file_path = os.path.join(COMFYUI_OUTPUT_DIR, base_name, filename)
+        if os.path.exists(comfyui_file_path):
+            log_success(f"📤 Enviando archivo desde ComfyUI output: {comfyui_file_path}")
+            return send_file(comfyui_file_path, as_attachment=True, download_name=filename)
         
-        log_success(f"Enviando archivo: {file_path}")
-        return send_file(file_path, as_attachment=True, download_name=filename)
+        log_error(f"❌ Archivo no encontrado en ningún directorio: {filename}")
+        return jsonify({"error": "Archivo no encontrado"}), 404
         
     except Exception as e:
-        log_error(f"Error al obtener imagen: {str(e)}")
+        log_error(f"❌ Error al obtener imagen: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/workflow-nodes/<path:workflow_name>', methods=['GET'])
@@ -1595,6 +1680,7 @@ def process_batch():
         log_info(f"🎯 Workflows seleccionados: {len(filtered_workflows)}/{len(available_workflows)}")
         
         # Guardar imagen original en la sesión inmediatamente
+
         session_manager.update_job(batch_job_id, current_operation='Guardando imagen original...')
         image_file.seek(0)
         original_image_data = image_file.read()
@@ -1809,8 +1895,15 @@ def process_single_workflow_for_batch(image_file, workflow_info, common_params):
         batch_output_dir = create_output_directory(base_image_name)
         
         # Copiar imágenes generadas con nombre unificado (evitando duplicados)
+        # Las imágenes en generated_images ya están filtradas según include_upscale
         saved_images = []
+        include_upscale = common_params.get('include_upscale', True)
+        log_info(f"📊 Batch - Resumen de imágenes extraídas: {len(generated_images)} imágenes (include_upscale={include_upscale})")
+        for i, img in enumerate(generated_images):
+            log_info(f"   {i+1}. Tipo: {img.get('image_type', 'unknown')}, Archivo: {img['filename']}, Nodo: {img.get('node_id', 'N/A')}")
+        
         for img_info in generated_images:
+            
             source_path = find_image_file(img_info['filename'], img_info['subfolder'])
             if source_path:
                 # Crear nombre unificado: workflow_estilo_fecha_numero.extension
@@ -1823,7 +1916,7 @@ def process_single_workflow_for_batch(image_file, workflow_info, common_params):
                 else:
                     original_ext = 'png'
                 
-                # Generar nombre unificado: workflow_estilo_fechahora_numero.extension
+                # Generar nombre único: workflow_estilo_fechahora_numero.extension
                 img_number = len(saved_images) + 1
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 new_filename = f"{workflow_clean}_{style_name}_{timestamp}_{img_number:03d}.{original_ext}"
@@ -2098,9 +2191,16 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
             batch_output_dir = create_output_directory(base_image_name)
             
             # Copiar imágenes generadas con nombre de workflow y estilo (evitando duplicados)
+            # Las imágenes en generated_images ya están filtradas según include_upscale
             saved_images = []
             session_images = []  # Para URLs de sesión
+            include_upscale = common_params.get('include_upscale', True)
+            log_info(f"📊 Tracking Batch - Resumen de imágenes extraídas: {len(generated_images)} imágenes (include_upscale={include_upscale})")
+            for i, img in enumerate(generated_images):
+                log_info(f"   {i+1}. Tipo: {img.get('image_type', 'unknown')}, Archivo: {img['filename']}, Nodo: {img.get('node_id', 'N/A')}")
+            
             for img_info in generated_images:
+                
                 source_path = find_image_file(img_info['filename'], img_info['subfolder'])
                 if source_path:
                     # Crear nombre descriptivo: workflow_estilo_numeroImagen.extension
@@ -2149,15 +2249,11 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
                     # Copiar archivo si no existe
                     shutil.copy2(source_path, dest_path)
                     
-                    # Guardar también en la sesión si tenemos session_job_id
-                    session_url = None
-                    if session_job_id:
-                        try:
-                            with open(source_path, 'rb') as img_file:
-                                session_url = session_manager.save_job_image(session_job_id, img_file.read(), new_filename)
-                        except Exception as e:
-                            log_warning(f"⚠️ No se pudo guardar imagen nueva en sesión: {str(e)}")
+                    # Guardar también en sesión
+                    with open(dest_path, 'rb') as img_file:
+                        session_url = session_manager.save_job_image(session_job_id, img_file.read(), new_filename)
                     
+                    # Agregar a lista de guardadas
                     saved_images.append({
                         'filename': new_filename,
                         'url': f"/get-image/{base_image_name}/{new_filename}",
@@ -2167,11 +2263,6 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
                         'style': style_name,
                         'status': 'new'  # Marcar como nuevo
                     })
-                    
-                    if session_url:
-                        session_images.append(session_url)
-                    
-                    log_success(f"✅ Imagen de tracking nueva copiada: {dest_path}")
                     
                     if session_url:
                         session_images.append(session_url)
