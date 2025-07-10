@@ -489,6 +489,10 @@
                         <h3>🎨 Color del Marco</h3>
                         <div class="color-options">
                             <div class="color-option">
+                                <input type="radio" id="color-none" name="frameColor" value="none">
+                                <label for="color-none" style="background: #f8f9fa; color: #333; border: 1px solid #ddd; font-weight: 600;">🚫 Sin Marco</label>
+                            </div>
+                            <div class="color-option">
                                 <input type="radio" id="color-black" name="frameColor" value="black" checked>
                                 <label for="color-black" style="background: #333; color: white;">⚫ Negro</label>
                             </div>
@@ -587,6 +591,10 @@
                         <div>
                             <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #555;">🎨 Color del Marco:</label>
                             <div class="color-options">
+                                <div class="color-option">
+                                    <input type="radio" id="batch-color-none" name="batchFrameColor" value="none">
+                                    <label for="batch-color-none" style="background: #f8f9fa; color: #333; border: 1px solid #ddd; font-weight: 600;">🚫 Sin Marco</label>
+                                </div>
                                 <div class="color-option">
                                     <input type="radio" id="batch-color-black" name="batchFrameColor" value="black" checked>
                                     <label for="batch-color-black" style="background: #333; color: white;">⚫ Negro</label>
@@ -1370,30 +1378,45 @@
 
             resultImages.innerHTML = '';
 
-            // Mostrar imagen original
-            if (data.original_image) {
-                const originalDiv = document.createElement('div');
-                originalDiv.className = 'result-item';
-                originalDiv.innerHTML = `
-                    <h4>📄 Imagen Original</h4>
-                    <img src="${data.original_image.url}" alt="Imagen Original">
-                    <a href="${data.original_image.url}" class="download-btn" download>⬇️ Descargar Original</a>
-                `;
-                resultImages.appendChild(originalDiv);
-            }
+            // ❌ NO mostrar imagen original - solo mostrar imágenes generadas (composición final)
+            // Comentado para ocultar la imagen original:
+            // if (data.original_image) { ... }
 
-            // Mostrar imágenes generadas
+            // ✅ Mostrar SOLO imágenes generadas (composición final)
             if (data.generated_images && data.generated_images.length > 0) {
                 data.generated_images.forEach((image, index) => {
                     const imageDiv = document.createElement('div');
                     imageDiv.className = 'result-item';
+                    
+                    // Determinar el tipo de imagen para mejor etiquetado
+                    let imageLabel = '✨ Resultado Final';
+                    if (image.image_type === 'composition') {
+                        imageLabel = '🎯 Composición Final';
+                    } else if (image.image_type === 'upscale') {
+                        imageLabel = '📈 Imagen Escalada';
+                    } else if (data.generated_images.length > 1) {
+                        imageLabel = `✨ Resultado ${index + 1}`;
+                    }
+                    
                     imageDiv.innerHTML = `
-                        <h4>✨ Resultado ${index + 1}</h4>
+                        <h4>${imageLabel}</h4>
                         <img src="${image.url}" alt="Imagen Generada">
                         <a href="${image.url}" class="download-btn" download="${image.filename}">⬇️ Descargar</a>
                     `;
                     resultImages.appendChild(imageDiv);
                 });
+                
+                showStatus(`✅ Mostrando ${data.generated_images.length} imagen(es) generada(s)`, 'success');
+            } else {
+                // Mostrar mensaje si no hay imágenes generadas
+                const noResultsDiv = document.createElement('div');
+                noResultsDiv.className = 'result-item';
+                noResultsDiv.innerHTML = `
+                    <h4>⚠️ Sin Resultados</h4>
+                    <p>No se generaron imágenes en este procesamiento.</p>
+                `;
+                resultImages.appendChild(noResultsDiv);
+                showStatus('⚠️ No se encontraron imágenes generadas', 'warning');
             }
 
             resultsSection.style.display = 'block';
