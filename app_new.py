@@ -1210,26 +1210,45 @@ def process_image():
             img['workflow'] = workflow_name
             img['style'] = style_id if style_id != 'default' else 'default'
         
+        # 🎯 FILTRAR IMÁGENES PARA EL FRONTEND - SOLO COMPOSICIÓN FINAL
+        log_info("🎯 Filtrando imágenes para el frontend - solo composición final...")
+        frontend_images = [img for img in saved_images if img.get('image_type') == 'composition']
+        
+        if not frontend_images:
+            # Fallback: si no hay composición, buscar cualquier imagen generada
+            log_warning("⚠️ No se encontró imagen de composición, usando fallback...")
+            frontend_images = saved_images[:1]  # Solo la primera
+        
+        log_info(f"📤 Para frontend: {len(frontend_images)} imagen(es) de {len(saved_images)} guardadas")
+        log_info(f"💾 Guardadas en disco: {len(saved_images)} imágenes + 1 original")
+        
+        # Log detallado de lo que se está enviando al frontend vs lo que se guarda
+        log_info("📋 RESUMEN DE FILTRADO PARA FRONTEND:")
+        log_info(f"   💾 GUARDADAS EN DISCO ({len(saved_images)} imágenes):")
+        for i, img in enumerate(saved_images):
+            tipo = img.get('image_type', 'unknown')
+            log_info(f"      {i+1}. {tipo.upper()}: {img['filename']}")
+        
+        log_info(f"   📤 ENVIADAS AL FRONTEND ({len(frontend_images)} imágenes):")
+        for i, img in enumerate(frontend_images):
+            tipo = img.get('image_type', 'unknown')
+            log_info(f"      {i+1}. {tipo.upper()}: {img['filename']}")
+        
+        # Verificar si se están filtrando upscales
+        upscale_count = len([img for img in saved_images if img.get('image_type') == 'upscale'])
+        if upscale_count > 0:
+            log_success(f"✅ FILTRADO CORRECTO: {upscale_count} imagen(es) upscale guardadas en disco pero excluidas del frontend")
+        
         # Crear respuesta
         processing_mode = "text2img + controlnet_0.85" if (style_id and style_id != 'default') else "img2img_preserving_original"
         
-        # Seleccionar imagen final principal (priorizar composición)
+        # Seleccionar imagen final principal (composición)
         final_image_info = None
         final_image_url = None
-        if saved_images:
-            # 1. PRIORIDAD MÁXIMA: Imagen de composición (nodo 704)
-            composition_images = [img for img in saved_images if img.get('image_type') == 'composition']
-            
-            if composition_images:
-                final_image_info = composition_images[0]
-                log_info(f"🎯 Imagen final (composición): {final_image_info['filename']}")
-            else:
-                # 2. FALLBACK: La primera imagen disponible
-                final_image_info = saved_images[0]
-                log_info(f"📷 Imagen final (primera disponible): {final_image_info['filename']}")
-            
-            final_image_url = final_image_info['session_url']  # Usar URL de sesión para acceso directo
-            log_success(f"✅ Imagen final seleccionada: {final_image_info['filename']} (nodo: {final_image_info.get('node_id', 'N/A')}) -> {final_image_url}")
+        if frontend_images:
+            final_image_info = frontend_images[0]
+            final_image_url = final_image_info['session_url']
+            log_success(f"✅ Imagen final para frontend: {final_image_info['filename']} (nodo: {final_image_info.get('node_id', 'N/A')})")
         
         response = {
             "success": True,
@@ -1247,19 +1266,20 @@ def process_image():
             "original_image": original_info,
             "final_image_url": final_image_url,  # Nueva imagen final para el frontend
             "final_image": final_image_info,  # Información completa de la imagen final
-            "generated_images": saved_images,  # Contiene composición + upscale opcional (ya filtradas)
-            "total_images": len(saved_images),
+            "generated_images": frontend_images,  # ✅ SOLO IMÁGENES PARA FRONTEND (composición únicamente)
+            "total_images": len(frontend_images),  # Total para frontend
+            "total_images_saved": len(saved_images),  # Total guardadas en disco
             "total_files_saved": len(saved_images) + 1,  # +1 por la original
             "include_upscale": include_upscale,  # Indicar si se incluyó upscale
             "our_output_dir": OUR_OUTPUT_DIR,  # Información del directorio personalizado
-            "message": f"✅ Procesamiento completado en modo {processing_mode}. {len(saved_images) + 1} archivos guardados en directorio personalizado: 1 original + {len(saved_images)} generadas {'(composición + upscale)' if include_upscale else '(solo composición)'}."
+            "message": f"✅ Procesamiento completado en modo {processing_mode}. {len(saved_images) + 1} archivos guardados en directorio personalizado: 1 original + {len(saved_images)} generadas {'(composición + upscale)' if include_upscale else '(solo composición)'}. Frontend mostrará solo composición."
         }
         
         # Actualizar trabajo de sesión como completado
         session_manager.update_job(job_id,
             status='completed',
             current_operation='Completado',
-            results=saved_images,
+            results=frontend_images,  # ✅ SOLO IMÁGENES PARA FRONTEND (composición únicamente)
             response_data=response
         )
         
@@ -2010,11 +2030,30 @@ def process_single_workflow_for_batch(image_file, workflow_info, common_params):
         
         processing_time = time.time() - start_time
         
+        # 🎯 FILTRAR IMÁGENES PARA EL FRONTEND EN BATCH - SOLO COMPOSICIÓN FINAL
+        log_info(f"🎯 Filtrando imágenes para frontend en batch - solo composición final...")
+        frontend_images = []
+        
+        # En batch, todas las imágenes guardadas en saved_images ya son filtradas por extract_generated_images
+        # pero necesitamos filtrar aún más para el frontend (solo composición)
+        for img in saved_images:
+            # En batch, las imágenes no tienen 'image_type' porque son renombradas,
+            # pero sabemos que si include_upscale=False, solo hay composición
+            # Si include_upscale=True, la primera imagen es composición y la segunda upscale
+            if len(frontend_images) == 0:  # Siempre incluir la primera (composición)
+                frontend_images.append(img)
+                log_info(f"✅ Batch - Imagen de composición para frontend: {img['filename']}")
+            # No incluir más imágenes (evitar upscale en frontend)
+        
+        log_info(f"📤 Batch - Para frontend: {len(frontend_images)} imagen(es) de {len(saved_images)} guardadas")
+        log_info(f"💾 Batch - Guardadas en disco: {len(saved_images)} imágenes + 1 original")
+        
         return {
             "workflow_id": workflow_info["id"],
             "workflow_info": workflow_info,
             "success": True,
-            "generated_images": saved_images,
+            "generated_images": frontend_images,  # ✅ SOLO IMÁGENES PARA FRONTEND (composición únicamente)
+            "all_images_saved": saved_images,  # Todas las imágenes guardadas en disco (para debugging)
             "original_image": {
                 "filename": "original.png",
                 "url": f"/get-image/{base_image_name}/original.png"
@@ -2341,11 +2380,23 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
             
             processing_time = time.time() - start_time
             
+            # 🎯 FILTRAR IMÁGENES PARA EL FRONTEND EN BATCH TRACKING - SOLO COMPOSICIÓN FINAL
+            log_info(f"🎯 Filtrando imágenes para frontend en batch tracking - solo composición final...")
+            frontend_images = []
+            
+            # En batch tracking, filtrar para mostrar solo la primera imagen (composición)
+            if saved_images:
+                frontend_images = [saved_images[0]]  # Solo la primera (composición)
+                log_info(f"✅ Batch tracking - Imagen de composición para frontend: {saved_images[0]['filename']}")
+            
+            log_info(f"📤 Batch tracking - Para frontend: {len(frontend_images)} imagen(es) de {len(saved_images)} guardadas")
+            
             result = {
                 "workflow_id": workflow_info["id"],
                 "workflow_info": workflow_info,
                 "success": True,
-                "generated_images": saved_images,
+                "generated_images": frontend_images,  # ✅ SOLO IMÁGENES PARA FRONTEND (composición únicamente)
+                "all_images_saved": saved_images,  # Todas las imágenes guardadas en disco (para debugging)
                 "session_images": session_images,  # URLs de sesión persistentes
                 "original_image": {
                     "filename": "original.png",
