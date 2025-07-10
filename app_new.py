@@ -810,7 +810,7 @@ def find_image_file(filename, subfolder=''):
     log_error(f"❌ Imagen no encontrada en ComfyUI output: {filename}")
     return None
 
-def save_images_to_our_output(output_dir, original_file, generated_images, original_filename, include_upscale, job_id):
+def save_images_to_our_output(output_dir, original_file, generated_images, original_filename, include_upscale, job_id, workflow_name=None, style_id=None):
     """
     Guarda las imágenes en nuestro directorio personalizado de manera organizada
     
@@ -821,6 +821,8 @@ def save_images_to_our_output(output_dir, original_file, generated_images, origi
         original_filename: Nombre del archivo original
         include_upscale: Si incluir upscale en el guardado
         job_id: ID del trabajo de sesión
+        workflow_name: Nombre del workflow utilizado (para nombres descriptivos)
+        style_id: ID del estilo aplicado (para nombres descriptivos)
     
     Returns:
         (original_info, saved_images) - Información de imagen original y lista de generadas guardadas
@@ -880,8 +882,44 @@ def save_images_to_our_output(output_dir, original_file, generated_images, origi
     
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
+    # 🔍 VERIFICAR ARCHIVOS EXISTENTES EN EL DIRECTORIO
+    existing_files = []
+    if os.path.exists(output_dir):
+        existing_files = [f.lower() for f in os.listdir(output_dir)]
+    
+    # Verificar si ya existe una imagen upscale
+    existing_upscale = any('upscale_' in f for f in existing_files)
+    if existing_upscale:
+        log_info(f"📈 Ya existe una imagen upscale en {output_dir}, se omitirán nuevas imágenes upscale")
+    
     for i, img_info in enumerate(generated_images):
         try:
+            # Verificar tipo de imagen
+            img_type = img_info.get('image_type', 'generated')
+            
+            # 🚫 SALTAR UPSCALE SI YA EXISTE UNA
+            if img_type == 'upscale' and existing_upscale:
+                log_warning(f"⚠️ Imagen upscale saltada (ya existe una): {img_info['filename']}")
+                # Buscar la imagen upscale existente para agregarla a la respuesta
+                for existing_file in os.listdir(output_dir):
+                    if 'upscale_' in existing_file.lower():
+                        # Crear entrada para la imagen existente
+                        with open(os.path.join(output_dir, existing_file), 'rb') as img_file:
+                            session_url = session_manager.save_job_image(job_id, img_file.read(), existing_file)
+                        
+                        saved_images.append({
+                            'filename': existing_file,
+                            'url': f"/get-image/{os.path.basename(output_dir)}/{existing_file}",
+                            'session_url': session_url,
+                            'original_filename': img_info['filename'],
+                            'node_id': img_info.get('node_id'),
+                            'image_type': img_type,
+                            'status': 'existing'  # Marcar como existente
+                        })
+                        log_info(f"📈 Usando imagen upscale existente: {existing_file}")
+                        break
+                continue
+            
             # Buscar archivo fuente en ComfyUI output
             source_path = find_image_file(img_info['filename'], img_info['subfolder'])
             if not source_path:
@@ -889,22 +927,34 @@ def save_images_to_our_output(output_dir, original_file, generated_images, origi
                 continue
             
             # Crear nombre descriptivo
-            img_type = img_info.get('image_type', 'generated')
             original_ext = img_info['filename'].rsplit('.', 1)[1] if '.' in img_info['filename'] else 'png'
+            
+            # Preparar componentes para el nombre del archivo
+            workflow_clean = workflow_name.replace('/', '_').replace('-', '_') if workflow_name else 'workflow'
+            style_clean = style_id if style_id and style_id != 'default' else 'nostyle'
+            photo_name = secure_filename(original_filename.rsplit('.', 1)[0] if '.' in original_filename else 'image')
             
             # Nombres descriptivos según tipo
             if img_type == 'composition':
-                dest_filename = f"composition_{timestamp}.{original_ext}"
+                # Formato: workflow_estilo_nombreFoto_timestamp.ext
+                dest_filename = f"{workflow_clean}_{style_clean}_{photo_name}_{timestamp}.{original_ext}"
+                log_info(f"🎯 Nombre de composición generado: {dest_filename}")
+                log_info(f"   📝 Componentes: workflow={workflow_clean}, estilo={style_clean}, foto={photo_name}, timestamp={timestamp}")
             elif img_type == 'upscale':
-                dest_filename = f"upscale_{timestamp}.{original_ext}"
+                # Formato: upscale_nombreFoto_timestamp.ext (más simple para upscale)
+                dest_filename = f"upscale_{photo_name}_{timestamp}.{original_ext}"
+                log_info(f"📈 Nombre de upscale generado: {dest_filename}")
+                # Marcar que ahora tenemos upscale para futuras verificaciones
+                existing_upscale = True
             else:
+                # Formato genérico: generated_numeroSecuencia_timestamp.ext
                 dest_filename = f"generated_{i+1}_{timestamp}.{original_ext}"
             
             dest_path = os.path.join(output_dir, dest_filename)
             
-            # Verificar si ya existe para evitar duplicados
+            # Verificar si ya existe este archivo específico
             if os.path.exists(dest_path):
-                log_warning(f"⚠️ Archivo ya existe, saltando: {dest_filename}")
+                log_warning(f"⚠️ Archivo específico ya existe, saltando: {dest_filename}")
                 continue
             
             # Copiar archivo
@@ -1150,7 +1200,9 @@ def process_image():
             generated_images=generated_images,
             original_filename=original_filename,
             include_upscale=include_upscale,
-            job_id=job_id
+            job_id=job_id,
+            workflow_name=workflow_name,
+            style_id=style_id
         )
         
         # Agregar información adicional a las imágenes guardadas
