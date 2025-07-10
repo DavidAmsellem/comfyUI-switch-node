@@ -1,7 +1,7 @@
 {
   "3": {
     "inputs": {
-      "prompt": "a clean modern bathroom with a plain back wall, front view, no decoration, soft lighting, minimalist\n"
+      "prompt": "a modern minimalist bathroom, clean and empty matte back wall, soft neutral lighting, centered bathtub with natural fabric, smooth wooden floor with subtle grain, frontal view, symmetrical composition, warm and cozy atmosphere, no decor on the wall\n"
     },
     "class_type": "SeargeTextInputV2",
     "_meta": {
@@ -85,7 +85,7 @@
   },
   "268": {
     "inputs": {
-      "image": "open.png"
+      "image": "Captura de pantalla 2025-07-04 134640.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -94,7 +94,7 @@
   },
   "269": {
     "inputs": {
-      "image": "open.png"
+      "image": "Captura de pantalla 2025-07-04 134640.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -103,7 +103,7 @@
   },
   "463": {
     "inputs": {
-      "enabled": false,
+      "enabled": true,
       "images": [
         "573",
         0
@@ -388,7 +388,7 @@
   },
   "540": {
     "inputs": {
-      "stage": "upscaling",
+      "stage": "none - skip",
       "input_from": "data stream",
       "output_to": "data stream",
       "data": [
@@ -418,7 +418,7 @@
   },
   "542": {
     "inputs": {
-      "stage": "high resolution",
+      "stage": "none - skip",
       "input_from": "data stream",
       "output_to": "data stream",
       "data": [
@@ -514,11 +514,11 @@
   },
   "610": {
     "inputs": {
-      "seed": 1018044306406491,
+      "seed": 603142351471952,
       "image_size_preset": "none - use settings",
       "image_width": 1200,
       "image_height": 1200,
-      "steps": 28,
+      "steps": 30,
       "cfg": 5,
       "sampler_preset": "1 - DPM++ 2M Karras",
       "sampler_name": "dpmpp_2m",
@@ -574,7 +574,7 @@
   },
   "613": {
     "inputs": {
-      "denoise": 0.6100000000000001,
+      "denoise": 0.5900000000000001,
       "inpaint_mask_blur": 8,
       "inpaint_mask_mode": "masked - full",
       "data": [
@@ -653,7 +653,7 @@
   "618": {
     "inputs": {
       "hires_mode": "none",
-      "hires_scale": "2x",
+      "hires_scale": "1.25x",
       "hires_denoise": 0.20000000000000004,
       "hires_softness": 0.10000000000000002,
       "hires_detail_boost": 0.5000000000000001,
@@ -805,7 +805,7 @@
   },
   "647": {
     "inputs": {
-      "image": "example.png",
+      "image": "Captura de pantalla 2025-07-04 134640.png",
       "channel": "green"
     },
     "class_type": "LoadImageMask",
@@ -815,7 +815,7 @@
   },
   "658": {
     "inputs": {
-      "image": "open.png"
+      "image": "Captura de pantalla 2025-07-04 134640.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -850,7 +850,7 @@
   },
   "668": {
     "inputs": {
-      "image": "open.png"
+      "image": "Captura de pantalla 2025-07-04 134640.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -859,7 +859,7 @@
   },
   "669": {
     "inputs": {
-      "image": "open.png"
+      "image": "Captura de pantalla 2025-07-04 134640.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -881,7 +881,7 @@
   },
   "671": {
     "inputs": {
-      "image": "open.png"
+      "image": "Captura de pantalla 2025-07-04 134640.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -903,7 +903,7 @@
   },
   "673": {
     "inputs": {
-      "image": "open.png"
+      "image": "Captura de pantalla 2025-07-04 134640.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -970,7 +970,7 @@
       "start_percent": 0,
       "end_percent": 1,
       "noise_augmentation": 0,
-      "revision_enhancer": true,
+      "revision_enhancer": false,
       "data": [
         "678",
         0
@@ -989,7 +989,7 @@
     "inputs": {
       "controlnet_mode": "depth",
       "controlnet_preprocessor": true,
-      "strength": 0.20000000000000004,
+      "strength": 0.4000000000000001,
       "low_threshold": 0,
       "high_threshold": 1,
       "start_percent": 0,
@@ -1014,7 +1014,7 @@
     "inputs": {
       "controlnet_mode": "canny",
       "controlnet_preprocessor": true,
-      "strength": 0.26000000000000006,
+      "strength": 0.32000000000000006,
       "low_threshold": 0,
       "high_threshold": 1,
       "start_percent": 0,
@@ -1163,23 +1163,14 @@
       "title": "ImageCompositeMasked"
     }
   },
-  "691": {
-    "inputs": {
-      "filename_prefix": "bathroom-beach-v60x80",
-      "images": [
-        "706",
-        0
-      ]
-    },
-    "class_type": "SaveImage",
-    "_meta": {
-      "title": "Save Image"
-    }
-  },
   "692": {
     "inputs": {
       "preset": "black",
       "frame_width": 20,
+      "shadow_enabled": true,
+      "shadow_size": 15,
+      "shadow_opacity": 0.30000000000000004,
+      "wall_color": 220,
       "image": [
         "697",
         0
@@ -1234,7 +1225,7 @@
   },
   "698": {
     "inputs": {
-      "image": "60x80-high-close-lss.png"
+      "image": "60x80-high-close-open.jpg"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -1259,10 +1250,10 @@
       "title": "Load Upscale Model"
     }
   },
-  "706": {
+  "701": {
     "inputs": {
       "upscale_model": [
-        "707",
+        "702",
         0
       ],
       "image": [
@@ -1275,7 +1266,7 @@
       "title": "Upscale Image (using Model)"
     }
   },
-  "707": {
+  "702": {
     "inputs": {
       "model_name": "4x-UltraSharp.pth"
     },
@@ -1284,16 +1275,29 @@
       "title": "Cargar Modelo de Escala Superior"
     }
   },
-  "708": {
+  "703": {
     "inputs": {
       "images": [
-        "706",
+        "701",
         0
       ]
     },
     "class_type": "PreviewImage",
     "_meta": {
       "title": "Vista previa de imagen"
+    }
+  },
+  "704": {
+    "inputs": {
+      "filename_prefix": "ComfyUI",
+      "images": [
+        "701",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Guardar Imagen"
     }
   }
 }

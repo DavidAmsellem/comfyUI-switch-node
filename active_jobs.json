@@ -1,38 +1,93 @@
 {
-  "fb8a983f-6828-43f5-bf7e-af85bf156b83": {
-    "id": "fb8a983f-6828-43f5-bf7e-af85bf156b83",
-    "type": "batch",
-    "status": "processing",
-    "created_at": "2025-07-04T02:06:02.706212",
+  "a1555c74-4583-4227-9c43-bb6b461c9143": {
+    "id": "a1555c74-4583-4227-9c43-bb6b461c9143",
+    "type": "individual",
+    "status": "completed",
+    "created_at": "2025-07-10T12:34:56.246227",
     "config": {
-      "batch_config": {
-        "room_types": [
-          "bathroom"
-        ],
-        "orientations": [
-          "V60x80"
-        ],
-        "frame_color": "black",
-        "style": "minimalist"
-      },
+      "workflow": "bathroom/V60x80/cuadro-bathroom-arquitecture-V60x802",
       "frame_color": "black",
-      "style": "minimalist",
-      "original_filename": "cuadro-bathroom-minimalism-V60x802.png",
-      "total_workflows": 0,
-      "completed_workflows": 0,
-      "successful": 0,
-      "failed": 0
+      "style": "default",
+      "style_node": null,
+      "original_filename": "2.png"
     },
-    "results": [],
-    "workflows": [
-      "bathroom/V60x80/cuadro-bathroom-classic-V60x802",
-      "bathroom/V60x80/cuadro-bathroom-modern-V60x802",
-      "bathroom/V60x80/cuadro-bathroom-old-V60x802",
-      "bathroom/V60x80/cuadro-bathroom-open-V60x802",
-      "bathroom/V60x80/cuadro-bathroom-student-V60x802"
+    "results": [
+      {
+        "filename": "bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250710_123812_001.png",
+        "url": "/get-image/2/bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250710_123812_001.png",
+        "session_url": "/session/images/a1555c74-4583-4227-9c43-bb6b461c9143/bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250710_123812_001.png",
+        "original_filename": "Original-upscale_00001_.png",
+        "node_id": "696",
+        "image_type": "upscale",
+        "workflow": "bathroom/V60x80/cuadro-bathroom-arquitecture-V60x802",
+        "style": "default",
+        "status": "new"
+      },
+      {
+        "filename": "bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250710_123812_002.png",
+        "url": "/get-image/2/bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250710_123812_002.png",
+        "session_url": "/session/images/a1555c74-4583-4227-9c43-bb6b461c9143/bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250710_123812_002.png",
+        "original_filename": "ComfyUI_00001_.png",
+        "node_id": "704",
+        "image_type": "composition",
+        "workflow": "bathroom/V60x80/cuadro-bathroom-arquitecture-V60x802",
+        "style": "default",
+        "status": "new"
+      }
     ],
-    "current_operation": "Procesando 5 workflows...",
-    "total_workflows": 5,
-    "batch_tracking_id": "20250704_020602_4a4862fb"
+    "workflows": [],
+    "current_operation": "Completado",
+    "prompt_id": "2253ab6f-20d5-4ae5-ba2c-2f7fa060f07d",
+    "response_data": {
+      "success": true,
+      "job_id": "a1555c74-4583-4227-9c43-bb6b461c9143",
+      "prompt_id": "2253ab6f-20d5-4ae5-ba2c-2f7fa060f07d",
+      "workflow_used": "bathroom/V60x80/cuadro-bathroom-arquitecture-V60x802",
+      "processing_mode": "img2img_preserving_original",
+      "frame_color": "black",
+      "style_used": "default",
+      "style_node_used": "auto-detectado",
+      "base_name": "2",
+      "output_dir": "C:\\Users\\david_qskhc9c\\Documents\\ComfyUI_windows_portable\\ComfyUI\\output\\2",
+      "final_image_url": "/session/images/a1555c74-4583-4227-9c43-bb6b461c9143/bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250710_123812_002.png",
+      "final_image": {
+        "filename": "bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250710_123812_002.png",
+        "url": "/get-image/2/bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250710_123812_002.png",
+        "session_url": "/session/images/a1555c74-4583-4227-9c43-bb6b461c9143/bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250710_123812_002.png",
+        "original_filename": "ComfyUI_00001_.png",
+        "node_id": "704",
+        "image_type": "composition",
+        "workflow": "bathroom/V60x80/cuadro-bathroom-arquitecture-V60x802",
+        "style": "default",
+        "status": "new"
+      },
+      "generated_images": [
+        {
+          "filename": "bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250710_123812_001.png",
+          "url": "/get-image/2/bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250710_123812_001.png",
+          "session_url": "/session/images/a1555c74-4583-4227-9c43-bb6b461c9143/bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250710_123812_001.png",
+          "original_filename": "Original-upscale_00001_.png",
+          "node_id": "696",
+          "image_type": "upscale",
+          "workflow": "bathroom/V60x80/cuadro-bathroom-arquitecture-V60x802",
+          "style": "default",
+          "status": "new"
+        },
+        {
+          "filename": "bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250710_123812_002.png",
+          "url": "/get-image/2/bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250710_123812_002.png",
+          "session_url": "/session/images/a1555c74-4583-4227-9c43-bb6b461c9143/bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250710_123812_002.png",
+          "original_filename": "ComfyUI_00001_.png",
+          "node_id": "704",
+          "image_type": "composition",
+          "workflow": "bathroom/V60x80/cuadro-bathroom-arquitecture-V60x802",
+          "style": "default",
+          "status": "new"
+        }
+      ],
+      "total_images": 2,
+      "message": "Procesamiento completado en modo img2img_preserving_original. 2 imágenes generadas (original excluida del frontend)."
+    },
+    "completed_at": "2025-07-10T12:38:13.064931"
   }
 }

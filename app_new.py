@@ -425,15 +425,18 @@ def update_workflow(workflow, image_filename, frame_color='black', style_id='def
     # Actualizar nodos SaveImage (subfolder si se especifica Y configurar prefijo descriptivo)
     save_node_id = WORKFLOW_CONFIG['save_image_node_id']
     
-    # Actualizar el nodo SaveImage principal con un prefijo más descriptivo
-    if save_node_id in workflow_copy:
-        save_node = workflow_copy[save_node_id]
-        if 'inputs' in save_node:
-            # Crear prefijo basado en la imagen y frame_color
-            base_image_name = image_filename.split('.')[0] if '.' in image_filename else image_filename
-            descriptive_prefix = f"{base_image_name}_{frame_color}"
-            save_node['inputs']['filename_prefix'] = descriptive_prefix
-            log_success(f"SaveImage {save_node_id}: prefijo actualizado a '{descriptive_prefix}'")
+    # NO actualizar el prefijo del nodo principal (704) para mantener "ComfyUI" 
+    # Esto permite identificar correctamente la imagen de composición final
+    # if save_node_id in workflow_copy:
+    #     save_node = workflow_copy[save_node_id]
+    #     if 'inputs' in save_node:
+    #         # Crear prefijo basado en la imagen y frame_color
+    #         base_image_name = image_filename.split('.')[0] if '.' in image_filename else image_filename
+    #         descriptive_prefix = f"{base_image_name}_{frame_color}"
+    #         save_node['inputs']['filename_prefix'] = descriptive_prefix
+    #         log_success(f"SaveImage {save_node_id}: prefijo actualizado a '{descriptive_prefix}'")
+    
+    log_info(f"💾 Manteniendo prefijo original 'ComfyUI' en nodo {save_node_id} para identificación correcta")
     
     if output_subfolder:
         for node_id, node_data in workflow_copy.items():
@@ -563,11 +566,12 @@ def wait_for_completion(prompt_id, timeout=300):
 
 def extract_generated_images(outputs, original_image_filename=None):
     """
-    Extrae exactamente 3 imágenes generadas de los outputs de ComfyUI:
-    1. Original (imagen procesada sin upscale)
-    2. Upscale (imagen escalada)
-    3. Composición (imagen final combinada)
-    Retorna: lista de exactamente 3 imágenes filtradas
+    Extrae las imágenes GENERADAS de los outputs de ComfyUI para mostrar en el frontend:
+    1. Upscale (imagen escalada del nodo 696)
+    2. Composición (imagen final combinada del nodo 704)
+    
+    NOTA: La imagen original NO se incluye en el resultado para evitar mostrarla en el frontend.
+    Retorna: lista de 2 imágenes generadas filtradas (upscale + composición)
     """
     # Contenedores para los 3 tipos de imágenes
     original_image = None
@@ -586,15 +590,19 @@ def extract_generated_images(outputs, original_image_filename=None):
             if pattern in filename_lower:
                 return None
         
-        # Clasificar tipos específicos
-        if 'original-upscale' in filename_lower:
-            return 'composition'  # Composición de original + upscale
+        # Clasificar tipos específicos CORREGIDOS:
+        # 1. COMPOSICIÓN FINAL: Imágenes que empiezan con "comfyui" (nodo 704)
+        if filename_lower.startswith('comfyui') and any(char.isdigit() for char in filename_lower):
+            return 'composition'  # ✅ Resultado final del workflow (nodo 704)
+        # 2. UPSCALE ORIGINAL: Imágenes con "original-upscale" (nodo 696)
+        elif 'original-upscale' in filename_lower:
+            return 'upscale'  # ✅ Solo upscale de la imagen original (nodo 696)
+        # 3. UPSCALE GENÉRICO: Otras imágenes con "upscale" pero sin "original"
         elif 'upscale' in filename_lower and 'original' not in filename_lower:
             return 'upscale'  # Solo upscale
+        # 4. ORIGINAL: Imágenes con "original" pero sin "upscale"
         elif 'original' in filename_lower and 'upscale' not in filename_lower:
             return 'original'  # Solo original
-        elif filename_lower.startswith('comfyui') and any(char.isdigit() for char in filename_lower):
-            return 'composition'  # Resultado final del workflow
         else:
             # Usar keywords de habitaciones como fallback para original
             room_keywords = ['bathroom', 'bedroom', 'office', 'salon', 'kitchen', 'living']
@@ -606,8 +614,17 @@ def extract_generated_images(outputs, original_image_filename=None):
     def add_image_if_better(current_image, new_image_info, image_type):
         """Añade la imagen si es mejor que la actual o si no hay una actual"""
         if current_image is None:
-            log_info(f"✅ Primera imagen {image_type}: {new_image_info['filename']}")
+            log_info(f"✅ Primera imagen {image_type}: {new_image_info['filename']} (nodo {new_image_info['node_id']})")
             return new_image_info
+        
+        # 🎯 PRIORIDAD MÁXIMA: Nodo 704 siempre gana para composición
+        if image_type == 'composition':
+            if new_image_info['node_id'] == '704' and current_image['node_id'] != '704':
+                log_info(f"✅ Mejor imagen {image_type} (nodo 704 - composición final): {new_image_info['filename']}")
+                return new_image_info
+            elif current_image['node_id'] == '704' and new_image_info['node_id'] != '704':
+                log_info(f"⚠️ Manteniendo imagen {image_type} (nodo 704 prioritario): {current_image['filename']}")
+                return current_image
         
         # Preferir imágenes que contengan el nombre original
         if original_image_filename:
@@ -630,8 +647,8 @@ def extract_generated_images(outputs, original_image_filename=None):
         log_info(f"⚠️ Manteniendo imagen {image_type} actual: {current_image['filename']}")
         return current_image
     
-    # Buscar en todos los nodos SaveImage
-    all_save_nodes = [save_node_id] + ['696', '704']  # Nodos SaveImage específicos
+    # Buscar en todos los nodos SaveImage (704 primero para prioridad de composición)
+    all_save_nodes = ['704', save_node_id, '696']  # 704 primero (composición final), luego los demás
     
     for node_id in all_save_nodes:
         if node_id in outputs and isinstance(outputs[node_id], dict) and 'images' in outputs[node_id]:
@@ -641,6 +658,8 @@ def extract_generated_images(outputs, original_image_filename=None):
                 
                 filename = image_info['filename']
                 image_type = classify_image_type(filename)
+                
+                log_info(f"🔍 Analizando imagen: {filename} (nodo {node_id}) -> clasificada como: {image_type}")
                 
                 if image_type is None:
                     log_info(f"❌ Archivo excluido (no clasificado): {filename}")
@@ -655,12 +674,23 @@ def extract_generated_images(outputs, original_image_filename=None):
                     'image_type': image_type
                 }
                 
-                # Asignar a la categoría correspondiente
-                if image_type == 'original':
+                # 🎯 CLASIFICACIÓN ADICIONAL POR NODO (más confiable que el nombre)
+                if node_id == '704':
+                    img_info['image_type'] = 'composition'  # Nodo 704 siempre es composición final
+                    log_info(f"🎯 FORZADO: Imagen del nodo 704 clasificada como COMPOSITION: {filename}")
+                elif node_id == '696':
+                    img_info['image_type'] = 'upscale'  # Nodo 696 siempre es upscale original
+                    log_info(f"📈 FORZADO: Imagen del nodo 696 clasificada como UPSCALE: {filename}")
+                
+                # Usar la clasificación forzada por nodo
+                final_image_type = img_info['image_type']
+                
+                # Asignar a la categoría correspondiente usando clasificación forzada por nodo
+                if final_image_type == 'original':
                     original_image = add_image_if_better(original_image, img_info, 'original')
-                elif image_type == 'upscale':
+                elif final_image_type == 'upscale':
                     upscale_image = add_image_if_better(upscale_image, img_info, 'upscale')
-                elif image_type == 'composition':
+                elif final_image_type == 'composition':
                     composition_image = add_image_if_better(composition_image, img_info, 'composition')
     
     # Buscar en otros nodos si no se encontraron todas las imágenes
@@ -701,26 +731,39 @@ def extract_generated_images(outputs, original_image_filename=None):
                         composition_image = img_info
                         log_info(f"✅ Imagen composición encontrada en nodo {node_id}: {filename}")
     
-    # Ensamblar resultado final - exactamente 3 imágenes
+    # Ensamblar resultado final - SOLO IMÁGENES GENERADAS (sin la original)
     final_images = []
     
-    if original_image:
-        final_images.append(original_image)
+    # 🎯 CAMBIO: NO incluir la imagen original en generated_images para el frontend
+    # Solo incluir las imágenes realmente generadas: upscale y composition
     if upscale_image:
         final_images.append(upscale_image)
     if composition_image:
         final_images.append(composition_image)
     
-    # Si no tenemos exactamente 3, usar lo que tengamos y logear advertencia
-    if len(final_images) != 3:
-        log_warning(f"⚠️ Se esperaban 3 imágenes, pero se encontraron {len(final_images)}")
-        log_warning(f"   Original: {'✅' if original_image else '❌'}")
+    # Si no tenemos las 2 imágenes generadas esperadas, logear advertencia
+    expected_generated = 2  # Solo upscale y composition
+    if len(final_images) != expected_generated:
+        log_warning(f"⚠️ Se esperaban {expected_generated} imágenes generadas, pero se encontraron {len(final_images)}")
         log_warning(f"   Upscale: {'✅' if upscale_image else '❌'}")
         log_warning(f"   Composición: {'✅' if composition_image else '❌'}")
+        if original_image:
+            log_info(f"   Original encontrada pero excluida del frontend: {original_image['filename']}")
     
-    log_success(f"✅ Total de imágenes seleccionadas: {len(final_images)}/3")
+    log_success(f"✅ Total de imágenes generadas para frontend: {len(final_images)}/{expected_generated}")
+    log_info(f"📋 RESUMEN DE IMÁGENES GENERADAS PARA FRONTEND:")
     for img in final_images:
-        log_info(f"   {img['image_type']}: {img['filename']} (nodo {img['node_id']})")
+        log_info(f"   📷 {img['image_type'].upper()}: {img['filename']} (nodo {img['node_id']})")
+    
+    # Log especial para indicar que la original se excluye
+    if original_image:
+        log_info(f"🚫 IMAGEN ORIGINAL EXCLUIDA DEL FRONTEND: {original_image['filename']} (nodo {original_image['node_id']})")
+    
+    # Log especial para composición final
+    if composition_image:
+        log_success(f"🎯 IMAGEN DE COMPOSICIÓN FINAL (nodo 704): {composition_image['filename']}")
+    else:
+        log_error(f"❌ NO SE ENCONTRÓ IMAGEN DE COMPOSICIÓN FINAL (nodo 704)")
     
     return final_images
 
@@ -892,18 +935,19 @@ def process_image():
         
         session_manager.update_job(job_id, current_operation='Guardando imagen original...')
         
-        # Guardar imagen original
-        log_info("Guardando imagen original...")
+        # Guardar imagen original (solo para referencia del backend, NO para el frontend)
+        log_info("Guardando imagen original (solo para referencia del backend)...")
         original_path = os.path.join(output_dir, 'original.png')
         image = Image.open(file.stream)
         image.save(original_path, format='PNG')
         file.stream.seek(0)
         
-        # Guardar también en el directorio de sesión
-        with open(original_path, 'rb') as img_file:
-            session_original_url = session_manager.save_job_image(job_id, img_file.read(), 'original.png')
+        # 🚫 NO GUARDAR la imagen original en la sesión para evitar que el frontend la muestre
+        # with open(original_path, 'rb') as img_file:
+        #     session_original_url = session_manager.save_job_image(job_id, img_file.read(), 'original.png')
+        # log_info(f"Imagen original guardada en sesión: {session_original_url}")
         
-        log_info(f"Imagen original guardada en sesión: {session_original_url}")
+        log_info("🚫 Imagen original NO guardada en sesión para evitar mostrarla en el frontend")
         
         # Guardar en input de ComfyUI
         input_path, workflow_filename = save_uploaded_image(file, base_name)
@@ -980,6 +1024,8 @@ def process_image():
                         'url': f"/get-image/{base_name}/{new_filename}",
                         'session_url': session_url,
                         'original_filename': img_info['filename'],
+                        'node_id': img_info.get('node_id'),  # Añadir node_id para identificación
+                        'image_type': img_info.get('image_type'),  # Añadir tipo de imagen
                         'workflow': workflow_name,
                         'style': style_name,
                         'status': 'existing'  # Marcar como existente
@@ -1000,6 +1046,8 @@ def process_image():
                     'url': f"/get-image/{base_name}/{new_filename}",
                     'session_url': session_url,
                     'original_filename': img_info['filename'],
+                    'node_id': img_info.get('node_id'),  # Añadir node_id para identificación
+                    'image_type': img_info.get('image_type'),  # Añadir tipo de imagen
                     'workflow': workflow_name,
                     'style': style_name,
                     'status': 'new'  # Marcar como nuevo
@@ -1008,6 +1056,32 @@ def process_image():
         
         # Crear respuesta
         processing_mode = "text2img + controlnet_0.85" if (style_id and style_id != 'default') else "img2img_preserving_original"
+        
+        # Seleccionar imagen final principal (priorizar nodo 704)
+        final_image_info = None
+        final_image_url = None
+        if saved_images:
+            # 1. PRIORIDAD MÁXIMA: Imágenes del nodo 704 (composición final)
+            node_704_images = [img for img in saved_images if img.get('node_id') == '704']
+            
+            if node_704_images:
+                final_image_info = node_704_images[0]
+                log_info(f"🎯 Imagen final del nodo 704 (composición): {final_image_info['filename']}")
+            else:
+                # 2. FALLBACK: Imágenes que contienen "composition" en el tipo o nombre
+                composition_images = [img for img in saved_images if 
+                                    img.get('image_type') == 'composition' or 
+                                    'composition' in img.get('filename', '').lower()]
+                if composition_images:
+                    final_image_info = composition_images[0]
+                    log_info(f"🖼️ Imagen final por tipo composition: {final_image_info['filename']}")
+                else:
+                    # 3. ÚLTIMO RECURSO: La primera imagen disponible
+                    final_image_info = saved_images[0]
+                    log_info(f"📷 Imagen final (primera disponible): {final_image_info['filename']}")
+            
+            final_image_url = final_image_info['session_url']  # Usar URL de sesión para acceso directo
+            log_success(f"✅ Imagen final seleccionada: {final_image_info['filename']} (nodo: {final_image_info.get('node_id', 'N/A')}) -> {final_image_url}")
         
         response = {
             "success": True,
@@ -1020,14 +1094,16 @@ def process_image():
             "style_node_used": style_node_id if style_node_id else "auto-detectado",
             "base_name": base_name,
             "output_dir": output_dir,
-            "original_image": {
-                "filename": "original.png",
-                "url": f"/get-image/{base_name}/original.png",
-                "session_url": session_original_url
-            },
-            "generated_images": saved_images,
+            # 🚫 ORIGINAL_IMAGE ELIMINADO: No enviar al frontend para evitar que se muestre
+            # "original_image": {
+            #     "filename": "original.png",
+            #     "url": f"/get-image/{base_name}/original.png"
+            # },
+            "final_image_url": final_image_url,  # Nueva imagen final para el frontend
+            "final_image": final_image_info,  # Información completa de la imagen final
+            "generated_images": saved_images,  # Solo contiene upscale y composition
             "total_images": len(saved_images),
-            "message": f"Procesamiento completado en modo {processing_mode}. {len(saved_images)} imágenes generadas."
+            "message": f"Procesamiento completado en modo {processing_mode}. {len(saved_images)} imágenes generadas (original excluida del frontend)."
         }
         
         # Actualizar trabajo de sesión como completado
