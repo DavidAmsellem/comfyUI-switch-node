@@ -657,11 +657,6 @@
                     <div class="individual-results" id="individualResults"></div>
                 </div>
 
-                <div class="section" id="resultsSection" style="display: none;">
-                    <h3>✨ Resultados Rápidos</h3>
-                    <div class="result-images" id="resultImages"></div>
-                </div>
-
                 <div class="section" id="batchResultsSection" style="display: none;">
                     <h3>🖼️ Galería de Lotes</h3>
                     <div id="batchSummary" style="background: #e8f5e8; border-radius: 6px; padding: 10px; margin-bottom: 15px; font-size: 0.9em; color: #2d5a2d;">
@@ -1213,13 +1208,9 @@
         }
 
         function clearResults() {
-            const resultsSection = document.getElementById('resultsSection');
-            const resultImages = document.getElementById('resultImages');
             const batchResultsSection = document.getElementById('batchResultsSection');
             
-            resultsSection.style.display = 'none';
             batchResultsSection.style.display = 'none';
-            resultImages.innerHTML = '';
             
             // No limpiar la selección de nodos aquí, solo los resultados
         }
@@ -1335,8 +1326,7 @@
                     
                     showStatus(`✅ Procesamiento completado exitosamente`, 'success');
                     
-                    // Mostrar resultados en ambas secciones
-                    displayResults(data);
+                    // Mostrar resultados en la galería individual
                     displayIndividualJobResult(localJobId, data);
                     
                     // Iniciar polling para obtener más detalles si es necesario
@@ -1370,61 +1360,6 @@
                 processBtn.disabled = false;
                 processBtn.textContent = '🚀 Procesar Individual';
             }
-        }
-
-        function displayResults(data) {
-            const resultsSection = document.getElementById('resultsSection');
-            const resultImages = document.getElementById('resultImages');
-
-            resultImages.innerHTML = '';
-
-            // ❌ NO mostrar imagen original - solo mostrar imágenes generadas (composición final)
-            // Comentado para ocultar la imagen original:
-            // if (data.original_image) { ... }
-
-            // ✅ Mostrar SOLO imágenes generadas (composición final)
-            if (data.generated_images && data.generated_images.length > 0) {
-                data.generated_images.forEach((image, index) => {
-                    const imageDiv = document.createElement('div');
-                    imageDiv.className = 'result-item';
-                    
-                    // Determinar el tipo de imagen para mejor etiquetado
-                    let imageLabel = '✨ Resultado Final';
-                    if (image.image_type === 'composition') {
-                        imageLabel = '🎯 Composición Final';
-                    } else if (image.image_type === 'upscale') {
-                        imageLabel = '📈 Imagen Escalada';
-                    } else if (data.generated_images.length > 1) {
-                        imageLabel = `✨ Resultado ${index + 1}`;
-                    }
-                    
-                    imageDiv.innerHTML = `
-                        <h4>${imageLabel}</h4>
-                        <img src="${image.url}" alt="Imagen Generada">
-                        <a href="${image.url}" class="download-btn" download="${image.filename}">⬇️ Descargar</a>
-                    `;
-                    resultImages.appendChild(imageDiv);
-                });
-                
-                showStatus(`✅ Mostrando ${data.generated_images.length} imagen(es) generada(s)`, 'success');
-            } else {
-                // Mostrar mensaje si no hay imágenes generadas
-                const noResultsDiv = document.createElement('div');
-                noResultsDiv.className = 'result-item';
-                noResultsDiv.innerHTML = `
-                    <h4>⚠️ Sin Resultados</h4>
-                    <p>No se generaron imágenes en este procesamiento.</p>
-                `;
-                resultImages.appendChild(noResultsDiv);
-                showStatus('⚠️ No se encontraron imágenes generadas', 'warning');
-            }
-
-            resultsSection.style.display = 'block';
-            
-            // Scroll hacia los resultados
-            setTimeout(() => {
-                resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 100);
         }
 
         function showStatus(message, type = 'info') {
@@ -1692,16 +1627,7 @@
             // Limpiar contenedor de imágenes
             imagesContainer.innerHTML = '';
             
-            // Mostrar imagen original si está disponible
-            if (resultData.original_image) {
-                const img = document.createElement('img');
-                img.src = resultData.original_image.session_url || resultData.original_image.url;
-                img.alt = 'Imagen Original';
-                img.title = 'Imagen Original';
-                imagesContainer.appendChild(img);
-            }
-            
-            // Mostrar imágenes generadas
+            // Solo mostrar imágenes generadas (no la original)
             if (resultData.generated_images && resultData.generated_images.length > 0) {
                 resultData.generated_images.forEach(image => {
                     const img = document.createElement('img');
