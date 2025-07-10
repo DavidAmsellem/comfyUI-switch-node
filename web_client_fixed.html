@@ -525,8 +525,11 @@
                     </div>
 
                     <button class="btn" id="processBtn" disabled>
-                        🚀 Procesar Individual
+                        🚀 Añadir a Cola
                     </button>
+                    <div style="margin-top: 10px; padding: 8px; background: #f0f8ff; border-radius: 4px; font-size: 0.85em; color: #1976d2;">
+                        💡 <strong>Tip:</strong> Puedes enviar múltiples workflows a la cola sin esperar a que terminen
+                    </div>
                 </div>
 
                 <!-- Panel de Procesamiento por Lotes -->
@@ -1256,12 +1259,10 @@
             const localJobId = `individual_${individualJobCounter}`;
             const startTime = new Date();
 
-            // Deshabilitar botón
+            // NO deshabilitar botón - permitir múltiples envíos a la cola
             const processBtn = document.getElementById('processBtn');
-            processBtn.disabled = true;
-            processBtn.textContent = '🔄 Procesando...';
-
-            showStatus(`🚀 Iniciando procesamiento...`, 'info');
+            
+            showStatus(`🚀 Enviando trabajo #${individualJobCounter} a la cola...`, 'info');
             showStatus(`📋 Workflow: ${selectedWorkflow}`, 'info');
             showStatus(`🎨 Color del marco: ${selectedFrameColor}`, 'info');
             showStatus(`✨ Estilo: ${selectedStyle}`, 'info');
@@ -1271,7 +1272,7 @@
                 showStatus(`🔧 Nodo de estilo: auto-detectar`, 'info');
             }
             showStatus(`📈 Incluir upscale: ${includeUpscale ? 'Sí' : 'No'}`, 'info');
-            showStatus(`⏱️ Esto puede tardar varios minutos`, 'info');
+            showStatus(`⏱️ El trabajo se procesará en cola. Puedes enviar más mientras tanto.`, 'info');
 
             // Crear entrada en el tracking de trabajos individuales
             activeIndividualJobs.set(localJobId, {
@@ -1324,7 +1325,7 @@
                     jobInfo.currentOperation = 'Completado';
                     jobInfo.images = data.total_images || 1;
                     
-                    showStatus(`✅ Procesamiento completado exitosamente`, 'success');
+                    showStatus(`✅ Trabajo #${individualJobCounter} completado exitosamente`, 'success');
                     
                     // Mostrar resultados en la galería individual
                     displayIndividualJobResult(localJobId, data);
@@ -1355,11 +1356,8 @@
                 }
                 
                 showStatus(`❌ Error de conexión: ${error.message}`, 'error');
-            } finally {
-                // Rehabilitar botón
-                processBtn.disabled = false;
-                processBtn.textContent = '🚀 Procesar Individual';
             }
+            // Botón permanece habilitado para permitir múltiples envíos
         }
 
         function showStatus(message, type = 'info') {
