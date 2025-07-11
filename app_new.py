@@ -2281,6 +2281,16 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
             # Crear directorio de salida basado en nombre de imagen original (shared)
             batch_output_dir = create_output_directory(base_image_name)
             
+            # 🔍 VERIFICAR ARCHIVOS EXISTENTES EN EL DIRECTORIO PARA EVITAR DUPLICADOS DE UPSCALE
+            existing_files = []
+            if os.path.exists(batch_output_dir):
+                existing_files = [f.lower() for f in os.listdir(batch_output_dir)]
+            
+            # Verificar si ya existe una imagen upscale
+            existing_upscale = any('upscale_' in f for f in existing_files)
+            if existing_upscale:
+                log_info(f"📈 Ya existe una imagen upscale en {batch_output_dir}, se omitirán nuevas imágenes upscale")
+            
             # Copiar imágenes generadas con nombre de workflow y estilo (evitando duplicados)
             # Las imágenes en generated_images ya están filtradas según include_upscale
             saved_images = []
@@ -2294,20 +2304,61 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
                 
                 source_path = find_image_file(img_info['filename'], img_info['subfolder'])
                 if source_path:
-                    # Crear nombre descriptivo: workflow_estilo_numeroImagen.extension
-                    style_name = common_params.get('style', 'default')
-                    workflow_clean = workflow_info['id'].replace('/', '_').replace('-', '_')
-                    
                     # Obtener extensión original
                     if '.' in img_info['filename']:
                         original_ext = img_info['filename'].rsplit('.', 1)[1]
                     else:
                         original_ext = 'png'
                     
-                    # Generar nombre unificado: workflow_estilo_fechahora_numero.extension
-                    img_number = len(saved_images) + 1
-                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    new_filename = f"{workflow_clean}_{style_name}_{timestamp}_{img_number:03d}.{original_ext}"
+                    # Diferentes estrategias de naming según el tipo de imagen
+                    image_type = img_info.get('image_type', 'unknown')
+                    
+                    # 🔍 LOG DETALLADO PARA DEBUGGING EN BATCH TRACKING
+                    log_info(f"🔍 BATCH TRACKING - Procesando imagen: {img_info['filename']}")
+                    log_info(f"   📋 Tipo detectado: {image_type}")
+                    log_info(f"   📋 Nodo origen: {img_info.get('node_id', 'N/A')}")
+                    log_info(f"   📋 Workflow: {workflow_info['id']}")
+                    log_info(f"   📋 Archivo original de ComfyUI: {img_info['filename']}")
+                    log_info(f"   📋 Subfolder: {img_info.get('subfolder', 'N/A')}")
+                    
+                    if image_type == 'upscale':
+                        # 🔍 VERIFICAR SI YA EXISTE UPSCALE ANTES DE PROCESAR
+                        if existing_upscale:
+                            log_warning(f"⚠️ Ya existe imagen upscale, saltando: {img_info['filename']}")
+                            # Buscar el archivo upscale existente para referenciarlo
+                            existing_upscale_file = next((f for f in os.listdir(batch_output_dir) if 'upscale_' in f.lower()), None)
+                            if existing_upscale_file:
+                                # Agregar referencia al archivo existente
+                                saved_images.append({
+                                    'filename': existing_upscale_file,
+                                    'url': f"/get-image/{base_image_name}/{existing_upscale_file}",
+                                    'original_filename': img_info['filename'],
+                                    'workflow': workflow_info['id'],
+                                    'image_type': image_type,
+                                    'status': 'existing_previous'  # Marcar como existente de workflow anterior
+                                })
+                                log_info(f"📈 Referenciando upscale existente: {existing_upscale_file}")
+                            continue
+                        
+                        # ✅ UPSCALE: Nombre consistente basado en imagen original (no en workflow)
+                        # Formato: upscale_nombreoriginal_timestamp.ext
+                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        new_filename = f"upscale_{base_image_name}_{timestamp}.{original_ext}"
+                        
+                        log_info(f"📈 BATCH TRACKING UPSCALE - Nombre generado: {new_filename}")
+                        log_info(f"   📈 Razón: image_type='{image_type}' -> usando formato upscale_[base]_[timestamp]")
+                    else:
+                        # ✅ COMPOSICIÓN: Nombre único con workflow para distinguir diferentes composiciones
+                        # Formato: workflow_estilo_timestamp_numero.ext
+                        style_name = common_params.get('style', 'default')
+                        workflow_clean = workflow_info['id'].replace('/', '_').replace('-', '_')
+                        img_number = len(saved_images) + 1
+                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        new_filename = f"{workflow_clean}_{style_name}_{timestamp}_{img_number:03d}.{original_ext}"
+                        
+                        log_info(f"🎯 BATCH TRACKING COMPOSICIÓN - Nombre generado: {new_filename}")
+                        log_info(f"   🎯 Razón: image_type='{image_type}' -> usando formato [workflow]_[style]_[timestamp]_[num]")
+                        log_info(f"   🎯 Componentes: workflow='{workflow_clean}', style='{style_name}', num={img_number:03d}")
                     
                     dest_path = os.path.join(batch_output_dir, new_filename)
                     
@@ -2329,7 +2380,7 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
                             'session_url': session_url,
                             'original_filename': img_info['filename'],
                             'workflow': workflow_info['id'],
-                            'style': style_name,
+                            'image_type': image_type,  # Agregar tipo de imagen
                             'status': 'existing'  # Marcar como existente
                         })
                         
@@ -2351,9 +2402,17 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
                         'session_url': session_url,  # URL de sesión persistente
                         'original_filename': img_info['filename'],
                         'workflow': workflow_info['id'],
-                        'style': style_name,
+                        'image_type': image_type,  # Agregar tipo de imagen
                         'status': 'new'  # Marcar como nuevo
                     })
+                    
+                    # Log específico para upscales y composiciones en batch tracking
+                    if image_type == 'upscale':
+                        log_info(f"📈 BATCH TRACKING UPSCALE guardado con nombre consistente: {new_filename}")
+                        # Marcar que ya existe upscale para evitar duplicados en siguientes workflows del batch
+                        existing_upscale = True
+                    else:
+                        log_info(f"🎯 BATCH TRACKING COMPOSICIÓN guardada con nombre único: {new_filename}")
                     
                     if session_url:
                         session_images.append(session_url)

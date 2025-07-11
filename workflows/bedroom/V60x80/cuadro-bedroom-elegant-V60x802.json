@@ -1,7 +1,7 @@
 {
   "3": {
     "inputs": {
-      "prompt": "a cozy modern bedroom with a smooth plain empty back wall, soft natural light, minimalist interior design, warm wooden floor, neutral bedding, front view, architectural photo, clear white surface, no textures, no lines, clean background\n"
+      "prompt": "a modern minimalist bathroom, clean and empty matte back wall, soft neutral lighting, centered bathtub with natural fabric, smooth wooden floor with subtle grain, frontal view, symmetrical composition, warm and cozy atmosphere, no decor on the wall\n"
     },
     "class_type": "SeargeTextInputV2",
     "_meta": {
@@ -10,7 +10,7 @@
   },
   "5": {
     "inputs": {
-      "prompt": "subtle warm lighting on wooden floor, cozy bedroom atmosphere, matte textures, realistic shadows, modern neutral tones, ambient occlusion\n"
+      "prompt": "subtle floor texture, sunlight filtering softly through off-screen window, matte concrete or plaster wall, carefully balanced layout, empty open space, elegant minimal furniture, no clutter\n"
     },
     "class_type": "SeargeTextInputV2",
     "_meta": {
@@ -28,7 +28,7 @@
   },
   "7": {
     "inputs": {
-      "prompt": "paintings, posters, frames, decorations, wall art, shelves, clutter, hanging objects, mirrors, ceiling lamps, wall lamps, spotlights, messy background, windows, stickers, graffiti, logos, writings, cracks, stains, pipes, dirt, distortions, blurry wall, perspective shift, tilted angle, asymmetry, textured wall, striped wallpaper, vertical lines, paper patterns, gradient wall, ornaments, mosaic, noise, grid, ripple\n"
+      "prompt": "(((paintings))), (((posters))), (((mirrors))), (((shelves))), (((frames))), (((reflections))), (((clutter))), (((wall art))), (((lamps))), (((decorations))), ((windows)), ((openings)), ((cracks)), ((holes)), ((graffiti)), ((text)), ((logos)), ((ceiling lights)), ((spotlights)), ((bookshelves)), ((plants on the wall)), ((curtains)), ((TV)), ((mess)), ((depth artifacts))\n"
     },
     "class_type": "SeargeTextInputV2",
     "_meta": {
@@ -85,7 +85,7 @@
   },
   "268": {
     "inputs": {
-      "image": "cuadro-bedroom-elegant-V60x802.png"
+      "image": "cuadro-bathroom-arquitecture-V60x802.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -94,7 +94,7 @@
   },
   "269": {
     "inputs": {
-      "image": "cuadro-bedroom-elegant-V60x802.png"
+      "image": "cuadro-bathroom-arquitecture-V60x802.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -103,7 +103,7 @@
   },
   "463": {
     "inputs": {
-      "enabled": false,
+      "enabled": true,
       "images": [
         "573",
         0
@@ -388,7 +388,7 @@
   },
   "540": {
     "inputs": {
-      "stage": "upscaling",
+      "stage": "none - skip",
       "input_from": "data stream",
       "output_to": "data stream",
       "data": [
@@ -418,7 +418,7 @@
   },
   "542": {
     "inputs": {
-      "stage": "high resolution",
+      "stage": "none - skip",
       "input_from": "data stream",
       "output_to": "data stream",
       "data": [
@@ -514,11 +514,11 @@
   },
   "610": {
     "inputs": {
-      "seed": 930967005300881,
+      "seed": 603142351471952,
       "image_size_preset": "none - use settings",
       "image_width": 1200,
       "image_height": 1200,
-      "steps": 28,
+      "steps": 30,
       "cfg": 5,
       "sampler_preset": "1 - DPM++ 2M Karras",
       "sampler_name": "dpmpp_2m",
@@ -574,7 +574,7 @@
   },
   "613": {
     "inputs": {
-      "denoise": 0.5200000000000001,
+      "denoise": 0.5900000000000001,
       "inpaint_mask_blur": 8,
       "inpaint_mask_mode": "masked - full",
       "data": [
@@ -612,7 +612,7 @@
     "inputs": {
       "dynamic_cfg_method": "rescale",
       "dynamic_cfg_factor": 0.4000000000000001,
-      "refiner_detail_boost": 0.20000000000000004,
+      "refiner_detail_boost": 0.5500000000000002,
       "contrast_factor": 0.05000000000000001,
       "saturation_factor": 0.10000000000000002,
       "latent_detailer": "none",
@@ -653,7 +653,7 @@
   "618": {
     "inputs": {
       "hires_mode": "none",
-      "hires_scale": "2x",
+      "hires_scale": "1.25x",
       "hires_denoise": 0.20000000000000004,
       "hires_softness": 0.10000000000000002,
       "hires_detail_boost": 0.5000000000000001,
@@ -805,7 +805,7 @@
   },
   "647": {
     "inputs": {
-      "image": "cuadro-bedroom-elegant-V60x802.png",
+      "image": "cuadro-bathroom-arquitecture-V60x802.png",
       "channel": "green"
     },
     "class_type": "LoadImageMask",
@@ -815,7 +815,7 @@
   },
   "658": {
     "inputs": {
-      "image": "cuadro-bedroom-elegant-V60x802.png"
+      "image": "cuadro-bathroom-arquitecture-V60x802.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -850,7 +850,7 @@
   },
   "668": {
     "inputs": {
-      "image": "cuadro-bedroom-elegant-V60x802.png"
+      "image": "cuadro-bathroom-arquitecture-V60x802.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -859,7 +859,7 @@
   },
   "669": {
     "inputs": {
-      "image": "cuadro-bedroom-elegant-V60x802.png"
+      "image": "cuadro-bathroom-arquitecture-V60x802.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -881,7 +881,7 @@
   },
   "671": {
     "inputs": {
-      "image": "cuadro-bedroom-elegant-V60x802.png"
+      "image": "cuadro-bathroom-arquitecture-V60x802.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -903,7 +903,7 @@
   },
   "673": {
     "inputs": {
-      "image": "cuadro-bedroom-elegant-V60x802.png"
+      "image": "cuadro-bathroom-arquitecture-V60x802.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -989,7 +989,7 @@
     "inputs": {
       "controlnet_mode": "depth",
       "controlnet_preprocessor": true,
-      "strength": 1.0000000000000002,
+      "strength": 0.4000000000000001,
       "low_threshold": 0,
       "high_threshold": 1,
       "start_percent": 0,
@@ -1014,7 +1014,7 @@
     "inputs": {
       "controlnet_mode": "canny",
       "controlnet_preprocessor": true,
-      "strength": 0.16000000000000003,
+      "strength": 0.32000000000000006,
       "low_threshold": 0,
       "high_threshold": 1,
       "start_percent": 0,
@@ -1163,23 +1163,20 @@
       "title": "ImageCompositeMasked"
     }
   },
-  "691": {
-    "inputs": {
-      "filename_prefix": "bathroom-beach-v60x80",
-      "images": [
-        "701",
-        0
-      ]
-    },
-    "class_type": "SaveImage",
-    "_meta": {
-      "title": "Save Image"
-    }
-  },
   "692": {
     "inputs": {
       "preset": "black",
       "frame_width": 20,
+      "shadow_enabled": true,
+      "shadow_size": 15,
+      "shadow_opacity": 0.30000000000000004,
+      "wall_color": 220,
+      "shadow_color": 0,
+      "shadow_angle": 270,
+      "shadow_blur": 2,
+      "shadow_offset_x": 0,
+      "shadow_offset_y": 15,
+      "upscale_workflow": false,
       "image": [
         "697",
         0
@@ -1234,7 +1231,7 @@
   },
   "698": {
     "inputs": {
-      "image": "60x80-high-close-lss.png"
+      "image": "60x80-high-close-arquitecture.jpg"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -1243,7 +1240,7 @@
   },
   "699": {
     "inputs": {
-      "image": "cuadro-bathroom-minimalism-V60x802.png"
+      "image": "e6mmqmducags9ema81vqg4lssvin112lzmqib9g8jpg.jpg"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -1281,7 +1278,7 @@
     },
     "class_type": "UpscaleModelLoader",
     "_meta": {
-      "title": "Load Upscale Model"
+      "title": "Cargar Modelo de Escala Superior"
     }
   },
   "703": {
@@ -1294,6 +1291,19 @@
     "class_type": "PreviewImage",
     "_meta": {
       "title": "Vista previa de imagen"
+    }
+  },
+  "704": {
+    "inputs": {
+      "filename_prefix": "ComfyUI",
+      "images": [
+        "701",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Guardar Imagen"
     }
   }
 }
