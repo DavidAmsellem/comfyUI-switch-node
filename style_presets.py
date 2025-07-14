@@ -3,7 +3,7 @@
 Configuración de estilos predefinidos para workflows
 """
 
-# Estilos predefinidos simplificados (6 estilos bien definidos)
+# Estilos predefinidos organizados: primero los normales (menos creativos), luego los creativos
 STYLE_PRESETS = {
     "default": {
         "name": "🎨 Por defecto",
@@ -11,98 +11,189 @@ STYLE_PRESETS = {
         "style_prompt": "",
         "negative_prompt": "",
         "display_order": 1,
-        "force_text2img": False
+        "force_text2img": False,
+        "category": "normal"
     },
+
+    # === ESTILOS NORMALES (Menos creativos - Más fieles a la imagen original) ===
     
-   "minimalist": {
-    "name": "⚪ Minimalista",
-    "description": "Estilo minimalista moderno con líneas limpias y paredes despejadas",
-    "style_prompt": "minimalist modern interior, clean white painted walls, smooth wall texture, geometric simple furniture, natural lighting, uncluttered space, zen atmosphere, pure lines, nordic influences, plain solid colored background walls, photorealistic, architectural photography",
-    "negative_prompt": "cluttered walls, ornate wall decorations, busy wall patterns, textured walls, wallpaper, wall art, excessive furniture, dark wall colors, vintage wall elements, baroque wall style, multiple wall objects, crowded wall space, artwork on walls, paintings, prints, frames on walls, wall mounted decorations, wall textures, brick walls, concrete walls",
-    "display_order": 2,
-    "denoise_override": 0.85,
-    "force_text2img": True,
-    "controlnet_config": {
-        "canny_strength": 0.35,
-        "depth_strength": 0.40,
-        "conditioning_scale": 2.0
-    }
-},
+    "casa_ciudad": {
+        "name": "🏙️ Casa de Ciudad",
+        "description": "Estilo urbano moderno típico de casas en la ciudad con paredes contemporáneas (estilo normal - menos creativo)",
+        "style_prompt": "modern urban house interior, contemporary city home walls, clean painted walls, urban apartment style, metropolitan home atmosphere, city living room walls, modern residential walls, urban home decor, contemporary house interior, sleek city apartment walls, photorealistic, residential photography",
+        "negative_prompt": "rustic walls, country house style, rural home elements, wooden cabin walls, farmhouse style, beach house elements, countryside decor, rural atmosphere, vintage country walls, barn style walls, artwork on walls, paintings, prints, frames on walls, wall mounted decorations",
+        "display_order": 2,
+        "denoise_override": 0.65,
+        "force_text2img": True,
+        "category": "normal",
+        "controlnet_config": {
+            "canny_strength": 0.30,
+            "depth_strength": 0.40,
+            "conditioning_scale": 1.6
+        }
+    },
 
-"luxury": {
-    "name": "✨ Lujoso",
-    "description": "Estilo de lujo premium con paredes elegantes y materiales de alta gama",
-    "style_prompt": "luxury premium interior, elegant marble wall panels, sophisticated wall finishes, gold accent walls, velvet wall textures, silk wall coverings, high-end wall materials, opulent wall design, refined wall surfaces, premium wall treatments, crystal wall elements, photorealistic, professional interior photography",
-    "negative_prompt": "cheap wall materials, plastic wall panels, basic painted walls, fluorescent lighting, cluttered wall space, industrial wall elements, rough wall textures, budget wall design, casual wall style, basic wall finishes, plain white walls, bare walls, artwork on walls, paintings, prints, frames on walls, wall mounted decorations",
-    "display_order": 3,
-    "denoise_override": 0.85,
-    "force_text2img": True,
-    "controlnet_config": {
-        "canny_strength": 0.30,
-        "depth_strength": 0.45,
-        "conditioning_scale": 2.0
-    }
-},
+    "casa_campo": {
+        "name": "🌾 Casa de Campo",
+        "description": "Estilo rústico y acogedor típico de casas rurales con paredes de materiales naturales (estilo normal - menos creativo)",
+        "style_prompt": "rustic country house interior, rural farmhouse walls, natural stone walls, wooden wall paneling, countryside home atmosphere, rural house walls, farmhouse style walls, country home decor, rustic residential walls, natural materials walls, warm country lighting, photorealistic, rural home photography",
+        "negative_prompt": "modern city walls, urban apartment style, metropolitan decor, sleek modern walls, contemporary city elements, glass walls, steel materials, industrial city style, urban lighting, modern apartment walls, artwork on walls, paintings, prints, frames on walls, wall mounted decorations",
+        "display_order": 3,
+        "denoise_override": 0.65,
+        "force_text2img": True,
+        "category": "normal",
+        "controlnet_config": {
+            "canny_strength": 0.25,
+            "depth_strength": 0.45,
+            "conditioning_scale": 1.6
+        }
+    },
 
-"industrial": {
-    "name": "🏭 Industrial",
-    "description": "Estilo industrial urbano con paredes de materiales crudos y acabados metálicos",
-    "style_prompt": "industrial loft interior, exposed concrete walls, raw brick wall texture, steel beam walls, metal wall fixtures, weathered wall surfaces, factory aesthetic walls, urban wall atmosphere, Edison bulb wall lighting, industrial wall materials, unfinished wall concrete, photorealistic, architectural photography",
-    "negative_prompt": "ornate wall decorations, soft wall fabrics, pastel wall colors, delicate wall materials, classical wall elements, fancy wall furniture, decorative wall moldings, elegant wall finishes, luxury wall textures, painted smooth walls, wallpaper, artwork on walls, paintings, prints, frames on walls, wall mounted decorations",
-    "display_order": 4,
-    "denoise_override": 0.85,
-    "force_text2img": True,
-    "controlnet_config": {
-        "canny_strength": 0.40,
-        "depth_strength": 0.35,
-        "conditioning_scale": 2.0
-    }
-},
+    "casa_playa": {
+        "name": "🏖️ Casa de Playa",
+        "description": "Estilo costero relajado típico de casas junto al mar con paredes de colores claros (estilo normal - menos creativo)",
+        "style_prompt": "coastal beach house interior, seaside home walls, light blue wall colors, beach house atmosphere, ocean view home walls, coastal residential walls, nautical home decor, beachy wall finishes, seaside cottage walls, marine inspired walls, natural beach lighting, photorealistic, coastal home photography",
+        "negative_prompt": "dark wall colors, urban city style, industrial walls, heavy materials, metropolitan decor, concrete walls, steel elements, landlocked home style, mountain house elements, desert home style, artwork on walls, paintings, prints, frames on walls, wall mounted decorations",
+        "display_order": 4,
+        "denoise_override": 0.65,
+        "force_text2img": True,
+        "category": "normal",
+        "controlnet_config": {
+            "canny_strength": 0.30,
+            "depth_strength": 0.40,
+            "conditioning_scale": 1.6
+        }
+    },
 
-"warm_cozy": {
-    "name": "🔥 Cálido y Acogedor",
-    "description": "Estilo cálido y acogedor con paredes en tonos tierra y materiales naturales",
-    "style_prompt": "warm cozy interior, natural wood wall paneling, warm earth tone wall colors, textured wall surfaces, rustic wall elements, inviting wall atmosphere, amber wall lighting, wood wall textures, comfortable wall finishes, natural wall materials, fireplace wall accent, soft warm wall tones, photorealistic, interior photography",
-    "negative_prompt": "cold wall colors, steel wall materials, harsh wall lighting, clinical wall atmosphere, stark white wall surfaces, modern minimalist walls, glass wall panels, fluorescent wall lights, sterile wall environment, concrete walls, industrial wall finishes, artwork on walls, paintings, prints, frames on walls, wall mounted decorations",
-    "display_order": 5,
-    "denoise_override": 0.85,
-    "force_text2img": True,
-    "controlnet_config": {
-        "canny_strength": 0.25,
-        "depth_strength": 0.40,
-        "conditioning_scale": 1.8
-    }
-},
+    "casa_montana": {
+        "name": "🏔️ Casa de Montaña",
+        "description": "Estilo alpino acogedor típico de casas en la montaña con paredes de madera y piedra (estilo normal - menos creativo)",
+        "style_prompt": "mountain house interior, alpine cabin walls, natural wood walls, stone fireplace walls, cozy mountain home atmosphere, rustic log cabin walls, mountain lodge style walls, wooden beam walls, natural mountain materials, warm cabin lighting, photorealistic, mountain home photography",
+        "negative_prompt": "urban city walls, modern apartment style, beach house elements, tropical decor, desert style, industrial materials, sleek modern walls, metropolitan atmosphere, glass walls, steel elements, artwork on walls, paintings, prints, frames on walls, wall mounted decorations",
+        "display_order": 5,
+        "denoise_override": 0.65,
+        "force_text2img": True,
+        "category": "normal",
+        "controlnet_config": {
+            "canny_strength": 0.28,
+            "depth_strength": 0.42,
+            "conditioning_scale": 1.6
+        }
+    },
 
-"futuristic": {
-    "name": "🚀 Futurista",
-    "description": "Estilo futurista high-tech con paredes tecnológicas avanzadas y materiales innovadores",
-    "style_prompt": "futuristic sci-fi interior, sleek metallic wall surfaces, LED wall lighting panels, holographic wall elements, chrome wall finishes, glass wall panels, high-tech wall atmosphere, digital wall displays, cyberpunk wall influences, advanced wall materials, glowing wall accents, seamless wall design, photorealistic, modern architecture",
-    "negative_prompt": "vintage wall elements, natural wood walls, rustic wall materials, traditional wall furniture, antique wall decorations, warm wall colors, organic wall textures, classical wall design, aged wall surfaces, brick walls, concrete walls, wallpaper, artwork on walls, paintings, prints, frames on walls, wall mounted decorations",
-    "display_order": 6,
-    "denoise_override": 0.85,
-    "force_text2img": True,
-    "controlnet_config": {
-        "canny_strength": 0.45,
-        "depth_strength": 0.35,
-        "conditioning_scale": 2.0
-    }
-},
+    "casa_moderna": {
+        "name": "🏠 Casa Moderna",
+        "description": "Estilo contemporáneo limpio típico de casas modernas con paredes minimalistas (estilo normal - menos creativo)",
+        "style_prompt": "modern contemporary house interior, sleek modern walls, minimalist wall design, clean geometric walls, contemporary home atmosphere, modern residential walls, glass wall panels, open plan walls, modern architectural walls, natural modern lighting, photorealistic, contemporary home photography",
+        "negative_prompt": "vintage walls, rustic elements, ornate decorations, classical style, antique furniture, traditional patterns, country house style, farmhouse elements, baroque style, cluttered walls, artwork on walls, paintings, prints, frames on walls, wall mounted decorations",
+        "display_order": 6,
+        "denoise_override": 0.65,
+        "force_text2img": True,
+        "category": "normal",
+        "controlnet_config": {
+            "canny_strength": 0.32,
+            "depth_strength": 0.38,
+            "conditioning_scale": 1.6
+        }
+    },
 
-"artistic_bohemian": {
-    "name": "🎭 Artístico Bohemio",
-    "description": "Estilo artístico bohemio con paredes coloridas y elementos creativos",
-    "style_prompt": "artistic bohemian interior, vibrant colored walls, eclectic wall textures, creative wall surfaces, artistic wall elements, colorful wall fabrics, unique wall lighting, expressive wall atmosphere, gallery wall vibe, creative wall chaos, textured wall finishes, bold wall colors, photorealistic, interior design photography",
-    "negative_prompt": "minimalist wall design, corporate wall style, sterile wall environment, monochrome wall colors, uniform wall surfaces, stark wall lighting, conservative wall design, bland wall surfaces, business wall atmosphere, plain white walls, smooth painted walls, artwork on walls, paintings, prints, frames on walls, wall mounted decorations",
-    "display_order": 7,
-    "denoise_override": 0.85,
-    "force_text2img": True,
-    "controlnet_config": {
-        "canny_strength": 0.20,
-        "depth_strength": 0.45,
-        "conditioning_scale": 1.9
+    # === ESTILOS CREATIVOS (Más creativos - Transformaciones dramáticas) ===
+    
+    "minimalist": {
+        "name": "⚪ Minimalista",
+        "description": "Estilo minimalista moderno con líneas limpias y paredes despejadas (estilo creativo - más transformativo)",
+        "style_prompt": "minimalist modern interior, clean white painted walls, smooth wall texture, geometric simple furniture, natural lighting, uncluttered space, zen atmosphere, pure lines, nordic influences, plain solid colored background walls, photorealistic, architectural photography",
+        "negative_prompt": "cluttered walls, ornate wall decorations, busy wall patterns, textured walls, wallpaper, wall art, excessive furniture, dark wall colors, vintage wall elements, baroque wall style, multiple wall objects, crowded wall space, artwork on walls, paintings, prints, frames on walls, wall mounted decorations, wall textures, brick walls, concrete walls",
+        "display_order": 7,
+        "denoise_override": 0.85,
+        "force_text2img": True,
+        "category": "creative",
+        "controlnet_config": {
+            "canny_strength": 0.35,
+            "depth_strength": 0.40,
+            "conditioning_scale": 2.0
+        }
+    },
+
+    "luxury": {
+        "name": "✨ Lujoso",
+        "description": "Estilo de lujo premium con paredes elegantes y materiales de alta gama (estilo creativo - más transformativo)",
+        "style_prompt": "luxury premium interior, elegant marble wall panels, sophisticated wall finishes, gold accent walls, velvet wall textures, silk wall coverings, high-end wall materials, opulent wall design, refined wall surfaces, premium wall treatments, crystal wall elements, photorealistic, professional interior photography",
+        "negative_prompt": "cheap wall materials, plastic wall panels, basic painted walls, fluorescent lighting, cluttered wall space, industrial wall elements, rough wall textures, budget wall design, casual wall style, basic wall finishes, plain white walls, bare walls, artwork on walls, paintings, prints, frames on walls, wall mounted decorations",
+        "display_order": 8,
+        "denoise_override": 0.85,
+        "force_text2img": True,
+        "category": "creative",
+        "controlnet_config": {
+            "canny_strength": 0.30,
+            "depth_strength": 0.45,
+            "conditioning_scale": 2.0
+        }
+    },
+
+    "industrial": {
+        "name": "🏭 Industrial",
+        "description": "Estilo industrial urbano con paredes de materiales crudos y acabados metálicos (estilo creativo - más transformativo)",
+        "style_prompt": "industrial loft interior, exposed concrete walls, raw brick wall texture, steel beam walls, metal wall fixtures, weathered wall surfaces, factory aesthetic walls, urban wall atmosphere, Edison bulb wall lighting, industrial wall materials, unfinished wall concrete, photorealistic, architectural photography",
+        "negative_prompt": "ornate wall decorations, soft wall fabrics, pastel wall colors, delicate wall materials, classical wall elements, fancy wall furniture, decorative wall moldings, elegant wall finishes, luxury wall textures, painted smooth walls, wallpaper, artwork on walls, paintings, prints, frames on walls, wall mounted decorations",
+        "display_order": 9,
+        "denoise_override": 0.85,
+        "force_text2img": True,
+        "category": "creative",
+        "controlnet_config": {
+            "canny_strength": 0.40,
+            "depth_strength": 0.35,
+            "conditioning_scale": 2.0
+        }
+    },
+
+    "warm_cozy": {
+        "name": "🔥 Cálido y Acogedor",
+        "description": "Estilo cálido y acogedor con paredes en tonos tierra y materiales naturales (estilo creativo - más transformativo)",
+        "style_prompt": "warm cozy interior, natural wood wall paneling, warm earth tone wall colors, textured wall surfaces, rustic wall elements, inviting wall atmosphere, amber wall lighting, wood wall textures, comfortable wall finishes, natural wall materials, fireplace wall accent, soft warm wall tones, photorealistic, interior photography",
+        "negative_prompt": "cold wall colors, steel wall materials, harsh wall lighting, clinical wall atmosphere, stark white wall surfaces, modern minimalist walls, glass wall panels, fluorescent wall lights, sterile wall environment, concrete walls, industrial wall finishes, artwork on walls, paintings, prints, frames on walls, wall mounted decorations",
+        "display_order": 10,
+        "denoise_override": 0.85,
+        "force_text2img": True,
+        "category": "creative",
+        "controlnet_config": {
+            "canny_strength": 0.25,
+            "depth_strength": 0.40,
+            "conditioning_scale": 1.8
+        }
+    },
+
+    "futuristic": {
+        "name": "🚀 Futurista",
+        "description": "Estilo futurista high-tech con paredes tecnológicas avanzadas y materiales innovadores (estilo creativo - más transformativo)",
+        "style_prompt": "futuristic sci-fi interior, sleek metallic wall surfaces, LED wall lighting panels, holographic wall elements, chrome wall finishes, glass wall panels, high-tech wall atmosphere, digital wall displays, cyberpunk wall influences, advanced wall materials, glowing wall accents, seamless wall design, photorealistic, modern architecture",
+        "negative_prompt": "vintage wall elements, natural wood walls, rustic wall materials, traditional wall furniture, antique wall decorations, warm wall colors, organic wall textures, classical wall design, aged wall surfaces, brick walls, concrete walls, wallpaper, artwork on walls, paintings, prints, frames on walls, wall mounted decorations",
+        "display_order": 11,
+        "denoise_override": 0.85,
+        "force_text2img": True,
+        "category": "creative",
+        "controlnet_config": {
+            "canny_strength": 0.45,
+            "depth_strength": 0.35,
+            "conditioning_scale": 2.0
+        }
+    },
+
+    "artistic_bohemian": {
+        "name": "🎭 Artístico Bohemio",
+        "description": "Estilo artístico bohemio con paredes coloridas y elementos creativos (estilo creativo - más transformativo)",
+        "style_prompt": "artistic bohemian interior, vibrant colored walls, eclectic wall textures, creative wall surfaces, artistic wall elements, colorful wall fabrics, unique wall lighting, expressive wall atmosphere, gallery wall vibe, creative wall chaos, textured wall finishes, bold wall colors, photorealistic, interior design photography",
+        "negative_prompt": "minimalist wall design, corporate wall style, sterile wall environment, monochrome wall colors, uniform wall surfaces, stark wall lighting, conservative wall design, bland wall surfaces, business wall atmosphere, plain white walls, smooth painted walls, artwork on walls, paintings, prints, frames on walls, wall mounted decorations",
+        "display_order": 12,
+        "denoise_override": 0.85,
+        "force_text2img": True,
+        "category": "creative",
+        "controlnet_config": {
+            "canny_strength": 0.20,
+            "depth_strength": 0.45,
+            "conditioning_scale": 1.9
+        }
     }
-}
 }
 
 # Configuración de nodos específicos para diferentes tipos de workflow
@@ -138,7 +229,8 @@ def get_available_styles():
             "id": style_id,
             "name": style_data["name"],
             "description": style_data["description"],
-            "display_order": style_data["display_order"]
+            "display_order": style_data["display_order"],
+            "category": style_data.get("category", "normal")
         }
         
         # Incluir información de denoise si está disponible
@@ -151,6 +243,33 @@ def get_available_styles():
     # Ordenar por display_order
     styles.sort(key=lambda x: x["display_order"])
     return styles
+
+def get_available_styles_by_category():
+    """
+    Retorna estilos organizados por categoría para el dropdown
+    """
+    styles = get_available_styles()
+    
+    categorized_styles = {
+        "normal": [],
+        "creative": []
+    }
+    
+    for style in styles:
+        category = style.get("category", "normal")
+        if category in categorized_styles:
+            categorized_styles[category].append(style)
+    
+    return {
+        "normal": {
+            "label": "🏠 Estilos Normales (Menos creativos - Más fieles a la imagen)",
+            "styles": categorized_styles["normal"]
+        },
+        "creative": {
+            "label": "🎨 Estilos Creativos (Más creativos - Transformaciones dramáticas)",
+            "styles": categorized_styles["creative"]
+        }
+    }
 
 def get_style_prompt(style_id):
     """
