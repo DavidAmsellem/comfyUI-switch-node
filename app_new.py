@@ -40,6 +40,12 @@ COMFYUI_URL = f"http://{COMFYUI_HOST}:{COMFYUI_PORT}"
 ACTIVE_BATCHES = {}  # batch_id -> batch_info
 BATCH_LOCK = threading.Lock()
 
+# Sistema de control de throttling para batches
+BATCH_THROTTLE_LOCK = threading.Lock()
+LAST_BATCH_SUBMIT_TIME = 0
+BATCH_PROMPT_SEND_DELAY = 0  # Sin delay entre prompts del mismo lote
+CURRENT_BATCH_PROMPTS = 0  # Número de prompts del lote actual
+
 # Directorios principales (simplificados)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 COMFYUI_ROOT = os.path.abspath(os.path.join(BASE_DIR, '..', '..'))
@@ -98,6 +104,49 @@ def log_warning(message):
     """Log de advertencia"""
     timestamp = datetime.now().strftime("%H:%M:%S")
     print(f"[{timestamp}] ⚠️  {message}")
+
+def calculate_batch_throttle_delay(num_prompts):
+    """
+    Calcula el tiempo de espera necesario antes de enviar un nuevo lote
+    Sin delay entre prompts, solo consideramos el tiempo de procesamiento
+    """
+    global LAST_BATCH_SUBMIT_TIME, CURRENT_BATCH_PROMPTS
+    
+    current_time = time.time()
+    
+    # Tiempo mínimo estimado para que ComfyUI procese el lote anterior
+    # Asumimos un mínimo de 1 segundo de procesamiento por prompt
+    min_processing_time = CURRENT_BATCH_PROMPTS * 1.0
+    estimated_completion_time = LAST_BATCH_SUBMIT_TIME + min_processing_time
+    
+    # Si ya pasó el tiempo estimado, no hay que esperar
+    if current_time >= estimated_completion_time:
+        return 0
+    
+    # Calcular tiempo de espera restante
+    wait_time = estimated_completion_time - current_time
+    return max(0, wait_time)
+
+def enforce_batch_throttle(num_prompts):
+    """
+    Aplica el throttling de batches - espera si es necesario
+    """
+    global LAST_BATCH_SUBMIT_TIME, CURRENT_BATCH_PROMPTS
+    
+    with BATCH_THROTTLE_LOCK:
+        wait_time = calculate_batch_throttle_delay(num_prompts)
+        
+        if wait_time > 0:
+            log_warning(f"🕐 Throttling batch: esperando {wait_time:.1f}s para que ComfyUI procese el lote anterior...")
+            time.sleep(wait_time)
+        
+        # Actualizar variables de control
+        LAST_BATCH_SUBMIT_TIME = time.time()
+        CURRENT_BATCH_PROMPTS = num_prompts
+        
+        log_info(f"🎯 Batch throttle aplicado: {num_prompts} prompts, envío inmediato")
+        
+        return wait_time
 
 def allowed_file(filename):
     """Verifica si el archivo tiene una extensión permitida"""
@@ -831,17 +880,21 @@ def save_images_to_our_output(output_dir, original_file, generated_images, origi
     
     saved_images = []
     
-    # 1. 📷 GUARDAR IMAGEN ORIGINAL
+    # 1. 📷 GUARDAR IMAGEN ORIGINAL (convertida a JPG con optimización)
     log_info("📷 Guardando imagen original...")
     original_filename_clean = secure_filename(original_filename.rsplit('.', 1)[0] if '.' in original_filename else 'image')
     original_ext = original_filename.rsplit('.', 1)[1] if '.' in original_filename else 'png'
-    original_dest_filename = f"original.{original_ext}"
+    
+    # Convertir imagen original a JPG con optimización
+    original_dest_filename = f"original.jpg"  # Siempre JPG
     original_dest_path = os.path.join(output_dir, original_dest_filename)
     
     try:
         # Guardar imagen original desde el archivo subido
         original_file.stream.seek(0)  # Reset stream
         image = Image.open(original_file.stream)
+        original_size_kb = len(original_file.stream.read()) / 1024
+        original_file.stream.seek(0)  # Reset stream again
         
         # Convertir a RGB si es necesario
         if image.mode in ('RGBA', 'LA', 'P'):
@@ -853,7 +906,63 @@ def save_images_to_our_output(output_dir, original_file, generated_images, origi
         elif image.mode != 'RGB':
             image = image.convert('RGB')
         
-        image.save(original_dest_path, format='PNG', optimize=False)
+        # Optimizar imagen original a JPG con límite de 200KB
+        target_size_kb = 200
+        
+        # Intentar calidad 100% primero
+        buffer = io.BytesIO()
+        image.save(buffer, format='JPEG', quality=100, optimize=True)
+        size_kb = buffer.tell() / 1024
+        
+        if size_kb <= target_size_kb:
+            # Perfecto con calidad 100%
+            with open(original_dest_path, 'wb') as f:
+                f.write(buffer.getvalue())
+            log_success(f"✅ Imagen original convertida a JPG con calidad 100%: {original_dest_filename} ({size_kb:.1f}KB)")
+            log_info(f"   📊 Reducción de tamaño: {original_size_kb:.1f}KB → {size_kb:.1f}KB ({((original_size_kb - size_kb) / original_size_kb * 100):.1f}% reducción)")
+        else:
+            # Optimizar gradualmente para mantener la mejor calidad posible
+            log_info(f"📏 Imagen original muy grande con calidad 100% ({size_kb:.1f}KB), optimizando para 200KB...")
+            
+            best_quality = 100
+            best_buffer = None
+            
+            # Optimización gradual más inteligente
+            for quality in range(95, 60, -2):  # Reducir de 2 en 2 desde 95% hasta 60%
+                buffer = io.BytesIO()
+                image.save(buffer, format='JPEG', quality=quality, optimize=True)
+                size_kb = buffer.tell() / 1024
+                
+                if size_kb <= target_size_kb:
+                    best_quality = quality
+                    best_buffer = buffer.getvalue()
+                    break
+            
+            # Si aún no encontramos una buena calidad, probar con pasos más grandes
+            if best_buffer is None:
+                for quality in range(60, 30, -5):  # Reducir de 5 en 5 desde 60% hasta 30%
+                    buffer = io.BytesIO()
+                    image.save(buffer, format='JPEG', quality=quality, optimize=True)
+                    size_kb = buffer.tell() / 1024
+                    
+                    if size_kb <= target_size_kb:
+                        best_quality = quality
+                        best_buffer = buffer.getvalue()
+                        break
+            
+            # Guardar la mejor versión encontrada
+            if best_buffer:
+                with open(original_dest_path, 'wb') as f:
+                    f.write(best_buffer)
+                final_size = len(best_buffer) / 1024
+                log_info(f"✅ Imagen original convertida a JPG: {original_dest_filename} ({final_size:.1f}KB, calidad {best_quality}%)")
+                log_info(f"   📊 Reducción de tamaño: {original_size_kb:.1f}KB → {final_size:.1f}KB ({((original_size_kb - final_size) / original_size_kb * 100):.1f}% reducción)")
+            else:
+                # Como último recurso, guardar con calidad 30%
+                image.save(original_dest_path, format='JPEG', quality=30, optimize=True)
+                final_size = os.path.getsize(original_dest_path) / 1024
+                log_warning(f"⚠️ Imagen original muy grande, guardada con calidad 30%: {original_dest_filename} ({final_size:.1f}KB)")
+                log_info(f"   📊 Reducción de tamaño: {original_size_kb:.1f}KB → {final_size:.1f}KB ({((original_size_kb - final_size) / original_size_kb * 100):.1f}% reducción)")
         
         # Guardar también en sesión
         with open(original_dest_path, 'rb') as img_file:
@@ -957,8 +1066,97 @@ def save_images_to_our_output(output_dir, original_file, generated_images, origi
                 log_warning(f"⚠️ Archivo específico ya existe, saltando: {dest_filename}")
                 continue
             
-            # Copiar archivo
-            shutil.copy2(source_path, dest_path)
+            # Convertir PNG a JPG con límite de 200KB manteniendo máxima calidad
+            if original_ext.lower() == 'png':
+                # Cambiar extensión a JPG
+                dest_filename = dest_filename.replace('.png', '.jpg')
+                dest_path = os.path.join(output_dir, dest_filename)
+                
+                # Convertir PNG a JPG con optimización inteligente de tamaño
+                try:
+                    from PIL import Image
+                    import io
+                    
+                    # Abrir imagen PNG original
+                    img = Image.open(source_path)
+                    original_size_kb = os.path.getsize(source_path) / 1024
+                    
+                    # Convertir a RGB si es necesario (PNG puede tener transparencia)
+                    if img.mode in ('RGBA', 'LA', 'P'):
+                        # Crear fondo blanco para imágenes con transparencia
+                        background = Image.new('RGB', img.size, (255, 255, 255))
+                        if img.mode == 'P':
+                            img = img.convert('RGBA')
+                        background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+                        img = background
+                    elif img.mode != 'RGB':
+                        img = img.convert('RGB')
+                    
+                    # Estrategia de optimización: Comenzar con calidad 100% y reducir gradualmente
+                    target_size_kb = 200
+                    best_quality = 100
+                    best_buffer = None
+                    
+                    # Probar calidad 100% primero
+                    buffer = io.BytesIO()
+                    img.save(buffer, format='JPEG', quality=100, optimize=True)
+                    size_kb = buffer.tell() / 1024
+                    
+                    if size_kb <= target_size_kb:
+                        # ¡Perfecto! Calidad 100% y dentro del límite
+                        with open(dest_path, 'wb') as f:
+                            f.write(buffer.getvalue())
+                        log_success(f"🎯 Imagen convertida a JPG con calidad 100%: {dest_filename} ({size_kb:.1f}KB)")
+                        log_info(f"   📊 Reducción de tamaño: {original_size_kb:.1f}KB PNG → {size_kb:.1f}KB JPG ({((original_size_kb - size_kb) / original_size_kb * 100):.1f}% reducción)")
+                    else:
+                        # Necesitamos reducir el tamaño, pero manteniendo la mejor calidad posible
+                        log_info(f"📏 Imagen muy grande con calidad 100% ({size_kb:.1f}KB), optimizando para 200KB...")
+                        
+                        # Algoritmo de optimización más inteligente: reducir en pasos más pequeños
+                        for quality in range(95, 60, -2):  # Reducir de 2 en 2 desde 95% hasta 60%
+                            buffer = io.BytesIO()
+                            img.save(buffer, format='JPEG', quality=quality, optimize=True)
+                            size_kb = buffer.tell() / 1024
+                            
+                            if size_kb <= target_size_kb:
+                                best_quality = quality
+                                best_buffer = buffer.getvalue()
+                                break
+                        
+                        # Si aún no encontramos una buena calidad, probar con pasos más grandes
+                        if best_buffer is None:
+                            log_warning(f"⚠️ Imagen muy grande, probando calidades más bajas...")
+                            for quality in range(60, 30, -5):  # Reducir de 5 en 5 desde 60% hasta 30%
+                                buffer = io.BytesIO()
+                                img.save(buffer, format='JPEG', quality=quality, optimize=True)
+                                size_kb = buffer.tell() / 1024
+                                
+                                if size_kb <= target_size_kb:
+                                    best_quality = quality
+                                    best_buffer = buffer.getvalue()
+                                    break
+                        
+                        # Guardar la mejor versión encontrada
+                        if best_buffer:
+                            with open(dest_path, 'wb') as f:
+                                f.write(best_buffer)
+                            final_size = len(best_buffer) / 1024
+                            log_info(f"🎯 Imagen convertida a JPG: {dest_filename} ({final_size:.1f}KB, calidad {best_quality}%)")
+                            log_info(f"   📊 Reducción de tamaño: {original_size_kb:.1f}KB PNG → {final_size:.1f}KB JPG ({((original_size_kb - final_size) / original_size_kb * 100):.1f}% reducción)")
+                        else:
+                            # Como último recurso, guardar con calidad 30%
+                            img.save(dest_path, format='JPEG', quality=30, optimize=True)
+                            final_size = os.path.getsize(dest_path) / 1024
+                            log_warning(f"⚠️ Imagen muy grande, guardada con calidad 30%: {dest_filename} ({final_size:.1f}KB)")
+                            log_info(f"   📊 Reducción de tamaño: {original_size_kb:.1f}KB PNG → {final_size:.1f}KB JPG ({((original_size_kb - final_size) / original_size_kb * 100):.1f}% reducción)")
+                    
+                except Exception as e:
+                    log_error(f"❌ Error convirtiendo PNG a JPG: {str(e)}")
+                    # Fallback: copiar archivo original
+                    shutil.copy2(source_path, dest_path)
+            else:
+                # Copiar archivo no-PNG normalmente
+                shutil.copy2(source_path, dest_path)
             
             # Guardar también en sesión
             with open(dest_path, 'rb') as img_file:
@@ -1386,14 +1584,40 @@ def get_workflow_nodes(workflow_name):
 def get_batch_status(batch_id):
     """
     Obtiene el status actual de un batch en progreso con información de sesión
+    Consulta tanto ACTIVE_BATCHES como el sistema de sesión para persistencia
     """
-    with BATCH_LOCK:
-        if batch_id not in ACTIVE_BATCHES:
-            return jsonify({"error": "Batch no encontrado"}), 404
-        
-        batch_info = ACTIVE_BATCHES[batch_id].copy()
+    batch_info = None
     
-    # Agregar información del job de sesión si está disponible
+    # 1. Primero intentar obtener de ACTIVE_BATCHES (batch en progreso)
+    with BATCH_LOCK:
+        if batch_id in ACTIVE_BATCHES:
+            batch_info = ACTIVE_BATCHES[batch_id].copy()
+    
+    # 2. Si no está en ACTIVE_BATCHES, buscar en el sistema de sesión
+    if not batch_info:
+        # Buscar en todos los jobs de sesión por batch_tracking_id
+        all_jobs = session_manager.get_all_active_jobs()
+        for job_id, job_data in all_jobs.items():
+            if job_data.get('batch_tracking_id') == batch_id:
+                # Reconstruir batch_info desde el job de sesión
+                images = session_manager.get_job_images(job_id)
+                batch_info = {
+                    'batch_id': batch_id,
+                    'session_job_id': job_id,
+                    'status': job_data.get('status', 'completed'),
+                    'total_workflows': job_data.get('total_workflows', len(images)),
+                    'completed_workflows': len(images),
+                    'errors': job_data.get('errors', []),
+                    'all_images': images,
+                    'created_at': job_data.get('created_at'),
+                    'type': 'batch'
+                }
+                break
+    
+    if not batch_info:
+        return jsonify({"error": "Batch no encontrado"}), 404
+    
+    # 3. Agregar información del job de sesión si está disponible
     session_job_id = batch_info.get('session_job_id')
     if session_job_id:
         session_job = session_manager.get_job(session_job_id)
@@ -1803,6 +2027,15 @@ def process_batch():
         log_info(f"📊 Batch ID para tracking: {batch_id}")
         log_info(f"🆔 Session Job ID: {batch_job_id}")
         
+        # 🎯 APLICAR THROTTLING DE BATCH
+        log_info(f"⏰ Aplicando throttling de batch para {len(filtered_workflows)} workflows...")
+        throttle_wait_time = enforce_batch_throttle(len(filtered_workflows))
+        
+        if throttle_wait_time > 0:
+            session_manager.update_job(batch_job_id, 
+                current_operation=f'Throttling aplicado: esperó {throttle_wait_time:.1f}s para evitar sobrecarga de ComfyUI'
+            )
+        
         # Guardar el contenido de la imagen en memoria antes de iniciar el thread
         image_file.seek(0)
         image_data = BytesIO(image_file.read())
@@ -1861,10 +2094,17 @@ def process_batch():
             "success": True,
             "batch_id": batch_id,
             "session_job_id": batch_job_id,  # También devolver el job ID de sesión
-            "processing_mode": "asynchronous_with_tracking",
+            "processing_mode": "asynchronous_with_tracking_and_throttling",
             "status": "processing",
             "total_workflows": len(filtered_workflows),
-            "message": "Batch iniciado. Use GET /batch-status/{batch_id} para consultar progreso o /session/jobs/{session_job_id} para persistencia",
+            "throttling_info": {
+                "throttle_applied": throttle_wait_time > 0,
+                "throttle_wait_time": round(throttle_wait_time, 1),
+                "estimated_sending_time": 0,  # Sin delay entre prompts
+                "prompt_send_delay": BATCH_PROMPT_SEND_DELAY,
+                "immediate_sending": True
+            },
+            "message": "Batch iniciado con throttling. Use GET /batch-status/{batch_id} para consultar progreso o /session/jobs/{session_job_id} para persistencia",
             "status_endpoint": f"/batch-status/{batch_id}",
             "session_endpoint": f"/session/jobs/{batch_job_id}",
             "workflow_list": [w["id"] for w in filtered_workflows],
@@ -1885,6 +2125,43 @@ def process_batch():
             "error": str(e),
             "processing_mode": "simultaneous",
             "session_job_id": batch_job_id
+        }), 500
+
+@app.route('/batch-throttle-status', methods=['GET'])
+def get_batch_throttle_status():
+    """
+    Devuelve el estado actual del throttling de batches
+    """
+    try:
+        current_time = time.time()
+        
+        with BATCH_THROTTLE_LOCK:
+            # Calcular tiempo restante para poder enviar el siguiente lote
+            remaining_wait_time = calculate_batch_throttle_delay(0)  # 0 prompts para solo calcular
+            
+            # Información sobre el lote actual
+            time_since_last_batch = current_time - LAST_BATCH_SUBMIT_TIME if LAST_BATCH_SUBMIT_TIME > 0 else 0
+            # Tiempo estimado de procesamiento mínimo (1s por prompt)
+            estimated_completion_time = LAST_BATCH_SUBMIT_TIME + (CURRENT_BATCH_PROMPTS * 1.0)
+            
+            return jsonify({
+                "success": True,
+                "throttle_status": {
+                    "can_send_batch": remaining_wait_time == 0,
+                    "remaining_wait_time": round(remaining_wait_time, 1),
+                    "current_batch_prompts": CURRENT_BATCH_PROMPTS,
+                    "prompt_send_delay": BATCH_PROMPT_SEND_DELAY,
+                    "immediate_sending": True,
+                    "last_batch_submit_time": LAST_BATCH_SUBMIT_TIME,
+                    "time_since_last_batch": round(time_since_last_batch, 1),
+                    "estimated_completion_time": estimated_completion_time,
+                    "current_time": current_time
+                }
+            })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
         }), 500
 
 def filter_workflows_for_batch(batch_config, available_workflows):
@@ -2096,6 +2373,7 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
         )
     
     log_info(f"🚀 Enviando {len(workflows)} workflows simultáneamente a ComfyUI...")
+    log_info(f"⚡ Envío inmediato sin delay entre prompts")
     
     # Pre-cargar la imagen una vez para todos los workflows
     log_info("📷 Pre-cargando imagen para todos los workflows...")
@@ -2136,15 +2414,20 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
             )
         return []
 
-    # Fase 1: Preparar y enviar todos los workflows a ComfyUI
+    # Fase 1: Preparar y enviar todos los workflows a ComfyUI sin delay
+    start_sending_time = time.time()
+    
     for i, workflow_info in enumerate(workflows):
         try:
             # Actualizar progreso
             with BATCH_LOCK:
                 if batch_id in ACTIVE_BATCHES:
-                    ACTIVE_BATCHES[batch_id]["current_operation"] = f"Enviando {i+1}/{len(workflows)}: {workflow_info['id']}"
+                    elapsed_sending = time.time() - start_sending_time
+                    ACTIVE_BATCHES[batch_id]["current_operation"] = f"Enviando {i+1}/{len(workflows)}: {workflow_info['id']} (⚡ {elapsed_sending:.1f}s)"
             
             log_info(f"📤 Preparando {i+1}/{len(workflows)}: {workflow_info['id']}")
+            
+            # Sin delay entre prompts - envío inmediato
             
             # Guardar imagen temporal única para cada workflow
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -2172,8 +2455,10 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
                 base_image_name  # output_subfolder basado en imagen original, no en workflow
             )
             
-            # Enviar a ComfyUI (sin esperar)
+            # Enviar a ComfyUI (sin esperar respuesta)
+            log_info(f"🚀 Enviando prompt {i+1}/{len(workflows)} a ComfyUI...")
             prompt_id = submit_workflow_to_comfyui(workflow)
+            
             if prompt_id:
                 submitted_prompts[prompt_id] = {
                     "workflow_info": workflow_info,
@@ -2219,6 +2504,9 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
                     batch_info["completed_workflows"] += 1
                     batch_info["failed"] += 1
                     batch_info["results"].append(result)
+    
+    total_sending_time = time.time() - start_sending_time
+    log_success(f"📤 Todos los prompts enviados en {total_sending_time:.1f}s (promedio: {total_sending_time/len(workflows):.2f}s por prompt)")
     
     if not submitted_prompts:
         log_error("❌ No se pudo enviar ningún workflow a ComfyUI")
@@ -2388,8 +2676,98 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
                             session_images.append(session_url)
                         continue
                     
-                    # Copiar archivo si no existe
-                    shutil.copy2(source_path, dest_path)
+                    # Convertir PNG a JPG con límite de 200KB (igual que en save_images_to_our_output)
+                    if original_ext.lower() == 'png':
+                        # Cambiar extensión a JPG
+                        new_filename = new_filename.replace('.png', '.jpg')
+                        dest_path = os.path.join(batch_output_dir, new_filename)
+                        
+                        # Convertir PNG a JPG con optimización inteligente de tamaño
+                        try:
+                            from PIL import Image
+                            import io
+                            
+                            # Abrir imagen PNG original
+                            img = Image.open(source_path)
+                            original_size_kb = os.path.getsize(source_path) / 1024
+                            
+                            # Convertir a RGB si es necesario (PNG puede tener transparencia)
+                            if img.mode in ('RGBA', 'LA', 'P'):
+                                # Crear fondo blanco para imágenes con transparencia
+                                background = Image.new('RGB', img.size, (255, 255, 255))
+                                if img.mode == 'P':
+                                    img = img.convert('RGBA')
+                                background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+                                img = background
+                            elif img.mode != 'RGB':
+                                img = img.convert('RGB')
+                            
+                            # Estrategia de optimización: Comenzar con calidad 100% y reducir gradualmente
+                            target_size_kb = 200
+                            
+                            # Probar calidad 100% primero
+                            buffer = io.BytesIO()
+                            img.save(buffer, format='JPEG', quality=100, optimize=True)
+                            size_kb = buffer.tell() / 1024
+                            
+                            if size_kb <= target_size_kb:
+                                # ¡Perfecto! Calidad 100% y dentro del límite
+                                with open(dest_path, 'wb') as f:
+                                    f.write(buffer.getvalue())
+                                log_success(f"🎯 Imagen batch convertida a JPG con calidad 100%: {new_filename} ({size_kb:.1f}KB)")
+                                log_info(f"   📊 Reducción de tamaño: {original_size_kb:.1f}KB PNG → {size_kb:.1f}KB JPG ({((original_size_kb - size_kb) / original_size_kb * 100):.1f}% reducción)")
+                            else:
+                                # Necesitamos reducir el tamaño, pero manteniendo la mejor calidad posible
+                                log_info(f"📏 Imagen batch muy grande con calidad 100% ({size_kb:.1f}KB), optimizando para 200KB...")
+                                
+                                best_quality = 100
+                                best_buffer = None
+                                
+                                # Algoritmo de optimización más inteligente: reducir en pasos más pequeños
+                                for quality in range(95, 60, -2):  # Reducir de 2 en 2 desde 95% hasta 60%
+                                    buffer = io.BytesIO()
+                                    img.save(buffer, format='JPEG', quality=quality, optimize=True)
+                                    size_kb = buffer.tell() / 1024
+                                    
+                                    if size_kb <= target_size_kb:
+                                        best_quality = quality
+                                        best_buffer = buffer.getvalue()
+                                        break
+                                
+                                # Si aún no encontramos una buena calidad, probar con pasos más grandes
+                                if best_buffer is None:
+                                    log_warning(f"⚠️ Imagen batch muy grande, probando calidades más bajas...")
+                                    for quality in range(60, 30, -5):  # Reducir de 5 en 5 desde 60% hasta 30%
+                                        buffer = io.BytesIO()
+                                        img.save(buffer, format='JPEG', quality=quality, optimize=True)
+                                        size_kb = buffer.tell() / 1024
+                                        
+                                        if size_kb <= target_size_kb:
+                                            best_quality = quality
+                                            best_buffer = buffer.getvalue()
+                                            break
+                                
+                                # Guardar la mejor versión encontrada
+                                if best_buffer:
+                                    with open(dest_path, 'wb') as f:
+                                        f.write(best_buffer)
+                                    final_size = len(best_buffer) / 1024
+                                    log_info(f"🎯 Imagen batch convertida a JPG: {new_filename} ({final_size:.1f}KB, calidad {best_quality}%)")
+                                    log_info(f"   📊 Reducción de tamaño: {original_size_kb:.1f}KB PNG → {final_size:.1f}KB JPG ({((original_size_kb - final_size) / original_size_kb * 100):.1f}% reducción)")
+                                else:
+                                    # Como último recurso, guardar con calidad 30%
+                                    img.save(dest_path, format='JPEG', quality=30, optimize=True)
+                                    final_size = os.path.getsize(dest_path) / 1024
+                                    log_warning(f"⚠️ Imagen batch muy grande, guardada con calidad 30%: {new_filename} ({final_size:.1f}KB)")
+                                    log_info(f"   📊 Reducción de tamaño: {original_size_kb:.1f}KB PNG → {final_size:.1f}KB JPG ({((original_size_kb - final_size) / original_size_kb * 100):.1f}% reducción)")
+                            
+                        except Exception as e:
+                            log_error(f"❌ Error convirtiendo PNG a JPG en batch: {str(e)}")
+                            # Fallback: copiar archivo original
+                            shutil.copy2(source_path, dest_path)
+                    else:
+                        # Copiar archivo no-PNG normalmente
+                        shutil.copy2(source_path, dest_path)
                     
                     # Guardar también en sesión
                     with open(dest_path, 'rb') as img_file:
@@ -2417,11 +2795,76 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
                     if session_url:
                         session_images.append(session_url)
             
-            # Guardar imagen original solo una vez (check si ya existe)
-            original_dest = os.path.join(batch_output_dir, 'original.png')
+            # Guardar imagen original solo una vez (check si ya existe) - convertir a JPG
+            original_dest = os.path.join(batch_output_dir, 'original.jpg')  # Cambiar a JPG
             if not os.path.exists(original_dest):  # Solo si no existe ya
-                master_image.save(original_dest, format='PNG')
-                log_info(f"💾 Imagen original guardada: {original_dest}")
+                try:
+                    # Convertir imagen original a JPG con optimización
+                    original_rgb = master_image.convert('RGB') if master_image.mode != 'RGB' else master_image
+                    
+                    # Optimizar imagen original a JPG con límite de 200KB
+                    target_size_kb = 200
+                    
+                    # Intentar calidad 100% primero
+                    buffer = io.BytesIO()
+                    original_rgb.save(buffer, format='JPEG', quality=100, optimize=True)
+                    size_kb = buffer.tell() / 1024
+                    
+                    if size_kb <= target_size_kb:
+                        # Perfecto con calidad 100%
+                        with open(original_dest, 'wb') as f:
+                            f.write(buffer.getvalue())
+                        log_success(f"✅ Imagen original batch convertida a JPG con calidad 100%: original.jpg ({size_kb:.1f}KB)")
+                    else:
+                        # Optimizar gradualmente para mantener la mejor calidad posible
+                        log_info(f"📏 Imagen original batch muy grande con calidad 100% ({size_kb:.1f}KB), optimizando para 200KB...")
+                        
+                        best_quality = 100
+                        best_buffer = None
+                        
+                        # Optimización gradual más inteligente
+                        for quality in range(95, 60, -2):  # Reducir de 2 en 2 desde 95% hasta 60%
+                            buffer = io.BytesIO()
+                            original_rgb.save(buffer, format='JPEG', quality=quality, optimize=True)
+                            size_kb = buffer.tell() / 1024
+                            
+                            if size_kb <= target_size_kb:
+                                best_quality = quality
+                                best_buffer = buffer.getvalue()
+                                break
+                        
+                        # Si aún no encontramos una buena calidad, probar con pasos más grandes
+                        if best_buffer is None:
+                            for quality in range(60, 30, -5):  # Reducir de 5 en 5 desde 60% hasta 30%
+                                buffer = io.BytesIO()
+                                original_rgb.save(buffer, format='JPEG', quality=quality, optimize=True)
+                                size_kb = buffer.tell() / 1024
+                                
+                                if size_kb <= target_size_kb:
+                                    best_quality = quality
+                                    best_buffer = buffer.getvalue()
+                                    break
+                        
+                        # Guardar la mejor versión encontrada
+                        if best_buffer:
+                            with open(original_dest, 'wb') as f:
+                                f.write(best_buffer)
+                            final_size = len(best_buffer) / 1024
+                            log_info(f"✅ Imagen original batch convertida a JPG: original.jpg ({final_size:.1f}KB, calidad {best_quality}%)")
+                        else:
+                            # Como último recurso, guardar con calidad 30%
+                            original_rgb.save(original_dest, format='JPEG', quality=30, optimize=True)
+                            final_size = os.path.getsize(original_dest) / 1024
+                            log_warning(f"⚠️ Imagen original batch muy grande, guardada con calidad 30%: original.jpg ({final_size:.1f}KB)")
+                    
+                    log_info(f"💾 Imagen original batch guardada como JPG: {original_dest}")
+                    
+                except Exception as e:
+                    log_error(f"❌ Error convirtiendo imagen original batch a JPG: {str(e)}")
+                    # Fallback: guardar como PNG
+                    original_dest = os.path.join(batch_output_dir, 'original.png')
+                    master_image.save(original_dest, format='PNG')
+                    log_info(f"💾 Imagen original batch guardada como PNG (fallback): {original_dest}")
             
             # Guardar también imagen original en la sesión (solo una vez por batch)
             original_session_url = None
@@ -2429,11 +2872,12 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
                 try:
                     # Verificar si ya se guardó la original en sesión
                     existing_images = session_manager.get_job_images(session_job_id)
-                    original_already_saved = any('original.png' in img for img in existing_images)
+                    original_already_saved = any('original.' in img for img in existing_images)  # Buscar tanto PNG como JPG
                     
                     if not original_already_saved:
                         with open(original_dest, 'rb') as img_file:
-                            original_session_url = session_manager.save_job_image(session_job_id, img_file.read(), 'original.png')
+                            original_filename = os.path.basename(original_dest)  # original.jpg o original.png
+                            original_session_url = session_manager.save_job_image(session_job_id, img_file.read(), original_filename)
                 except Exception as e:
                     log_warning(f"⚠️ No se pudo guardar imagen original en sesión: {str(e)}")
             
