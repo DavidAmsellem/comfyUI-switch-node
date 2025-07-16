@@ -374,6 +374,102 @@
         .individual-job-images img {
             width: 100%;
             border-radius: 4px;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .individual-job-images img:hover {
+            transform: scale(1.05);
+        }
+
+        /* Estilos para el modal de zoom de imágenes */
+        .image-modal {
+            display: none !important;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .image-modal.show {
+            display: flex !important;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .image-modal-content {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .image-modal img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
+        .image-modal-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s ease;
+        }
+
+        .image-modal-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .image-modal-info {
+            position: absolute;
+            bottom: -50px;
+            left: 0;
+            right: 0;
+            color: white;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Hacer todas las imágenes clickeables */
+        .result-item img, 
+        .batch-workflow-images img, 
+        .individual-job-images img, 
+        .preview-image {
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .result-item img:hover, 
+        .batch-workflow-images img:hover, 
+        .individual-job-images img:hover, 
+        .preview-image:hover {
+            transform: scale(1.05);
         }
 
         /* Estilos para los modos de procesamiento */
@@ -552,7 +648,7 @@
                                 <select id="batchOrientations" class="workflow-select" multiple style="height: 100px;">
                                 </select>
                                 <div style="font-size: 0.8em; color: #666; margin-top: 5px;">
-                                    💡 Ctrl/Cmd para múltiple selección
+                                     Ctrl/Cmd para múltiple selección
                                 </div>
                             </div>
                         </div>
@@ -648,6 +744,15 @@
                         <button id="clearStateBtn" style="background: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
                             🗑️ Limpiar Estado
                         </button>
+                        <button id="testModalBtn" style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
+                            🧪 Test Modal
+                        </button>
+                        <button id="debugModalBtn" style="background: #007acc; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
+                            🔍 Debug Modal
+                        </button>
+                        <button id="debugBatchBtn" style="background: #ff6b35; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
+                            🔍 Debug Batch
+                        </button>
                     </div>
                     <div class="status-messages" id="statusMessages"></div>
                 </div>
@@ -668,6 +773,15 @@
                     <div class="batch-results" id="batchResults"></div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal para zoom de imágenes -->
+    <div id="imageModal" class="image-modal">
+        <div class="image-modal-content">
+            <span class="image-modal-close" id="modalClose">&times;</span>
+            <img id="modalImage" src="" alt="Imagen ampliada">
+            <div class="image-modal-info" id="modalInfo"></div>
         </div>
     </div>
 
@@ -817,12 +931,121 @@
             }
         }
 
+        // ===== FUNCIONES PARA MODAL DE ZOOM DE IMÁGENES =====
+        
+        function setupImageZoomModal() {
+            const modal = document.getElementById('imageModal');
+            const modalImage = document.getElementById('modalImage');
+            const modalClose = document.getElementById('modalClose');
+            const modalInfo = document.getElementById('modalInfo');
+            
+            // Verificar que los elementos existen
+            if (!modal || !modalImage || !modalClose || !modalInfo) {
+                console.error('❌ Error: Elementos del modal no encontrados');
+                console.log('modal:', modal);
+                console.log('modalImage:', modalImage);
+                console.log('modalClose:', modalClose);
+                console.log('modalInfo:', modalInfo);
+                return;
+            }
+            
+            console.log('✅ Elementos del modal encontrados correctamente');
+            
+            // Función para hacer que todas las imágenes sean clickeables
+            function makeImageClickable(img, imageInfo = '') {
+                // Evitar duplicar event listeners
+                if (img.hasAttribute('data-modal-enabled')) {
+                    return;
+                }
+                
+                console.log('🔗 Haciendo clickeable imagen:', img.src);
+                img.style.cursor = 'pointer';
+                img.setAttribute('data-modal-enabled', 'true');
+                
+                const clickHandler = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🖱️ Click en imagen:', img.src);
+                    showImageModal(img.src, imageInfo);
+                };
+                
+                img.addEventListener('click', clickHandler);
+                
+                // Añadir también evento para táctil
+                img.addEventListener('touchstart', clickHandler);
+            }
+            
+            // Hacer clickeables todas las imágenes existentes
+            document.querySelectorAll('.result-item img, .batch-workflow-images img, .individual-job-images img, .preview-image').forEach(img => {
+                makeImageClickable(img, img.alt || 'Imagen generada');
+            });
+            
+            // Observador para nuevas imágenes que se añadan dinámicamente
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType === 1) { // Element node
+                            // Buscar imágenes en el nodo añadido
+                            const images = node.querySelectorAll ? node.querySelectorAll('img') : [];
+                            
+                            // Si el nodo es una imagen
+                            if (node.tagName === 'IMG') {
+                                const parentClasses = node.parentElement?.className || '';
+                                if (parentClasses.includes('result-item') || 
+                                    parentClasses.includes('batch-workflow-images') || 
+                                    parentClasses.includes('individual-job-images') ||
+                                    node.className.includes('preview-image')) {
+                                    makeImageClickable(node, node.alt || 'Imagen generada');
+                                }
+                            }
+                            
+                            // Buscar imágenes dentro del nodo
+                            images.forEach(img => {
+                                const parentClasses = img.parentElement?.className || '';
+                                const parentId = img.parentElement?.id || '';
+                                if (parentClasses.includes('result-item') || 
+                                    parentClasses.includes('batch-workflow-images') || 
+                                    parentClasses.includes('individual-job-images') ||
+                                    parentClasses.includes('workflow-result-item') ||
+                                    parentId.includes('images-container-') ||
+                                    img.className.includes('preview-image')) {
+                                    
+                                    // Verificar si ya tiene modal habilitado
+                                    if (!img.hasAttribute('data-modal-enabled')) {
+                                        makeImageClickable(img, img.alt || 'Imagen generada');
+                                        console.log('🔧 Modal activado por MutationObserver para:', img.src);
+                                        console.log('📊 Contexto de imagen:', {
+                                            alt: img.alt,
+                                            parentClass: parentClasses,
+                                            parentId: parentId,
+                                            src: img.src
+                                        });
+                                    }
+                                }
+                            });
+                        }
+                    });
+                });
+            });
+            
+            // Observar cambios en el contenedor de resultados
+            const resultsContainer = document.querySelector('.panel');
+            if (resultsContainer) {
+                observer.observe(resultsContainer, {
+                    childList: true,
+                    subtree: true
+                });
+            }
+        }
+
         // Inicialización
         window.onload = function() {
             checkHealth();
             loadWorkflows();
             setupEventListeners();
             setupModeHandlers(); // Configurar manejadores de modo
+            setupImageZoomModal(); // Configurar modal de zoom
+            setupGlobalModalHandlers(); // Configurar manejadores globales del modal
             
             // Inicializar en modo individual
             switchMode('individual');
@@ -832,16 +1055,106 @@
                 loadSessionJobs();
             }, 500);
             
+            // 🔥 FORZAR RESTAURACIÓN AUTOMÁTICA DE TRABAJOS BATCH
+            setTimeout(async () => {
+                console.log('🔄 Ejecutando restauración automática de trabajos batch...');
+                
+                // Limpiar duplicados existentes primero
+                cleanupDuplicateBatchJobs();
+                
+                const batchRestored = await forceRestoreBatchJobs();
+                
+                if (batchRestored) {
+                    console.log('✅ Trabajos batch restaurados automáticamente');
+                    
+                    // Verificar que la sección esté visible
+                    setTimeout(() => {
+                        ensureBatchSectionVisible();
+                    }, 500);
+                } else {
+                    console.log('ℹ️ No se encontraron trabajos batch para restaurar');
+                }
+            }, 1000);
+            
             // Restaurar estado después de cargar workflows
             setTimeout(() => {
                 restoreState();
             }, 1000);
+            
+            // 🔥 HABILITAR MODAL AUTOMÁTICAMENTE PARA TODAS LAS IMÁGENES DESPUÉS DE CARGAR
+            setTimeout(() => {
+                console.log('🔧 Habilitando modal automáticamente para todas las imágenes...');
+                enableModalForAllImages();
+                
+                // 🔥 ASEGURAR QUE LA SECCIÓN DE BATCH ESTÉ VISIBLE
+                ensureBatchSectionVisible();
+            }, 1500); // Delay para asegurar que toda la página se haya cargado
+            
+            // 🔥 OBSERVER CONTINUO PARA MODAL DE IMÁGENES
+            const modalObserver = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                        mutation.addedNodes.forEach((node) => {
+                            if (node.nodeType === Node.ELEMENT_NODE) {
+                                // Buscar imágenes en el nodo agregado
+                                const images = node.querySelectorAll ? node.querySelectorAll('img') : [];
+                                const isImg = node.tagName === 'IMG';
+                                
+                                if (isImg || images.length > 0) {
+                                    console.log('👁️ Nuevas imágenes detectadas por observer, habilitando modal...');
+                                    
+                                    setTimeout(() => {
+                                        enableModalForAllImages();
+                                    }, 200);
+                                }
+                            }
+                        });
+                    }
+                });
+            });
+            
+            // Iniciar observación en el body
+            modalObserver.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+            
+            console.log('👁️ Observer de modal iniciado');
             
             // Limpiar trabajos antiguos al inicializar (más de 24 horas)
             setTimeout(() => {
                 cleanupOldJobs(24);
             }, 2000);
         };
+        
+        // Función para configurar manejadores globales del modal
+        function setupGlobalModalHandlers() {
+            const modal = document.getElementById('imageModal');
+            const modalClose = document.getElementById('modalClose');
+            
+            if (modal && modalClose) {
+                // Event listener para cerrar modal
+                modalClose.addEventListener('click', closeImageModal);
+                
+                // Cerrar modal al hacer clic fuera de la imagen
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        closeImageModal();
+                    }
+                });
+                
+                // Cerrar modal con tecla ESC
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && modal.classList.contains('show')) {
+                        closeImageModal();
+                    }
+                });
+                
+                console.log('✅ Manejadores globales del modal configurados');
+            } else {
+                console.error('❌ No se pudieron configurar manejadores globales del modal');
+            }
+        }
 
         // Limpieza cuando se cierra la página
         window.addEventListener('beforeunload', function() {
@@ -959,6 +1272,36 @@
             
             // Botón de debug de sesión
             document.getElementById('debugSessionBtn').addEventListener('click', debugSession);
+            
+            // Botón de prueba de modal
+            document.getElementById('testModalBtn').addEventListener('click', () => {
+                console.log('🧪 Testing modal...');
+                const modal = document.getElementById('imageModal');
+                if (modal) {
+                    // Crear imagen de prueba
+                    const testImage = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzQzNzNkYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmaWxsPSJ3aGl0ZSIgZm9udC1zaXplPSIxNiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPvCfp6ggVGVzdCBJbWFnZTwvdGV4dD48L3N2Zz4=';
+                    
+                    // Mostrar modal manualmente
+                    const modalImage = document.getElementById('modalImage');
+                    const modalInfo = document.getElementById('modalInfo');
+                    
+                    modalImage.src = testImage;
+                    modalInfo.textContent = 'Esta es una imagen de prueba';
+                    modal.style.display = 'flex';
+                    modal.classList.add('show');
+                    document.body.style.overflow = 'hidden';
+                    
+                    console.log('✅ Modal de prueba mostrado');
+                } else {
+                    console.error('❌ Modal no encontrado');
+                }
+            });
+            
+            // Botón de debug de modal
+            document.getElementById('debugModalBtn').addEventListener('click', debugImageModal);
+            
+            // Botón de debug de batch
+            document.getElementById('debugBatchBtn').addEventListener('click', debugBatchJobs);
         }
 
         function checkProcessButtonState() {
@@ -1213,7 +1556,26 @@
         function clearResults() {
             const batchResultsSection = document.getElementById('batchResultsSection');
             
-            batchResultsSection.style.display = 'none';
+            // 🔥 NO OCULTAR LA SECCIÓN SI HAY TRABAJOS BATCH ACTIVOS
+            console.log('🔧 clearResults() llamada - verificando si hay trabajos batch activos...');
+            console.log('📊 Estado actual: activeBatches =', activeBatches, 'batchCounter =', batchCounter);
+            
+            const batchResults = document.getElementById('batchResults');
+            const hasBatchContent = batchResults && batchResults.children.length > 0;
+            
+            console.log('📋 Contenido batch existente:', {
+                batchResults: !!batchResults,
+                childrenCount: batchResults?.children.length || 0,
+                hasBatchContent
+            });
+            
+            if (activeBatches > 0 || hasBatchContent) {
+                console.log('✅ Manteniendo sección de batch visible (hay trabajos activos o contenido)');
+                // No ocultar la sección si hay trabajos batch activos o contenido
+            } else {
+                console.log('🙈 Ocultando sección de batch (no hay trabajos activos)');
+                batchResultsSection.style.display = 'none';
+            }
             
             // No limpiar la selección de nodos aquí, solo los resultados
         }
@@ -1630,8 +1992,18 @@
                 resultData.generated_images.forEach(image => {
                     const img = document.createElement('img');
                     img.src = image.session_url || image.url;
-                    img.alt = image.filename;
-                    img.title = `Resultado: ${image.filename}`;
+                    img.alt = image.filename || 'Imagen generada';
+                    img.title = `Resultado: ${image.filename || 'Imagen generada'}`;
+                    img.style.width = '100%';
+                    img.style.borderRadius = '4px';
+                    img.style.cursor = 'pointer';
+                    
+                    // Hacer clickeable la imagen
+                    img.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        showImageModal(img.src, img.alt);
+                    });
+                    
                     imagesContainer.appendChild(img);
                 });
                 
@@ -1907,7 +2279,8 @@
             const batchResultsSection = document.getElementById('batchResultsSection');
             const batchResults = document.getElementById('batchResults');
             
-            // Mostrar la sección si estaba oculta
+            // 🔥 FORZAR MOSTRAR LA SECCIÓN SIEMPRE
+            console.log('🔧 createBatchResultsContainer - forzando mostrar sección...');
             batchResultsSection.style.display = 'block';
             
             // Crear contenedor para este lote específico
@@ -2032,6 +2405,12 @@
 
         // *** NUEVA FUNCIÓN: Actualizar display del batch ***
         function updateBatchDisplay(localBatchId, batchStatus, startTime) {
+            console.log('🔄 updateBatchDisplay called with:', {
+                localBatchId,
+                batchStatus,
+                startTime
+            });
+            
             // Actualizar status
             const statusElement = document.getElementById(`status-${localBatchId}`);
             if (statusElement) {
@@ -2043,14 +2422,23 @@
             // Actualizar contador de completados
             const completedElement = document.getElementById(`completed-${localBatchId}`);
             if (completedElement) {
-                completedElement.textContent = batchStatus.completed_workflows;
+                const completedCount = batchStatus.completed_workflows || 0;
+                completedElement.textContent = completedCount;
             }
             
             // Actualizar contador de imágenes
             const imagesElement = document.getElementById(`images-${localBatchId}`);
             if (imagesElement) {
-                const totalImages = batchStatus.results ? 
-                    batchStatus.results.reduce((sum, result) => sum + (result.generated_images ? result.generated_images.length : 0), 0) : 0;
+                let totalImages = 0;
+                
+                if (batchStatus.results) {
+                    // Formato de batch activo
+                    totalImages = batchStatus.results.reduce((sum, result) => sum + (result.generated_images ? result.generated_images.length : 0), 0);
+                } else if (batchStatus.all_images) {
+                    // Formato de sesión persistida
+                    totalImages = batchStatus.all_images.length;
+                }
+                
                 imagesElement.textContent = totalImages;
             }
             
@@ -2064,19 +2452,93 @@
             // Actualizar operación actual
             const operationElement = document.getElementById(`operation-${localBatchId}`);
             if (operationElement) {
-                operationElement.textContent = batchStatus.current_operation || 'Procesando...';
+                let operationText;
+                
+                if (batchStatus.status === 'completed') {
+                    operationText = 'Finalizado';
+                } else if (batchStatus.status === 'error') {
+                    operationText = 'Error en procesamiento';
+                } else {
+                    operationText = batchStatus.current_operation || 'Procesando...';
+                }
+                
+                operationElement.textContent = operationText;
             }
         }
 
         // *** NUEVA FUNCIÓN: Mostrar imágenes nuevas conforme se completan ***
         function displayNewCompletedImages(localBatchId, batchStatus, lastCompletedCount) {
             const imagesContainer = document.getElementById(`images-container-${localBatchId}`);
-            if (!imagesContainer || !batchStatus.results) return;
+            if (!imagesContainer) return;
             
-            // Obtener solo los resultados nuevos
-            const newResults = batchStatus.results.slice(lastCompletedCount);
+            console.log('🔍 DEBUG - displayNewCompletedImages called with:', {
+                localBatchId,
+                batchStatus,
+                lastCompletedCount
+            });
             
-            newResults.forEach((result, index) => {
+            let imagesToShow = [];
+            
+            if (batchStatus.results) {
+                // Formato de batch activo - obtener solo los resultados nuevos
+                const newResults = batchStatus.results.slice(lastCompletedCount);
+                imagesToShow = newResults.map((result, index) => ({
+                    workflow_id: result.workflow_id,
+                    success: result.success,
+                    generated_images: result.generated_images || [],
+                    processing_time: result.processing_time || 0,
+                    error: result.error
+                }));
+            } else if (batchStatus.all_images) {
+                // Formato de sesión persistida - convertir URLs de imágenes a formato compatible
+                const newImages = batchStatus.all_images.slice(lastCompletedCount);
+                
+                // Filtrar solo las imágenes generadas (no la original)
+                const generatedImages = newImages.filter(imageUrl => {
+                    const filename = imageUrl.split('/').pop();
+                    return filename !== 'original.png';
+                });
+                
+                console.log('🔍 DEBUG - Imágenes filtradas:', {
+                    totalImages: newImages.length,
+                    generatedImages: generatedImages.length,
+                    filtered: generatedImages
+                });
+                
+                imagesToShow = generatedImages.map((imageUrl, index) => {
+                    // Extraer información del nombre de archivo
+                    const filename = imageUrl.split('/').pop();
+                    const workflowMatch = filename.match(/([^_]+)_.*?_([^_]+)_/);
+                    const workflowId = workflowMatch ? `${workflowMatch[1]}_${workflowMatch[2]}` : `imagen_${index + 1}`;
+                    
+                    console.log('🔍 DEBUG - Procesando imagen de sesión:', {
+                        imageUrl,
+                        filename,
+                        workflowId
+                    });
+                    
+                    return {
+                        workflow_id: workflowId,
+                        success: true,
+                        generated_images: [{
+                            url: imageUrl,
+                            filename: filename,
+                            session_url: imageUrl  // Para compatibilidad
+                        }],
+                        processing_time: 0,
+                        error: null
+                    };
+                });
+            }
+            
+            if (imagesToShow.length === 0) {
+                console.log('⚠️ No hay imágenes nuevas para mostrar');
+                return;
+            }
+            
+            console.log('🖼️ Mostrando', imagesToShow.length, 'imágenes nuevas');
+            
+            imagesToShow.forEach((result, index) => {
                 const resultIndex = lastCompletedCount + index;
                 
                 // Crear elemento para este resultado
@@ -2093,22 +2555,70 @@
                 if (result.success && result.generated_images && result.generated_images.length > 0) {
                     // Mostrar imágenes generadas
                     const firstImage = result.generated_images[0];
+                    
+                    console.log('🔍 DEBUG - Procesando imagen:', {
+                        result,
+                        firstImage,
+                        type: typeof firstImage
+                    });
+                    
+                    // Determinar la URL correcta de la imagen
+                    let imageUrl;
+                    if (typeof firstImage === 'string') {
+                        // Si firstImage es un string directo (URL)
+                        imageUrl = firstImage.startsWith('http') ? firstImage : `${API_BASE_URL}${firstImage}`;
+                    } else if (firstImage.session_url) {
+                        // Usar session_url para imágenes de sesión persistida
+                        imageUrl = firstImage.session_url.startsWith('http') ? firstImage.session_url : `${API_BASE_URL}${firstImage.session_url}`;
+                    } else if (firstImage.url) {
+                        // Usar url normal para imágenes activas
+                        imageUrl = firstImage.url.startsWith('http') ? firstImage.url : `${API_BASE_URL}${firstImage.url}`;
+                    } else {
+                        console.error('❌ No se pudo determinar URL de imagen:', firstImage);
+                        imageUrl = `${API_BASE_URL}/placeholder.png`;
+                    }
+                    
+                    console.log('🖼️ URL final construida:', {
+                        workflow_id: result.workflow_id,
+                        imageUrl,
+                        firstImage,
+                        API_BASE_URL
+                    });
+                    
                     resultDiv.innerHTML = `
                         <div style="font-weight: 600; margin-bottom: 10px; color: #333; font-size: 0.9em;">
                             ✅ ${result.workflow_id}
                         </div>
-                        <img src="${API_BASE_URL}${firstImage.url}" 
-                             style="width: 100%; border-radius: 4px; margin-bottom: 10px;"
+                        <img src="${imageUrl}" 
+                             style="width: 100%; border-radius: 4px; margin-bottom: 10px; cursor: pointer;"
                              alt="Resultado ${result.workflow_id}"
-                             loading="lazy">
+                             loading="lazy"
+                             onerror="console.error('❌ Error cargando imagen:', this.src); this.style.display='none'; this.nextElementSibling.innerHTML='<div style=\\'color: red; font-size: 0.8em;\\'>Error cargando imagen: ' + this.src + '</div>';"
+                             onload="console.log('✅ Imagen cargada correctamente:', this.src);">
                         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8em; color: #666;">
                             <span>${result.generated_images.length} imagen(es)</span>
                             <span>${result.processing_time}s</span>
-                            <a href="${API_BASE_URL}${firstImage.url}" 
-                               download="${firstImage.filename}"
+                            <a href="${imageUrl}" 
+                               download="${firstImage.filename || 'imagen.png'}"
                                style="color: #4caf50; text-decoration: none;">⬇️</a>
                         </div>
                     `;
+                    
+                    // 🔥 AGREGAR EVENT LISTENER PARA ABRIR MODAL EN IMÁGENES DE BATCH
+                    const img = resultDiv.querySelector('img');
+                    if (img) {
+                        img.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('🖱️ Click en imagen de batch:', imageUrl);
+                            showImageModal(imageUrl, result.workflow_id + ' - ' + (firstImage.filename || 'Imagen generada'));
+                        });
+                        
+                        // Marcar como modal-enabled
+                        img.setAttribute('data-modal-enabled', 'true');
+                        
+                        console.log('✅ Modal activado para imagen de batch:', result.workflow_id);
+                    }
                     
                     // Mostrar mensaje de nueva imagen generada
                     showStatus(`🖼️ Nueva imagen generada para: ${result.workflow_id}`, 'success');
@@ -2213,24 +2723,69 @@
                         console.log(`🔍 Procesando trabajo: ${job.id}, tipo: ${job.type}, estado: ${job.status}`);
                         
                         if (job.type === 'batch') {
-                            if (job.status === 'processing') {
-                                // Reanudar seguimiento de lotes en progreso
-                                restoreBatchJob(job);
-                                restoredCount++;
-                            } else if (job.status === 'completed' || job.status === 'error') {
-                                // Mostrar lotes completados o con error
-                                restoreBatchJob(job);
-                                restoredCount++;
+                            console.log(`📋 BATCH JOB ENCONTRADO:`, {
+                                id: job.id,
+                                type: job.type,
+                                status: job.status,
+                                batch_tracking_id: job.batch_tracking_id,
+                                total_workflows: job.total_workflows,
+                                completed_workflows: job.completed_workflows,
+                                created_at: job.created_at
+                            });
+                            
+                            // Validar que el job tenga batch_tracking_id
+                            if (!job.batch_tracking_id) {
+                                console.warn(`⚠️ Job de batch sin batch_tracking_id: ${job.id}`);
+                                showStatus(`⚠️ Lote ${job.id} sin batch_tracking_id válido`, 'warning');
+                                return;
+                            } else {
+                                console.log(`✅ Job de batch válido: ${job.id} -> ${job.batch_tracking_id}`);
+                            }
+                            
+                            console.log(`🚀 RESTAURANDO BATCH JOB: ${job.id} (${job.status})`);
+                            
+                            try {
+                                if (job.status === 'processing') {
+                                    // Reanudar seguimiento de lotes en progreso
+                                    console.log(`🔄 Restaurando batch en progreso: ${job.id}`);
+                                    restoreBatchJob(job);
+                                    restoredCount++;
+                                } else if (job.status === 'completed' || job.status === 'error') {
+                                    // Mostrar lotes completados o con error
+                                    console.log(`✅ Restaurando batch completado/error: ${job.id}`);
+                                    restoreBatchJob(job);
+                                    restoredCount++;
+                                } else {
+                                    console.warn(`⚠️ Estado de batch no reconocido: ${job.status} para job ${job.id}`);
+                                }
+                            } catch (error) {
+                                console.error(`❌ Error restaurando batch job ${job.id}:`, error);
+                                showStatus(`❌ Error restaurando lote ${job.id}: ${error.message}`, 'error');
                             }
                         } else if (job.type === 'individual') {
-                            if (job.status === 'processing') {
-                                // Reanudar seguimiento de trabajos individuales en progreso
-                                restoreIndividualJobInProgress(job);
-                                restoredCount++;
-                            } else if (job.status === 'completed' || job.status === 'error') {
-                                // Mostrar trabajos individuales completados o con error
-                                restoreIndividualJob(job);
-                                restoredCount++;
+                            console.log(`👤 INDIVIDUAL JOB ENCONTRADO:`, {
+                                id: job.id,
+                                type: job.type,
+                                status: job.status,
+                                workflow: job.config?.workflow,
+                                created_at: job.created_at
+                            });
+                            
+                            try {
+                                if (job.status === 'processing') {
+                                    // Reanudar seguimiento de trabajos individuales en progreso
+                                    console.log(`🔄 Restaurando trabajo individual en progreso: ${job.id}`);
+                                    restoreIndividualJob(job);
+                                    restoredCount++;
+                                } else if (job.status === 'completed' || job.status === 'error') {
+                                    // Mostrar trabajos individuales completados o con error
+                                    console.log(`✅ Restaurando trabajo individual completado: ${job.id}`);
+                                    restoreIndividualJob(job);
+                                    restoredCount++;
+                                }
+                            } catch (error) {
+                                console.error(`❌ Error restaurando individual job ${job.id}:`, error);
+                                showStatus(`❌ Error restaurando trabajo ${job.id}: ${error.message}`, 'error');
                             }
                         } else {
                             console.log(`⏭️ Saltando trabajo: tipo=${job.type}, estado=${job.status}`);
@@ -2239,6 +2794,42 @@
                     
                     if (restoredCount > 0) {
                         showStatus(`💾 ${restoredCount} trabajos de sesión restaurados`, 'success');
+                        
+                        // 🔥 FORZAR MOSTRAR SECCIÓN DE BATCH RESULTS SI HAY TRABAJOS BATCH
+                        const batchJobs = Object.values(data.jobs).filter(job => job.type === 'batch');
+                        if (batchJobs.length > 0) {
+                            console.log(`🔧 Forzando mostrar sección de batch results (${batchJobs.length} trabajos batch)`);
+                            const batchResultsSection = document.getElementById('batchResultsSection');
+                            if (batchResultsSection) {
+                                batchResultsSection.style.display = 'block';
+                                console.log('✅ Sección de batch results mostrada');
+                            }
+                            
+                            // Actualizar texto del botón batch
+                            updateBatchButtonText();
+                            console.log(`📊 Estado después de restaurar: activeBatches=${activeBatches}, batchCounter=${batchCounter}`);
+                        }
+                        
+                        // 🔥 VERIFICACIÓN ADICIONAL DESPUÉS DE UN DELAY
+                        setTimeout(() => {
+                            const batchResults = document.getElementById('batchResults');
+                            const hasBatchContent = batchResults && batchResults.children.length > 0;
+                            
+                            console.log('🔍 Verificación post-restauración:', {
+                                activeBatches,
+                                batchCounter,
+                                hasBatchContent,
+                                batchChildrenCount: batchResults?.children.length || 0
+                            });
+                            
+                            if (hasBatchContent || activeBatches > 0) {
+                                const batchResultsSection = document.getElementById('batchResultsSection');
+                                if (batchResultsSection) {
+                                    batchResultsSection.style.display = 'block';
+                                    console.log('✅ Sección de batch results forzada a mostrarse post-restauración');
+                                }
+                            }
+                        }, 1000);
                     } else {
                         showStatus(`📂 No hay trabajos previos para restaurar`, 'info');
                     }
@@ -2249,24 +2840,175 @@
             } catch (error) {
                 console.error('❌ Error cargando trabajos de sesión:', error);
                 showStatus('⚠️ Error cargando trabajos de sesión anterior', 'warning');
+                console.error('❌ Stack trace:', error.stack);
             }
         }
         
         function restoreBatchJob(job) {
             // Restaura un trabajo de lote que estaba en progreso
-            const localBatchId = ++batchCounter;
-            activeBatches++;
-            
-            // Crear contenedor de resultados
-            createBatchResultsContainer(localBatchId, job.id, job.total_workflows || 0);
-            
-            // Continuar con el polling si está en progreso
-            if (job.status === 'processing') {
-                startBatchPolling(localBatchId, job.id);
-                showStatus(`🔄 Reanudando seguimiento del lote: ${job.id}`, 'info');
+            try {
+                console.log('🔄 INICIO - Restaurando batch job:', job.id, 'tipo:', job.type, 'estado:', job.status);
+                console.log('📊 Datos del job completos:', job);
+                
+                // Verificar si ya existe un contenedor para este batch job
+                const batchTrackingId = job.batch_tracking_id;
+                if (batchTrackingId) {
+                    const existingContainer = document.querySelector(`[data-batch-tracking-id="${batchTrackingId}"]`);
+                    if (existingContainer) {
+                        console.log('⏭️ Contenedor ya existe para batch_tracking_id:', batchTrackingId);
+                        return; // Salir sin crear duplicado
+                    }
+                }
+                
+                const localBatchId = ++batchCounter;
+                activeBatches++;
+                
+                console.log('📊 Datos del job:', {
+                    batch_tracking_id: job.batch_tracking_id,
+                    total_workflows: job.total_workflows,
+                    completed_workflows: job.completed_workflows,
+                    created_at: job.created_at,
+                    image_urls: job.image_urls?.length || 0,
+                    status: job.status
+                });
+                
+                // Crear contenedor de resultados
+                console.log('📋 Creando contenedor de resultados...');
+                createBatchResultsContainer(localBatchId, job.id, job.total_workflows || 0);
+                
+                // Marcar el contenedor con el batch_tracking_id para evitar duplicados
+                const batchContainer = document.getElementById(`batch-container-${localBatchId}`);
+                if (batchContainer && batchTrackingId) {
+                    batchContainer.setAttribute('data-batch-tracking-id', batchTrackingId);
+                }
+                
+                // 🔥 FORZAR MOSTRAR SECCIÓN DE BATCH INMEDIATAMENTE
+                const batchResultsSection = document.getElementById('batchResultsSection');
+                if (batchResultsSection) {
+                    batchResultsSection.style.display = 'block';
+                    console.log('🔧 Sección de batch results forzada a mostrarse');
+                }
+                
+                // Continuar con el polling si está en progreso
+                if (job.status === 'processing') {
+                    console.log('🔄 Job en procesamiento, configurando polling...');
+                    // Usar batch_tracking_id para el polling, no job.id
+                    const batchTrackingId = job.batch_tracking_id;
+                    if (batchTrackingId) {
+                        console.log('✅ Encontrado batch_tracking_id:', batchTrackingId);
+                        startBatchPolling(localBatchId, batchTrackingId);
+                        showStatus(`🔄 Reanudando seguimiento del lote: ${batchTrackingId}`, 'info');
+                    } else {
+                        console.warn('⚠️ No se encontró batch_tracking_id para el job:', job.id);
+                        showStatus(`⚠️ No se puede reanudar lote sin batch_tracking_id`, 'warning');
+                    }
+                } else if (job.status === 'completed' || job.status === 'error') {
+                    console.log('✅ Job completado/error, mostrando imágenes...');
+                    // Para lotes completados, mostrar las imágenes directamente
+                    const batchTrackingId = job.batch_tracking_id;
+                    if (batchTrackingId) {
+                        console.log('✅ Lote completado con batch_tracking_id:', batchTrackingId);
+                        
+                        // Obtener solo las imágenes generadas (no la original)
+                        const allImages = job.image_urls || [];
+                        const generatedImages = allImages.filter(imageUrl => {
+                            const filename = imageUrl.split('/').pop();
+                            return filename !== 'original.png';
+                        });
+                        
+                        console.log('🔍 DEBUG - Imágenes del job completado:', {
+                            allImages,
+                            generatedImages,
+                            jobStatus: job.status
+                        });
+                        
+                        // Simular datos de batch para mostrar imágenes
+                        const batchData = {
+                            batch_id: batchTrackingId,
+                            status: job.status,
+                            total_workflows: job.total_workflows || 0,
+                            completed_workflows: job.completed_workflows || 0,
+                            all_images: generatedImages  // Solo imágenes generadas
+                        };
+                        
+                        console.log('📊 Datos del lote:', batchData.completed_workflows + '/' + batchData.total_workflows, 'workflows,', batchData.all_images.length, 'imágenes');
+                        console.log('🔍 DEBUG - URLs de imágenes:', batchData.all_images);
+                        
+                        // Mostrar imágenes existentes
+                        if (batchData.all_images && batchData.all_images.length > 0) {
+                            console.log('🖼️ Mostrando imágenes existentes...');
+                            displayNewCompletedImages(localBatchId, batchData, 0);
+                            
+                            // 🔥 HABILITAR MODAL AUTOMÁTICAMENTE DESPUÉS DE RESTAURAR
+                            setTimeout(() => {
+                                console.log('🔧 Habilitando modal automáticamente para imágenes restauradas...');
+                                const restoredImages = document.querySelectorAll(`#images-container-${localBatchId} img`);
+                                console.log(`🔍 Encontradas ${restoredImages.length} imágenes para habilitar modal`);
+                                
+                                restoredImages.forEach((img, index) => {
+                                    if (!img.hasAttribute('data-modal-enabled')) {
+                                        console.log(`🔧 Habilitando modal para imagen restaurada ${index + 1}:`, img.src);
+                                        
+                                        // Extraer información para el modal
+                                        const workflowId = img.alt || `imagen_${index + 1}`;
+                                        const imageUrl = img.src;
+                                        
+                                        // Agregar event listener para modal
+                                        img.addEventListener('click', (e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            console.log('🖱️ Click en imagen restaurada:', imageUrl);
+                                            showImageModal(imageUrl, workflowId);
+                                        });
+                                        
+                                        // Marcar como modal-enabled
+                                        img.setAttribute('data-modal-enabled', 'true');
+                                        img.style.cursor = 'pointer';
+                                        
+                                        console.log('✅ Modal habilitado para imagen restaurada:', workflowId);
+                                    }
+                                });
+                                
+                                showStatus(`🎯 Modal habilitado automáticamente para ${restoredImages.length} imágenes restauradas`, 'success');
+                            }, 500); // Delay para asegurar que las imágenes se hayan renderizado
+                            
+                        } else {
+                            console.warn('⚠️ No se encontraron imágenes generadas para el lote:', batchTrackingId);
+                            showStatus(`⚠️ No se encontraron imágenes generadas para el lote: ${batchTrackingId}`, 'warning');
+                        }
+                        
+                        // Actualizar display
+                        console.log('📊 Actualizando display...');
+                        updateBatchDisplay(localBatchId, batchData, new Date(job.created_at));
+                        
+                        // Establecer operación final manualmente para jobs restaurados
+                        const operationElement = document.getElementById(`operation-${localBatchId}`);
+                        if (operationElement) {
+                            if (job.status === 'completed') {
+                                operationElement.textContent = 'Finalizado';
+                            } else if (job.status === 'error') {
+                                operationElement.textContent = 'Error en procesamiento';
+                            }
+                        }
+                        
+                        showStatus(`📋 Lote restaurado: ${batchTrackingId} (${job.status})`, 
+                                 job.status === 'completed' ? 'success' : 'error');
+                    } else {
+                        console.warn('⚠️ No se encontró batch_tracking_id para el job completado:', job.id);
+                        showStatus(`⚠️ Lote completado sin batch_tracking_id válido`, 'warning');
+                    }
+                } else {
+                    console.warn('⚠️ Estado de job no reconocido:', job.status);
+                    showStatus(`⚠️ Estado de lote no reconocido: ${job.status}`, 'warning');
+                }
+                
+                updateBatchButtonText();
+                console.log('✅ FINALIZADO - Batch job restaurado exitosamente');
+                
+            } catch (error) {
+                console.error('❌ Error restaurando trabajo batch:', error);
+                showStatus(`❌ Error restaurando trabajo batch: ${error.message}`, 'error');
             }
-            
-            updateBatchButtonText();
         }
         
         function restoreIndividualJob(job) {
@@ -2303,6 +3045,41 @@
                     generated_images: job.results
                 };
                 displayIndividualJobResult(localJobId, resultData);
+                
+                // 🔥 HABILITAR MODAL AUTOMÁTICAMENTE DESPUÉS DE RESTAURAR
+                setTimeout(() => {
+                    console.log('🔧 Habilitando modal automáticamente para trabajo individual restaurado...');
+                    const restoredImages = document.querySelectorAll(`#images-container-${localJobId} img`);
+                    console.log(`🔍 Encontradas ${restoredImages.length} imágenes individuales para habilitar modal`);
+                    
+                    restoredImages.forEach((img, index) => {
+                        if (!img.hasAttribute('data-modal-enabled')) {
+                            console.log(`🔧 Habilitando modal para imagen individual restaurada ${index + 1}:`, img.src);
+                            
+                            // Extraer información para el modal
+                            const workflowId = img.alt || `imagen_${index + 1}`;
+                            const imageUrl = img.src;
+                            
+                            // Agregar event listener para modal
+                            img.addEventListener('click', (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                console.log('🖱️ Click en imagen individual restaurada:', imageUrl);
+                                showImageModal(imageUrl, workflowId);
+                            });
+                            
+                            // Marcar como modal-enabled
+                            img.setAttribute('data-modal-enabled', 'true');
+                            img.style.cursor = 'pointer';
+                            
+                            console.log('✅ Modal habilitado para imagen individual restaurada:', workflowId);
+                        }
+                    });
+                    
+                    if (restoredImages.length > 0) {
+                        showStatus(`🎯 Modal habilitado automáticamente para ${restoredImages.length} imágenes individuales restauradas`, 'success');
+                    }
+                }, 500); // Delay para asegurar que las imágenes se hayan renderizado
             }
             
             // También mostrar en la sección de resultados rápidos (legacy)
@@ -2487,6 +3264,534 @@
                 console.error('Error en clearSession:', error);
                 showStatus(`❌ Error limpiando sesión: ${error.message}`, 'error');
             }
+        }
+
+        // ===== FUNCIONES FALTANTES =====
+        
+        async function loadSessionJobs() {
+            try {
+                showStatus('🔄 Cargando trabajos de sesión anterior...', 'info');
+                const response = await fetch(`${API_BASE_URL}/session/jobs`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const jobCount = Object.keys(data.jobs).length;
+                    showStatus(`📊 ${jobCount} trabajos cargados de sesión anterior`, 'info');
+                    
+                    // Restaurar trabajos individuales
+                    Object.values(data.jobs).forEach(job => {
+                        if (job.type === 'individual' && job.status === 'completed') {
+                            restoreIndividualJob(job);
+                        } else if (job.type === 'batch' && job.status === 'completed') {
+                            restoreBatchJob(job);
+                        }
+                    });
+                } else {
+                    showStatus('⚠️ No se pudieron cargar trabajos anteriores', 'warning');
+                }
+            } catch (error) {
+                console.error('Error cargando trabajos de sesión:', error);
+                showStatus('❌ Error cargando trabajos de sesión', 'error');
+            }
+        }
+        
+        async function cleanupOldJobs(hours = 24) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/session/cleanup`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ hours: hours })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showStatus(`🧹 Limpieza automática: ${data.cleaned_count || 0} trabajos antiguos eliminados`, 'info');
+                } else {
+                    console.error('Error en limpieza automática:', data);
+                }
+            } catch (error) {
+                console.error('Error en limpieza automática:', error);
+            }
+        }
+        
+        async function getSessionSummary() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/session/jobs`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const summary = {
+                        total: Object.keys(data.jobs).length,
+                        individual: 0,
+                        batch: 0,
+                        completed: 0,
+                        failed: 0
+                    };
+                    
+                    Object.values(data.jobs).forEach(job => {
+                        if (job.type === 'individual') summary.individual++;
+                        if (job.type === 'batch') summary.batch++;
+                        if (job.status === 'completed') summary.completed++;
+                        if (job.status === 'failed') summary.failed++;
+                    });
+                    
+                    return summary;
+                }
+                
+                return null;
+            } catch (error) {
+                console.error('Error obteniendo resumen de sesión:', error);
+                return null;
+            }
+        }
+        
+        function clearBatchResults() {
+            const batchResultsSection = document.getElementById('batchResultsSection');
+            const batchResults = document.getElementById('batchResults');
+            
+            if (batchResultsSection) {
+                batchResultsSection.style.display = 'none';
+            }
+            
+            if (batchResults) {
+                batchResults.innerHTML = '';
+            }
+        }
+        
+        function updateBatchButtonText() {
+            const processBatchBtn = document.getElementById('processBatchBtn');
+            if (processBatchBtn) {
+                processBatchBtn.disabled = !selectedFile;
+                
+                if (selectedFile) {
+                    processBatchBtn.textContent = '⚡ Procesar Lote';
+                } else {
+                    processBatchBtn.textContent = '📁 Selecciona imagen primero';
+                }
+            }
+        }
+        
+        // Función auxiliar para mostrar imagen en modal (declarada globalmente)
+        function showImageModal(imageSrc, imageInfo = '') {
+            const modal = document.getElementById('imageModal');
+            const modalImage = document.getElementById('modalImage');
+            const modalInfo = document.getElementById('modalInfo');
+            
+            if (modal && modalImage && modalInfo) {
+                console.log('🖼️ Abriendo modal con imagen:', imageSrc);
+                
+                modalImage.src = imageSrc;
+                modalInfo.textContent = imageInfo;
+                modal.style.display = 'flex';
+                modal.classList.add('show');
+                document.body.style.overflow = 'hidden';
+                
+                console.log('✅ Modal mostrado');
+            } else {
+                console.error('❌ Elementos del modal no encontrados');
+            }
+        }
+        
+        // Función para mostrar resultados (usado en restauración)
+        function displayResults(resultData) {
+            try {
+                console.log('📊 Mostrando resultados:', resultData);
+                
+                // Esta función ya no es necesaria para la restauración individual
+                // porque displayIndividualJobResult maneja la visualización
+                // Solo mostrar un mensaje de éxito
+                
+                showStatus('✅ Resultados procesados para restauración', 'success');
+                
+            } catch (error) {
+                console.error('Error mostrando resultados:', error);
+                showStatus(`❌ Error mostrando resultados: ${error.message}`, 'error');
+            }
+        }
+
+        // Función para limpiar duplicados de batch jobs existentes
+        function cleanupDuplicateBatchJobs() {
+            console.log('🧹 Limpiando duplicados de batch jobs...');
+            
+            const batchResults = document.getElementById('batchResults');
+            if (!batchResults) return;
+            
+            const containers = batchResults.querySelectorAll('[data-batch-tracking-id]');
+            const seenTrackingIds = new Set();
+            let removedCount = 0;
+            
+            containers.forEach(container => {
+                const trackingId = container.getAttribute('data-batch-tracking-id');
+                if (trackingId) {
+                    if (seenTrackingIds.has(trackingId)) {
+                        // Es un duplicado, eliminar
+                        console.log(`🗑️ Eliminando duplicado para tracking_id: ${trackingId}`);
+                        container.remove();
+                        removedCount++;
+                    } else {
+                        seenTrackingIds.add(trackingId);
+                    }
+                }
+            });
+            
+            if (removedCount > 0) {
+                console.log(`✅ Se eliminaron ${removedCount} duplicados de batch jobs`);
+                showStatus(`🧹 Se eliminaron ${removedCount} duplicados de batch jobs`, 'info');
+            } else {
+                console.log('ℹ️ No se encontraron duplicados de batch jobs');
+            }
+        }
+        
+        // Set para trackear qué batch jobs ya fueron restaurados
+        const restoredBatchJobs = new Set();
+        
+        // Función para forzar la restauración automática de trabajos batch
+        async function forceRestoreBatchJobs() {
+            console.log('🔄 FORZANDO RESTAURACIÓN AUTOMÁTICA DE TRABAJOS BATCH...');
+            
+            try {
+                // Cargar trabajos de sesión directamente
+                const response = await fetch(`${API_BASE_URL}/session/jobs`);
+                const data = await response.json();
+                
+                console.log('📋 Respuesta del servidor para restauración forzada:', data);
+                
+                if (data.success && data.jobs) {
+                    const batchJobs = Object.values(data.jobs).filter(job => job.type === 'batch');
+                    console.log(`📊 Trabajos batch encontrados para restauración forzada: ${batchJobs.length}`);
+                    
+                    if (batchJobs.length > 0) {
+                        // Forzar mostrar la sección de batch results
+                        const batchResultsSection = document.getElementById('batchResultsSection');
+                        if (batchResultsSection) {
+                            batchResultsSection.style.display = 'block';
+                            console.log('✅ Sección de batch results forzada a mostrarse');
+                        }
+                        
+                        let restoredCount = 0;
+                        
+                        // Restaurar cada trabajo batch SOLO si no ha sido restaurado antes
+                        for (const job of batchJobs) {
+                            const batchJobKey = `${job.id}_${job.batch_tracking_id}`;
+                            
+                            if (!restoredBatchJobs.has(batchJobKey)) {
+                                console.log(`🔧 Restaurando batch job forzado: ${job.id} (${job.status})`);
+                                
+                                try {
+                                    await new Promise(resolve => setTimeout(resolve, 100)); // Pequeño delay
+                                    restoreBatchJob(job);
+                                    restoredBatchJobs.add(batchJobKey);
+                                    restoredCount++;
+                                    console.log(`✅ Batch job ${job.id} restaurado exitosamente`);
+                                } catch (error) {
+                                    console.error(`❌ Error restaurando batch job ${job.id}:`, error);
+                                }
+                            } else {
+                                console.log(`⏭️ Batch job ${job.id} ya fue restaurado anteriormente`);
+                            }
+                        }
+                        
+                        // Habilitar modal automáticamente para las imágenes restauradas SOLO si se restauraron trabajos
+                        if (restoredCount > 0) {
+                            setTimeout(() => {
+                                console.log('🎯 Habilitando modal para imágenes de batch restauradas...');
+                                
+                                // Buscar imágenes de batch específicamente
+                                const batchImages = document.querySelectorAll('.batch-workflow-images img, .workflow-result-item img, div[id*="images-container-"] img');
+                                console.log(`🖼️ Imágenes de batch encontradas: ${batchImages.length}`);
+                                
+                                batchImages.forEach((img, index) => {
+                                    const hasModal = img.hasAttribute('data-modal-enabled');
+                                    console.log(`📋 Imagen batch ${index + 1}: hasModal=${hasModal}`);
+                                    
+                                    if (!hasModal) {
+                                        console.log(`🔧 Habilitando modal para imagen batch ${index + 1}`);
+                                        img.addEventListener('click', (e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            console.log('🖱️ Click en imagen batch restaurada:', img.src);
+                                            showImageModal(img.src, img.alt || 'Imagen de batch');
+                                        });
+                                        img.setAttribute('data-modal-enabled', 'true');
+                                        img.style.cursor = 'pointer';
+                                    }
+                                });
+                                
+                                // También ejecutar la función general
+                                enableModalForAllImages();
+                                
+                                console.log('✅ Modal habilitado para todas las imágenes de batch restauradas');
+                            }, 1000);
+                            
+                            showStatus(`🎉 ${restoredCount} trabajos batch restaurados automáticamente`, 'success');
+                        } else {
+                            console.log('ℹ️ No se restauraron trabajos batch nuevos');
+                        }
+                        
+                        return restoredCount > 0;
+                    } else {
+                        console.log('ℹ️ No se encontraron trabajos batch para restaurar');
+                        return false;
+                    }
+                } else {
+                    console.log('⚠️ No se encontraron trabajos o respuesta incorrecta');
+                    return false;
+                }
+            } catch (error) {
+                console.error('❌ Error en restauración forzada de batch jobs:', error);
+                showStatus('❌ Error en restauración automática de trabajos batch', 'error');
+                return false;
+            }
+        }
+
+        // Función auxiliar para asegurar que la sección de batch esté visible
+        function ensureBatchSectionVisible() {
+            console.log('🔧 ensureBatchSectionVisible - verificando estado...');
+            
+            const batchResultsSection = document.getElementById('batchResultsSection');
+            const batchResults = document.getElementById('batchResults');
+            const hasBatchContent = batchResults && batchResults.children.length > 0;
+            
+            console.log('📊 Estado de batch section:', {
+                activeBatches,
+                batchCounter,
+                hasBatchContent,
+                childrenCount: batchResults?.children.length || 0,
+                sectionDisplay: batchResultsSection?.style.display
+            });
+            
+            // Mostrar la sección si hay trabajos activos o contenido
+            if (activeBatches > 0 || hasBatchContent) {
+                if (batchResultsSection) {
+                    batchResultsSection.style.display = 'block';
+                    console.log('✅ Sección de batch results forzada a mostrarse');
+                    return true;
+                }
+            }
+            
+            console.log('ℹ️ No se requiere mostrar sección de batch');
+            return false;
+        }
+
+        // Función auxiliar para habilitar modal en todas las imágenes automáticamente
+        function enableModalForAllImages() {
+            console.log('🔧 INICIANDO - Habilitación automática de modal para todas las imágenes...');
+            
+            // 🔥 VERIFICAR Y MOSTRAR SECCIÓN DE BATCH SI HAY CONTENIDO
+            const batchResults = document.getElementById('batchResults');
+            const hasBatchContent = batchResults && batchResults.children.length > 0;
+            
+            if (hasBatchContent || activeBatches > 0) {
+                console.log('🔧 Detectado contenido batch - asegurando que la sección esté visible');
+                ensureBatchSectionVisible();
+            }
+            
+            // Buscar todas las imágenes en contenedores de resultado
+            const resultImages = document.querySelectorAll('.result-item img, .batch-workflow-images img, .individual-job-images img, .workflow-result-item img, .preview-image, div[id*="images-container-"] img');
+            console.log(`🎯 Encontradas ${resultImages.length} imágenes en contenedores de resultado`);
+            
+            let enabledCount = 0;
+            
+            resultImages.forEach((img, index) => {
+                if (!img.hasAttribute('data-modal-enabled')) {
+                    console.log(`🔧 Habilitando modal para imagen ${index + 1}:`, {
+                        src: img.src,
+                        alt: img.alt,
+                        parentClass: img.parentElement?.className,
+                        parentId: img.parentElement?.id
+                    });
+                    
+                    // Extraer información para el modal
+                    const workflowId = img.alt || `imagen_${index + 1}`;
+                    const imageUrl = img.src;
+                    
+                    // Agregar event listener para modal
+                    img.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('🖱️ Click en imagen con modal automático:', imageUrl);
+                        showImageModal(imageUrl, workflowId);
+                    });
+                    
+                    // Marcar como modal-enabled
+                    img.setAttribute('data-modal-enabled', 'true');
+                    img.style.cursor = 'pointer';
+                    
+                    enabledCount++;
+                    console.log(`✅ Modal habilitado automáticamente para: ${workflowId}`);
+                }
+            });
+            
+            if (enabledCount > 0) {
+                console.log(`🎉 Modal habilitado automáticamente para ${enabledCount} imágenes`);
+                showStatus(`🎯 Modal habilitado automáticamente para ${enabledCount} imágenes`, 'success');
+            } else {
+                console.log('ℹ️ No se encontraron imágenes nuevas para habilitar modal');
+            }
+        }
+
+        // Función auxiliar para cerrar modal (declarada globalmente)
+        function closeImageModal() {
+            const modal = document.getElementById('imageModal');
+            const modalImage = document.getElementById('modalImage');
+            const modalInfo = document.getElementById('modalInfo');
+            
+            if (modal) {
+                console.log('🔒 Cerrando modal');
+                modal.style.display = 'none';
+                modal.classList.remove('show');
+                document.body.style.overflow = 'auto';
+                
+                if (modalImage) modalImage.src = '';
+                if (modalInfo) modalInfo.textContent = '';
+            }
+        }
+
+        // Función de debug para verificar las imágenes
+        function debugImageModal() {
+            console.log('🔍 DEBUGGING MODAL - Iniciando debug...');
+            
+            // Verificar que los elementos del modal existen
+            const modal = document.getElementById('imageModal');
+            const modalImage = document.getElementById('modalImage');
+            const modalInfo = document.getElementById('modalInfo');
+            
+            console.log('📱 Modal element:', modal);
+            console.log('🖼️ Modal image:', modalImage);
+            console.log('ℹ️ Modal info:', modalInfo);
+            
+            // Buscar todas las imágenes en la página
+            const allImages = document.querySelectorAll('img');
+            console.log(`📊 Total de imágenes encontradas: ${allImages.length}`);
+            
+            allImages.forEach((img, index) => {
+                console.log(`🖼️ Imagen ${index + 1}:`, {
+                    src: img.src,
+                    alt: img.alt,
+                    className: img.className,
+                    parentClass: img.parentElement?.className,
+                    hasModalEnabled: img.hasAttribute('data-modal-enabled'),
+                    style: img.style.cursor
+                });
+            });
+            
+            // Buscar imágenes en contenedores específicos
+            const resultImages = document.querySelectorAll('.result-item img, .batch-workflow-images img, .individual-job-images img, .workflow-result-item img, .preview-image, div[id*="images-container-"] img');
+            console.log(`🎯 Imágenes en contenedores de resultado: ${resultImages.length}`);
+            
+            resultImages.forEach((img, index) => {
+                console.log(`📋 Imagen resultado ${index + 1}:`, {
+                    src: img.src,
+                    alt: img.alt,
+                    hasModalEnabled: img.hasAttribute('data-modal-enabled'),
+                    hasEventListeners: img.onclick !== null,
+                    parentClass: img.parentElement?.className,
+                    parentId: img.parentElement?.id
+                });
+                
+                // Forzar hacer clickeable si no lo está
+                if (!img.hasAttribute('data-modal-enabled')) {
+                    console.log(`🔧 Forzando hacer clickeable imagen ${index + 1}`);
+                    makeImageClickable(img, img.alt || 'Imagen generada');
+                }
+            });
+            
+            showStatus('🔍 Debug completado - Ver consola para detalles', 'info');
+        }
+
+        // Función de debug para verificar los trabajos batch
+        function debugBatchJobs() {
+            console.log('🔍 DEBUGGING BATCH JOBS - Iniciando debug...');
+            
+            // Verificar elementos HTML
+            const batchResultsSection = document.getElementById('batchResultsSection');
+            const batchResults = document.getElementById('batchResults');
+            
+            console.log('📱 Elementos HTML:');
+            console.log('  - batchResultsSection:', batchResultsSection);
+            console.log('  - batchResults:', batchResults);
+            console.log('  - batchResultsSection visible:', batchResultsSection?.style.display);
+            console.log('  - batchResults children:', batchResults?.children.length);
+            
+            // Verificar variables globales
+            console.log('📊 Variables globales:');
+            console.log('  - activeBatches:', activeBatches);
+            console.log('  - batchCounter:', batchCounter);
+            console.log('  - pollingIntervals:', pollingIntervals);
+            
+            // Verificar imágenes de batch existentes
+            const batchImages = document.querySelectorAll('.batch-workflow-images img, .workflow-result-item img');
+            console.log(`🖼️ Imágenes de batch encontradas: ${batchImages.length}`);
+            
+            batchImages.forEach((img, index) => {
+                const hasModal = img.hasAttribute('data-modal-enabled');
+                console.log(`📋 Imagen batch ${index + 1}:`, {
+                    src: img.src,
+                    alt: img.alt,
+                    hasModalEnabled: hasModal,
+                    parentClass: img.parentElement?.className
+                });
+                
+                // Forzar hacer clickeable si no lo está
+                if (!hasModal) {
+                    console.log(`🔧 Forzando hacer clickeable imagen batch ${index + 1}`);
+                    img.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('🖱️ Click forzado en imagen batch:', img.src);
+                        showImageModal(img.src, img.alt || 'Imagen de batch');
+                    });
+                    img.setAttribute('data-modal-enabled', 'true');
+                    img.style.cursor = 'pointer';
+                }
+            });
+            
+            // Intentar cargar trabajos de sesión manualmente
+            console.log('🔄 Intentando cargar trabajos de sesión manualmente...');
+            
+            fetch(`${API_BASE_URL}/session/jobs`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('📋 Respuesta del servidor:', data);
+                    
+                    if (data.success && data.jobs) {
+                        const batchJobs = Object.values(data.jobs).filter(job => job.type === 'batch');
+                        console.log(`📊 Trabajos batch encontrados: ${batchJobs.length}`);
+                        
+                        batchJobs.forEach((job, index) => {
+                            console.log(`📋 Batch Job ${index + 1}:`, {
+                                id: job.id,
+                                type: job.type,
+                                status: job.status,
+                                batch_tracking_id: job.batch_tracking_id,
+                                total_workflows: job.total_workflows,
+                                completed_workflows: job.completed_workflows,
+                                image_urls: job.image_urls?.length || 0,
+                                created_at: job.created_at
+                            });
+                            
+                            // Intentar restaurar manualmente
+                            if (index === 0) {
+                                console.log('🔧 Intentando restaurar el primer batch job manualmente...');
+                                try {
+                                    restoreBatchJob(job);
+                                } catch (error) {
+                                    console.error('❌ Error restaurando batch job:', error);
+                                }
+                            }
+                        });
+                    } else {
+                        console.log('⚠️ No se encontraron trabajos o respuesta incorrecta');
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Error cargando trabajos:', error);
+                });
+            
+            showStatus('🔍 Debug batch iniciado - Ver consola para detalles', 'info');
         }
 
         // ...existing code...
