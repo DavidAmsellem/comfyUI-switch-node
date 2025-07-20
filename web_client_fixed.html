@@ -402,36 +402,42 @@
         }
 
         .image-modal-content {
-            max-width: 90%;
-            max-height: 90%;
+            max-width: 40%;
+            max-height: 40%;
             border-radius: 8px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
             position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
         .image-modal img {
-            width: 100%;
-            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
             object-fit: contain;
             border-radius: 8px;
         }
 
         .image-modal-close {
             position: absolute;
-            top: -40px;
-            right: 0;
+            top: -45px;
+            right: -10px;
             color: white;
-            font-size: 32px;
+            font-size: 28px;
             font-weight: bold;
             cursor: pointer;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.7);
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            width: 35px;
+            height: 35px;
             display: flex;
             align-items: center;
             justify-content: center;
             transition: background 0.3s ease;
+            z-index: 1001;
         }
 
         .image-modal-close:hover {
@@ -440,15 +446,17 @@
 
         .image-modal-info {
             position: absolute;
-            bottom: -50px;
-            left: 0;
-            right: 0;
+            bottom: -55px;
+            left: 50%;
+            transform: translateX(-50%);
             color: white;
             text-align: center;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 8px 16px;
             border-radius: 6px;
-            font-size: 0.9em;
+            font-size: 0.85em;
+            white-space: nowrap;
+            max-width: 80%;
         }
 
         @keyframes fadeIn {
@@ -484,6 +492,41 @@
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 20px;
+            }
+            
+            .image-modal-content {
+                max-width: 95%;
+                max-height: 90%;
+            }
+            
+            .image-modal-close {
+                top: -35px;
+                right: -5px;
+                font-size: 24px;
+                width: 30px;
+                height: 30px;
+            }
+            
+            .image-modal-info {
+                bottom: -45px;
+                font-size: 0.8em;
+                padding: 6px 12px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .image-modal-content {
+                max-width: 98%;
+                max-height: 85%;
+            }
+        }
+        
+        /* Asegurar que el modal nunca exceda el viewport */
+        @media (max-height: 600px) {
+            .image-modal-content {
+                max-height: 75%;
             }
         }
     </style>

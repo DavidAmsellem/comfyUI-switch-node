@@ -1170,8 +1170,6 @@
       "shadow_enabled": true,
       "shadow_size": 15,
       "shadow_opacity": 0.30000000000000004,
-      "wall_color": 220,
-      "shadow_color": 0,
       "shadow_angle": 270,
       "shadow_blur": 2,
       "shadow_offset_x": 0,
@@ -1231,7 +1229,7 @@
   },
   "698": {
     "inputs": {
-      "image": "60x80-high-close-arquitecture.jpg"
+      "image": "60x80-high-close-bedroom-studentV.jpg"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -1284,7 +1282,7 @@
   "703": {
     "inputs": {
       "images": [
-        "701",
+        "690",
         0
       ]
     },
@@ -1297,7 +1295,7 @@
     "inputs": {
       "filename_prefix": "ComfyUI",
       "images": [
-        "701",
+        "690",
         0
       ]
     },

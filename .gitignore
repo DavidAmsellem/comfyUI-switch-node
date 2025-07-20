@@ -28,15 +28,16 @@ wheels/
 # Archivos temporales de la aplicación
 temp_uploads/
 outputs/
+output/
+session_jobs/
 *.log
 
 # Variables de entorno
 .env
 
-# Archivos descargados de prueba
-downloaded_*.png
-downloaded_*.jpg
-downloaded_*.jpeg
+# Archivos de prueba y testing
+test_*.py
+debug_*.py
 
 # IDE
 .vscode/

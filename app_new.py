@@ -68,22 +68,87 @@ WORKFLOW_CONFIG = {
     'frame_node_id': '692',       # ID del nodo DynamicFrameNode
     'allowed_extensions': ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'],
      'frame_colors': ['none', 'black', 'white', 'brown', 'gold'],  # Incluir 'none' para sin marco
-    # Parámetros por defecto para DynamicFrameNode (para asegurar todos los inputs requeridos)
+    # Parámetros por defecto para DynamicFrameNodeImproved (nodo mejorado con profundidad)
     'frame_node_defaults': {
-        'frame_width': 20,         # Ancho del marco (10-200)
-        'shadow_enabled': True,    # Habilitar sombra del marco
-        'shadow_opacity': 0.5,     # Opacidad de la sombra (0.1-0.8) - más intensa para efecto dramático
-        'wall_color': 220,         # Color de pared (180-250)
-        'shadow_size': 25,         # Tamaño de la sombra (5-50) - más grande para efecto picudo
-        'shadow_color': 0,         # Color de sombra (0=negro, 255=blanco) - NEGRO INTENSO
-        'shadow_angle': 270,       # Ángulo de la sombra en grados (270° = DIRECTAMENTE hacia abajo, efecto picudo)
-        'shadow_blur': 2,          # Difuminado de la sombra (1-10) - menos difuso para bordes más definidos
-        'shadow_offset_x': 0,      # Sin desplazamiento horizontal - sombra centrada
-        'shadow_offset_y': 15      # Desplazamiento vertical mayor (píxeles) - sombra más pronunciada hacia abajo
+        'frame_width': 50,         # Ancho del marco (0-200)
+        'depth_enabled': True,     # Profundidad ACTIVADA por defecto
+        'depth_intensity': 0.8,    # Intensidad de profundidad (0.1-1.0)
+        'perspective_style': 'realistic',  # Estilo de perspectiva ("realistic", "subtle", "dramatic")
+        'wall_color': 240,         # Color de pared (200-255) - gris claro
+        'upscale_workflow': False  # Para compatibilidad con workflow de upscale
     }
 }
 
 # ==================== FUNCIONES UTILITARIAS ====================
+
+def get_perspective_style_for_style(style_id):
+    """
+    Retorna el estilo de perspectiva apropiado según el estilo seleccionado
+    """
+    style_perspective_styles = {
+        'default': 'realistic',
+        'casa_ciudad': 'realistic',
+        'casa_campo': 'subtle',
+        'casa_playa': 'subtle',
+        'casa_montana': 'dramatic',
+        'casa_moderna': 'realistic',
+        'minimalist': 'subtle',
+        'luxury': 'dramatic',
+        'industrial': 'realistic',
+        'warm_cozy': 'subtle',
+        'futuristic': 'realistic',
+        'artistic_bohemian': 'dramatic'
+    }
+    
+    return style_perspective_styles.get(style_id, 'realistic')  # Default: realistic
+
+def get_wall_color_for_style(style_id):
+    """
+    Retorna el color de pared apropiado según el estilo seleccionado
+    """
+    style_wall_colors = {
+        # Estilos normales (conservadores)
+        'default': 240,        # Gris claro neutro
+        'casa_ciudad': 235,    # Gris urbano
+        'casa_campo': 245,     # Blanco cálido
+        'casa_playa': 250,     # Blanco costero
+        'casa_montana': 230,   # Gris piedra
+        'casa_moderna': 240,   # Gris moderno
+        
+        # Estilos creativos (más dramáticos)
+        'minimalist': 252,     # Blanco puro
+        'luxury': 235,         # Gris elegante
+        'industrial': 220,     # Gris concreto
+        'warm_cozy': 242,      # Beige cálido
+        'futuristic': 245,     # Blanco tech
+        'artistic_bohemian': 238  # Gris artístico
+    }
+    
+    return style_wall_colors.get(style_id, 240)  # Default: gris claro
+
+def get_depth_intensity_for_style(style_id):
+    """
+    Retorna la intensidad de profundidad apropiada según el estilo
+    """
+    style_depth_intensities = {
+        # Estilos normales (profundidad moderada)
+        'default': 0.7,
+        'casa_ciudad': 0.6,
+        'casa_campo': 0.8,
+        'casa_playa': 0.5,
+        'casa_montana': 0.9,
+        'casa_moderna': 0.6,
+        
+        # Estilos creativos (profundidad variable)
+        'minimalist': 0.4,       # Muy sutil
+        'luxury': 0.9,           # Muy dramático
+        'industrial': 0.8,       # Fuerte
+        'warm_cozy': 0.7,        # Moderado
+        'futuristic': 0.5,       # Sutil
+        'artistic_bohemian': 0.8  # Fuerte
+    }
+    
+    return style_depth_intensities.get(style_id, 0.8)  # Default: 0.8
 
 def log_info(message):
     """Log con timestamp"""
@@ -333,7 +398,7 @@ def update_workflow(workflow, image_filename, frame_color='black', style_id='def
     else:
         log_warning(f"Nodo LoadImage ({load_node_id}) no encontrado en el workflow")
     
-    # Actualizar nodo DynamicFrameNode (color del marco y otros parámetros)
+    # Actualizar nodo DynamicFrameNodeImproved (nodo mejorado con profundidad)
     frame_node_id = WORKFLOW_CONFIG['frame_node_id']
     if frame_node_id in workflow_copy:
         frame_node = workflow_copy[frame_node_id]
@@ -342,44 +407,50 @@ def update_workflow(workflow, image_filename, frame_color='black', style_id='def
         if 'inputs' not in frame_node:
             frame_node['inputs'] = {}
         
-        # Configuración especial para "none" (sin marco pero CON sombra)
+        frame_defaults = WORKFLOW_CONFIG['frame_node_defaults']
+        
+        # Obtener color de pared, intensidad de profundidad y estilo de perspectiva basado en el estilo
+        wall_color = get_wall_color_for_style(style_id)
+        depth_intensity = get_depth_intensity_for_style(style_id)
+        perspective_style = get_perspective_style_for_style(style_id)
+        
+        # Configuración especial para "none" (sin marco pero con profundidad)
         if frame_color == 'none':
-            frame_defaults = WORKFLOW_CONFIG['frame_node_defaults']
             frame_node['inputs']['preset'] = 'black'  # Usar preset black como base
-            frame_node['inputs']['wall_color'] = frame_defaults['wall_color']
             frame_node['inputs']['frame_width'] = 0  # Sin marco (ancho 0)
+            frame_node['inputs']['depth_enabled'] = True  # Mantener profundidad para efecto 3D
+            frame_node['inputs']['depth_intensity'] = depth_intensity
+            frame_node['inputs']['perspective_style'] = perspective_style  # Estilo basado en el estilo seleccionado
+            frame_node['inputs']['wall_color'] = wall_color
+            frame_node['inputs']['upscale_workflow'] = frame_defaults['upscale_workflow']
             
-            # MANTENER LA SOMBRA HABILITADA para el efecto sin marco
-            frame_node['inputs']['shadow_enabled'] = frame_defaults['shadow_enabled']
-            frame_node['inputs']['shadow_size'] = frame_defaults['shadow_size']
-            frame_node['inputs']['shadow_opacity'] = frame_defaults['shadow_opacity']
-            frame_node['inputs']['shadow_color'] = frame_defaults['shadow_color']  # Negro
-            frame_node['inputs']['shadow_angle'] = frame_defaults['shadow_angle']  # 270° hacia abajo
-            frame_node['inputs']['shadow_blur'] = frame_defaults['shadow_blur']
-            frame_node['inputs']['shadow_offset_x'] = frame_defaults['shadow_offset_x']
-            frame_node['inputs']['shadow_offset_y'] = frame_defaults['shadow_offset_y']
-            
-            log_success(f"🚫 DynamicFrameNode ({frame_node_id}) configurado SIN MARCO pero CON SOMBRA NEGRA")
+            log_success(f"🚫 DynamicFrameNodeImproved ({frame_node_id}) configurado SIN MARCO pero CON PROFUNDIDAD")
+            log_info(f"   🎨 Estilo: {style_id} -> Color pared: {wall_color}, Profundidad: {depth_intensity}")
+            log_info(f"   📐 Perspectiva: {perspective_style}")
         else:
-            # Configuración normal con marco y sombra personalizada (negra y picuda)
-            frame_defaults = WORKFLOW_CONFIG['frame_node_defaults']
+            # Configuración normal con marco y profundidad
             frame_node['inputs']['preset'] = frame_color if frame_color in WORKFLOW_CONFIG['frame_colors'] else 'black'
-            frame_node['inputs']['wall_color'] = frame_defaults['wall_color']
             frame_node['inputs']['frame_width'] = frame_defaults['frame_width']
+            frame_node['inputs']['depth_enabled'] = frame_defaults['depth_enabled']
+            frame_node['inputs']['depth_intensity'] = depth_intensity
+            frame_node['inputs']['perspective_style'] = perspective_style  # Estilo basado en el estilo seleccionado
+            frame_node['inputs']['wall_color'] = wall_color
+            frame_node['inputs']['upscale_workflow'] = frame_defaults['upscale_workflow']
             
-            # Configuración de sombra personalizada: negra y picuda hacia abajo
-            frame_node['inputs']['shadow_enabled'] = frame_defaults['shadow_enabled']
-            frame_node['inputs']['shadow_size'] = frame_defaults['shadow_size']
-            frame_node['inputs']['shadow_opacity'] = frame_defaults['shadow_opacity']
-            frame_node['inputs']['shadow_color'] = frame_defaults['shadow_color']  # 0 = negro
-            frame_node['inputs']['shadow_angle'] = frame_defaults['shadow_angle']  # 270° = picuda directamente hacia abajo
-            frame_node['inputs']['shadow_blur'] = frame_defaults['shadow_blur']    # Difuminado controlado
-            frame_node['inputs']['shadow_offset_x'] = frame_defaults['shadow_offset_x']  # Desplazamiento horizontal
-            frame_node['inputs']['shadow_offset_y'] = frame_defaults['shadow_offset_y']  # Desplazamiento hacia abajo
+            # Log detallado para verificar configuración
+            log_success(f"🖼️ DynamicFrameNodeImproved ({frame_node_id}) configurado:")
+            log_info(f"   📏 Marco: {frame_color} (ancho: {frame_defaults['frame_width']}px)")
+            log_info(f"   🎨 Preset aplicado: {frame_node['inputs']['preset']}")
+            log_info(f"   🏗️ Profundidad: {'ACTIVADA' if frame_defaults['depth_enabled'] else 'DESACTIVADA'} (intensidad: {depth_intensity})")
+            log_info(f"   📐 Perspectiva: {perspective_style}")
+            log_info(f"   🎯 Color de pared: {wall_color} (estilo: {style_id})")
             
-            log_success(f"🖼️ DynamicFrameNode ({frame_node_id}) configurado: marco={frame_color}, sombra=NEGRA PICUDA directamente hacia abajo (ángulo={frame_defaults['shadow_angle']}°)")
+            # Verificar que el color es válido
+            if frame_color not in WORKFLOW_CONFIG['frame_colors']:
+                log_warning(f"⚠️ Color '{frame_color}' no está en la lista de colores válidos: {WORKFLOW_CONFIG['frame_colors']}")
+                log_warning(f"   Usando color por defecto: black")
     else:
-        log_warning(f"Nodo DynamicFrameNode ({frame_node_id}) no encontrado en el workflow")
+        log_warning(f"Nodo DynamicFrameNodeImproved ({frame_node_id}) no encontrado en el workflow")
     
     # CONFIGURAR MODO DE WORKFLOW Y CONTROLNET SEGÚN ESTILO
     if forces_text2img:
