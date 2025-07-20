@@ -27,6 +27,9 @@ from style_presets import get_available_styles, apply_style_to_workflow, get_wor
 # Importar sistema de persistencia de sesión
 from job_persistence import session_manager
 
+# Importar sistema de cancelación de trabajos ComfyUI
+from comfyui_cancel import cancel_all_comfyui_jobs, get_comfyui_queue_status, cancel_specific_comfyui_job
+
 # Configuración básica
 app = Flask(__name__)
 CORS(app)
@@ -3137,6 +3140,81 @@ def process_all_workflows_simultáneamente_with_tracking(image_data, workflows, 
     ))
     
     return results
+
+# ==================== ENDPOINTS DE CANCELACIÓN ====================
+
+@app.route('/comfyui/queue/status', methods=['GET'])
+def get_queue_status():
+    """Obtiene el estado actual de la cola de ComfyUI"""
+    try:
+        log_info("📊 Consultando estado de cola de ComfyUI...")
+        queue_status = get_comfyui_queue_status()
+        
+        return jsonify({
+            "success": True,
+            "queue_status": queue_status,
+            "message": f"Cola: {queue_status.get('running_count', 0)} ejecutándose, {queue_status.get('queued_count', 0)} pendientes"
+        })
+        
+    except Exception as e:
+        log_error(f"Error consultando estado de cola: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@app.route('/comfyui/cancel/all', methods=['POST'])
+def cancel_all_jobs():
+    """Cancela todos los trabajos en ComfyUI (en ejecución y en cola)"""
+    try:
+        log_info("🚨 Solicitud de cancelación masiva recibida")
+        
+        result = cancel_all_comfyui_jobs()
+        
+        if result['success']:
+            log_success(f"✅ Cancelación exitosa: {result['message']}")
+            return jsonify(result)
+        else:
+            log_error(f"❌ Error en cancelación: {result.get('error', 'Error desconocido')}")
+            return jsonify(result), 500
+            
+    except Exception as e:
+        log_error(f"Error durante cancelación masiva: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@app.route('/comfyui/cancel/<prompt_id>', methods=['POST'])
+def cancel_specific_job(prompt_id):
+    """Cancela un trabajo específico por su ID"""
+    try:
+        log_info(f"🚨 Solicitud de cancelación para trabajo: {prompt_id}")
+        
+        success = cancel_specific_comfyui_job(prompt_id)
+        
+        if success:
+            log_success(f"✅ Trabajo {prompt_id} cancelado exitosamente")
+            return jsonify({
+                "success": True,
+                "message": f"Trabajo {prompt_id} cancelado",
+                "prompt_id": prompt_id
+            })
+        else:
+            log_error(f"❌ No se pudo cancelar trabajo {prompt_id}")
+            return jsonify({
+                "success": False,
+                "error": f"No se pudo cancelar el trabajo {prompt_id}",
+                "prompt_id": prompt_id
+            }), 500
+            
+    except Exception as e:
+        log_error(f"Error cancelando trabajo {prompt_id}: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "prompt_id": prompt_id
+        }), 500
 
 # ==================== INICIO DEL SERVIDOR ====================
 

@@ -77,5 +77,345 @@
       "message": "✅ Procesamiento completado en modo img2img_preserving_original. 3 archivos guardados en directorio personalizado: 1 original + 2 generadas (composición + upscale). Frontend mostrará solo composición."
     },
     "completed_at": "2025-07-20T12:07:29.969599"
+  },
+  "a8d595b8-9a90-4380-a19f-5b56c10f0475": {
+    "id": "a8d595b8-9a90-4380-a19f-5b56c10f0475",
+    "type": "batch",
+    "status": "processing",
+    "created_at": "2025-07-20T12:22:13.818142",
+    "config": {
+      "batch_config": {
+        "room_types": [
+          "office"
+        ],
+        "orientations": [
+          "V60x80"
+        ],
+        "frame_color": "none",
+        "style": "casa_playa",
+        "include_upscale": true
+      },
+      "frame_color": "none",
+      "style": "casa_playa",
+      "include_upscale": true,
+      "original_filename": "2.png",
+      "total_workflows": 0,
+      "completed_workflows": 0,
+      "successful": 0,
+      "failed": 0
+    },
+    "results": [
+      {
+        "workflow_id": "office/V60x80/cuadro-office-bohemian-V60x802",
+        "workflow_info": {
+          "id": "office/V60x80/cuadro-office-bohemian-V60x802",
+          "name": "cuadro-office-bohemian-V60x802",
+          "filename": "cuadro-office-bohemian-V60x802.json",
+          "room_type": "office",
+          "orientation": "V60x80",
+          "path": "office/V60x80/cuadro-office-bohemian-V60x802.json",
+          "status": "available"
+        },
+        "success": true,
+        "generated_images": [
+          {
+            "filename": "office_V60x80_cuadro_office_bohemian_V60x802_casa_playa_20250720_122618_001.jpg",
+            "url": "/get-image/2/office_V60x80_cuadro_office_bohemian_V60x802_casa_playa_20250720_122618_001.jpg",
+            "session_url": "/session/images/a8d595b8-9a90-4380-a19f-5b56c10f0475/office_V60x80_cuadro_office_bohemian_V60x802_casa_playa_20250720_122618_001.jpg",
+            "original_filename": "ComfyUI_00034_.png",
+            "workflow": "office/V60x80/cuadro-office-bohemian-V60x802",
+            "image_type": "composition",
+            "status": "new"
+          }
+        ],
+        "all_images_saved": [
+          {
+            "filename": "office_V60x80_cuadro_office_bohemian_V60x802_casa_playa_20250720_122618_001.jpg",
+            "url": "/get-image/2/office_V60x80_cuadro_office_bohemian_V60x802_casa_playa_20250720_122618_001.jpg",
+            "session_url": "/session/images/a8d595b8-9a90-4380-a19f-5b56c10f0475/office_V60x80_cuadro_office_bohemian_V60x802_casa_playa_20250720_122618_001.jpg",
+            "original_filename": "ComfyUI_00034_.png",
+            "workflow": "office/V60x80/cuadro-office-bohemian-V60x802",
+            "image_type": "composition",
+            "status": "new"
+          },
+          {
+            "filename": "upscale_2_20250715_170237.jpg",
+            "url": "/get-image/2/upscale_2_20250715_170237.jpg",
+            "original_filename": "Original-upscale_00041_.png",
+            "workflow": "office/V60x80/cuadro-office-bohemian-V60x802",
+            "image_type": "upscale",
+            "status": "existing_previous"
+          }
+        ],
+        "session_images": [
+          "/session/images/a8d595b8-9a90-4380-a19f-5b56c10f0475/office_V60x80_cuadro_office_bohemian_V60x802_casa_playa_20250720_122618_001.jpg"
+        ],
+        "original_image": {
+          "filename": "original.png",
+          "url": "/get-image/2/original.png",
+          "session_url": null
+        },
+        "processing_time": 241.45,
+        "prompt_id": "1bebd0bd-35e2-4a99-a8ff-5c46f67622da",
+        "completion_time": "2025-07-20T12:26:18.839484"
+      },
+      {
+        "workflow_id": "office/V60x80/cuadro-office-close-V60x802",
+        "workflow_info": {
+          "id": "office/V60x80/cuadro-office-close-V60x802",
+          "name": "cuadro-office-close-V60x802",
+          "filename": "cuadro-office-close-V60x802.json",
+          "room_type": "office",
+          "orientation": "V60x80",
+          "path": "office/V60x80/cuadro-office-close-V60x802.json",
+          "status": "available"
+        },
+        "success": true,
+        "generated_images": [
+          {
+            "filename": "office_V60x80_cuadro_office_close_V60x802_casa_playa_20250720_122926_001.jpg",
+            "url": "/get-image/2/office_V60x80_cuadro_office_close_V60x802_casa_playa_20250720_122926_001.jpg",
+            "session_url": "/session/images/a8d595b8-9a90-4380-a19f-5b56c10f0475/office_V60x80_cuadro_office_close_V60x802_casa_playa_20250720_122926_001.jpg",
+            "original_filename": "ComfyUI_00035_.png",
+            "workflow": "office/V60x80/cuadro-office-close-V60x802",
+            "image_type": "composition",
+            "status": "new"
+          }
+        ],
+        "all_images_saved": [
+          {
+            "filename": "office_V60x80_cuadro_office_close_V60x802_casa_playa_20250720_122926_001.jpg",
+            "url": "/get-image/2/office_V60x80_cuadro_office_close_V60x802_casa_playa_20250720_122926_001.jpg",
+            "session_url": "/session/images/a8d595b8-9a90-4380-a19f-5b56c10f0475/office_V60x80_cuadro_office_close_V60x802_casa_playa_20250720_122926_001.jpg",
+            "original_filename": "ComfyUI_00035_.png",
+            "workflow": "office/V60x80/cuadro-office-close-V60x802",
+            "image_type": "composition",
+            "status": "new"
+          },
+          {
+            "filename": "upscale_2_20250715_170237.jpg",
+            "url": "/get-image/2/upscale_2_20250715_170237.jpg",
+            "original_filename": "Original-upscale_00042_.png",
+            "workflow": "office/V60x80/cuadro-office-close-V60x802",
+            "image_type": "upscale",
+            "status": "existing_previous"
+          }
+        ],
+        "session_images": [
+          "/session/images/a8d595b8-9a90-4380-a19f-5b56c10f0475/office_V60x80_cuadro_office_close_V60x802_casa_playa_20250720_122926_001.jpg"
+        ],
+        "original_image": {
+          "filename": "original.png",
+          "url": "/get-image/2/original.png",
+          "session_url": null
+        },
+        "processing_time": 426.12,
+        "prompt_id": "a65ecb8c-1239-4bfb-81b7-dc238001d6f2",
+        "completion_time": "2025-07-20T12:29:26.833163"
+      },
+      {
+        "workflow_id": "office/V60x80/cuadro-office-coffe-V60x802",
+        "workflow_info": {
+          "id": "office/V60x80/cuadro-office-coffe-V60x802",
+          "name": "cuadro-office-coffe-V60x802",
+          "filename": "cuadro-office-coffe-V60x802.json",
+          "room_type": "office",
+          "orientation": "V60x80",
+          "path": "office/V60x80/cuadro-office-coffe-V60x802.json",
+          "status": "available"
+        },
+        "success": true,
+        "generated_images": [
+          {
+            "filename": "office_V60x80_cuadro_office_coffe_V60x802_casa_playa_20250720_123245_001.jpg",
+            "url": "/get-image/2/office_V60x80_cuadro_office_coffe_V60x802_casa_playa_20250720_123245_001.jpg",
+            "session_url": "/session/images/a8d595b8-9a90-4380-a19f-5b56c10f0475/office_V60x80_cuadro_office_coffe_V60x802_casa_playa_20250720_123245_001.jpg",
+            "original_filename": "ComfyUI_00036_.png",
+            "workflow": "office/V60x80/cuadro-office-coffe-V60x802",
+            "image_type": "composition",
+            "status": "new"
+          }
+        ],
+        "all_images_saved": [
+          {
+            "filename": "office_V60x80_cuadro_office_coffe_V60x802_casa_playa_20250720_123245_001.jpg",
+            "url": "/get-image/2/office_V60x80_cuadro_office_coffe_V60x802_casa_playa_20250720_123245_001.jpg",
+            "session_url": "/session/images/a8d595b8-9a90-4380-a19f-5b56c10f0475/office_V60x80_cuadro_office_coffe_V60x802_casa_playa_20250720_123245_001.jpg",
+            "original_filename": "ComfyUI_00036_.png",
+            "workflow": "office/V60x80/cuadro-office-coffe-V60x802",
+            "image_type": "composition",
+            "status": "new"
+          },
+          {
+            "filename": "upscale_2_20250715_170237.jpg",
+            "url": "/get-image/2/upscale_2_20250715_170237.jpg",
+            "original_filename": "Original-upscale_00043_.png",
+            "workflow": "office/V60x80/cuadro-office-coffe-V60x802",
+            "image_type": "upscale",
+            "status": "existing_previous"
+          }
+        ],
+        "session_images": [
+          "/session/images/a8d595b8-9a90-4380-a19f-5b56c10f0475/office_V60x80_cuadro_office_coffe_V60x802_casa_playa_20250720_123245_001.jpg"
+        ],
+        "original_image": {
+          "filename": "original.png",
+          "url": "/get-image/2/original.png",
+          "session_url": null
+        },
+        "processing_time": 613.93,
+        "prompt_id": "3c0c41a1-9eb5-4261-a79a-003ec59247b1",
+        "completion_time": "2025-07-20T12:32:45.922190"
+      },
+      {
+        "workflow_id": "office/V60x80/cuadro-office-desk-V60x802",
+        "workflow_info": {
+          "id": "office/V60x80/cuadro-office-desk-V60x802",
+          "name": "cuadro-office-desk-V60x802",
+          "filename": "cuadro-office-desk-V60x802.json",
+          "room_type": "office",
+          "orientation": "V60x80",
+          "path": "office/V60x80/cuadro-office-desk-V60x802.json",
+          "status": "available"
+        },
+        "success": true,
+        "generated_images": [
+          {
+            "filename": "upscale_2_20250715_170237.jpg",
+            "url": "/get-image/2/upscale_2_20250715_170237.jpg",
+            "original_filename": "Original-upscale_00044_.png",
+            "workflow": "office/V60x80/cuadro-office-desk-V60x802",
+            "image_type": "upscale",
+            "status": "existing_previous"
+          }
+        ],
+        "all_images_saved": [
+          {
+            "filename": "upscale_2_20250715_170237.jpg",
+            "url": "/get-image/2/upscale_2_20250715_170237.jpg",
+            "original_filename": "Original-upscale_00044_.png",
+            "workflow": "office/V60x80/cuadro-office-desk-V60x802",
+            "image_type": "upscale",
+            "status": "existing_previous"
+          }
+        ],
+        "session_images": [],
+        "original_image": {
+          "filename": "original.png",
+          "url": "/get-image/2/original.png",
+          "session_url": null
+        },
+        "processing_time": 640.63,
+        "prompt_id": "5df206d5-52d5-4084-b158-56562a6b3a7c",
+        "completion_time": "2025-07-20T12:33:16.287748"
+      }
+    ],
+    "workflows": [
+      "office/V60x80/cuadro-office-bohemian-V60x802",
+      "office/V60x80/cuadro-office-close-V60x802",
+      "office/V60x80/cuadro-office-coffe-V60x802",
+      "office/V60x80/cuadro-office-desk-V60x802",
+      "office/V60x80/cuadro-office-home-V60x802",
+      "office/V60x80/cuadro-office-minilamp-V60x802",
+      "office/V60x80/cuadro-office-open-V60x802",
+      "office/V60x80/cuadro-office-profesional-V60x802",
+      "office/V60x80/cuadro-office-simple-V60x802",
+      "office/V60x80/cuadro-office-student-V60x802"
+    ],
+    "current_operation": "Completado: office/V60x80/cuadro-office-desk-V60x802 (4/10)",
+    "total_workflows": 10,
+    "batch_tracking_id": "20250720_122213_27431a46",
+    "completed_workflows": 4,
+    "successful": 4,
+    "failed": 0
+  },
+  "42efe9a2-861d-49b0-b5b1-d7712953bc94": {
+    "id": "42efe9a2-861d-49b0-b5b1-d7712953bc94",
+    "type": "batch",
+    "status": "processing",
+    "created_at": "2025-07-20T12:38:39.613916",
+    "config": {
+      "batch_config": {
+        "room_types": [
+          "office"
+        ],
+        "orientations": [
+          "V60x80"
+        ],
+        "frame_color": "none",
+        "style": "default",
+        "include_upscale": true
+      },
+      "frame_color": "none",
+      "style": "default",
+      "include_upscale": true,
+      "original_filename": "2.png",
+      "total_workflows": 0,
+      "completed_workflows": 0,
+      "successful": 0,
+      "failed": 0
+    },
+    "results": [
+      {
+        "workflow_id": "office/V60x80/cuadro-office-bohemian-V60x802",
+        "workflow_info": {
+          "id": "office/V60x80/cuadro-office-bohemian-V60x802",
+          "name": "cuadro-office-bohemian-V60x802",
+          "filename": "cuadro-office-bohemian-V60x802.json",
+          "room_type": "office",
+          "orientation": "V60x80",
+          "path": "office/V60x80/cuadro-office-bohemian-V60x802.json",
+          "status": "available"
+        },
+        "success": true,
+        "generated_images": [
+          {
+            "filename": "upscale_2_20250715_170237.jpg",
+            "url": "/get-image/2/upscale_2_20250715_170237.jpg",
+            "original_filename": "Original-upscale_00045_.png",
+            "workflow": "office/V60x80/cuadro-office-bohemian-V60x802",
+            "image_type": "upscale",
+            "status": "existing_previous"
+          }
+        ],
+        "all_images_saved": [
+          {
+            "filename": "upscale_2_20250715_170237.jpg",
+            "url": "/get-image/2/upscale_2_20250715_170237.jpg",
+            "original_filename": "Original-upscale_00045_.png",
+            "workflow": "office/V60x80/cuadro-office-bohemian-V60x802",
+            "image_type": "upscale",
+            "status": "existing_previous"
+          }
+        ],
+        "session_images": [],
+        "original_image": {
+          "filename": "original.png",
+          "url": "/get-image/2/original.png",
+          "session_url": null
+        },
+        "processing_time": 101.39,
+        "prompt_id": "507ed029-5dc6-401d-a088-544bce967378",
+        "completion_time": "2025-07-20T12:40:24.381845"
+      }
+    ],
+    "workflows": [
+      "office/V60x80/cuadro-office-bohemian-V60x802",
+      "office/V60x80/cuadro-office-close-V60x802",
+      "office/V60x80/cuadro-office-coffe-V60x802",
+      "office/V60x80/cuadro-office-desk-V60x802",
+      "office/V60x80/cuadro-office-home-V60x802",
+      "office/V60x80/cuadro-office-minilamp-V60x802",
+      "office/V60x80/cuadro-office-open-V60x802",
+      "office/V60x80/cuadro-office-profesional-V60x802",
+      "office/V60x80/cuadro-office-simple-V60x802",
+      "office/V60x80/cuadro-office-student-V60x802"
+    ],
+    "current_operation": "Completado: office/V60x80/cuadro-office-bohemian-V60x802 (1/10)",
+    "total_workflows": 10,
+    "batch_tracking_id": "20250720_123839_b03a40d9",
+    "completed_workflows": 1,
+    "successful": 1,
+    "failed": 0
   }
 }

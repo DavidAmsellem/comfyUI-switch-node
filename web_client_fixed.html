@@ -778,6 +778,9 @@
                 <div class="section">
                     <h3>📊 Estado del Procesamiento</h3>
                     <div style="margin-bottom: 10px; text-align: right; display: flex; gap: 5px; justify-content: flex-end;">
+                        <button id="cancelAllJobsBtn" style="background: #ff4757; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; cursor: pointer; font-weight: 600;">
+                            🚨 Cancelar Todos
+                        </button>
                         <button id="debugSessionBtn" style="background: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
                             🔍 Debug Sesión
                         </button>
@@ -1306,6 +1309,9 @@
             
             // Botón de batch
             document.getElementById('processBatchBtn').addEventListener('click', processBatch);
+            
+            // Botón de cancelar todos los jobs
+            document.getElementById('cancelAllJobsBtn').addEventListener('click', cancelAllComfyUIJobs);
             
             // Botón de limpiar estado
             document.getElementById('clearStateBtn').addEventListener('click', clearState);
@@ -3347,6 +3353,78 @@
             } catch (error) {
                 console.error('Error en clearSession:', error);
                 showStatus(`❌ Error limpiando sesión: ${error.message}`, 'error');
+            }
+        }
+
+        async function cancelAllComfyUIJobs() {
+            // Confirmación antes de cancelar todos los jobs
+            if (!confirm('🚨 ¿Estás seguro de que quieres CANCELAR TODOS los trabajos de ComfyUI?\n\nEsto detendrá:\n• Todo el procesamiento actual\n• Todos los trabajos en cola\n• Todas las generaciones en progreso\n\nEsta acción no se puede deshacer.')) {
+                return;
+            }
+            
+            try {
+                showStatus('🚨 Cancelando todos los trabajos de ComfyUI...', 'warning');
+                
+                // Primero obtener el estado de la cola
+                const statusResponse = await fetch(`${API_BASE_URL}/comfyui/queue/status`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (statusResponse.ok) {
+                    const statusData = await statusResponse.json();
+                    const queueCount = statusData.queue_pending ? statusData.queue_pending.length : 0;
+                    const runningCount = statusData.queue_running ? statusData.queue_running.length : 0;
+                    
+                    console.log('📊 Estado de la cola ComfyUI:', {
+                        pending: queueCount,
+                        running: runningCount,
+                        total: queueCount + runningCount
+                    });
+                }
+                
+                // Cancelar todos los trabajos
+                const response = await fetch(`${API_BASE_URL}/comfyui/cancel/all`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showStatus(`✅ ${data.message}`, 'success');
+                    console.log('🚨 Resultado de cancelación:', data.details);
+                    
+                    // Mostrar detalles de la cancelación
+                    if (data.details) {
+                        let detailsMessage = '📊 Detalles de la cancelación:\n';
+                        if (data.details.interrupted) {
+                            detailsMessage += `• Trabajos interrumpidos: ${data.details.interrupted}\n`;
+                        }
+                        if (data.details.queue_cleared) {
+                            detailsMessage += `• Cola limpiada: ${data.details.queue_cleared}\n`;
+                        }
+                        if (data.details.jobs_cancelled > 0) {
+                            detailsMessage += `• Total cancelados: ${data.details.jobs_cancelled}`;
+                        }
+                        
+                        setTimeout(() => {
+                            alert(detailsMessage);
+                        }, 500);
+                    }
+                    
+                } else {
+                    showStatus('❌ Error cancelando trabajos: ' + (data.error || 'Error desconocido'), 'error');
+                    console.error('Error cancelando trabajos:', data);
+                }
+                
+            } catch (error) {
+                console.error('Error en cancelAllComfyUIJobs:', error);
+                showStatus(`❌ Error cancelando trabajos: ${error.message}`, 'error');
             }
         }
 
