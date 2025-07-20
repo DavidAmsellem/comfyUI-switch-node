@@ -2127,15 +2127,44 @@ def process_batch():
                         batch_info["total_processing_time"] = round(time.time() - batch_info["start_time"], 2)
                         batch_info["final_results"] = results
                 
-                # Finalizar job de sesión
+                # Finalizar job de sesión con URLs de sesión mejoradas
                 successful_results = [r for r in results if r.get('success', False)]
                 failed_results = [r for r in results if not r.get('success', False)]
+                
+                # 🔥 RECOLECTAR TODAS LAS URLs DE SESIÓN DE LOS RESULTADOS
+                all_session_images = []
+                for result in successful_results:
+                    if result.get('session_images'):
+                        all_session_images.extend(result['session_images'])
+                    # También buscar en generated_images por session_url
+                    if result.get('generated_images'):
+                        for img in result['generated_images']:
+                            if img.get('session_url') and img['session_url'] not in all_session_images:
+                                all_session_images.append(img['session_url'])
+                
+                log_info(f"📊 Finalizando batch - Total URLs de sesión recolectadas: {len(all_session_images)}")
+                
+                # Preparar results mejorados para sesión
+                session_results = []
+                for result in results:
+                    if result.get('success') and result.get('generated_images'):
+                        for img in result['generated_images']:
+                            session_result = {
+                                'filename': img.get('filename'),
+                                'url': img.get('url'),
+                                'session_url': img.get('session_url'),
+                                'workflow': result.get('workflow_id'),
+                                'image_type': img.get('image_type', 'composition'),
+                                'status': 'completed'
+                            }
+                            session_results.append(session_result)
                 
                 session_manager.update_job(batch_job_id,
                     status='completed',
                     successful=len(successful_results),
                     failed=len(failed_results),
-                    results=results,
+                    results=session_results,  # 🔥 Usar resultados optimizados para sesión
+                    completed_workflows=len(successful_results),
                     current_operation=f'Completado: {len(successful_results)} exitosos, {len(failed_results)} fallidos'
                 )
                 
@@ -2148,11 +2177,14 @@ def process_batch():
                         ACTIVE_BATCHES[batch_id]["status"] = "error"
                         ACTIVE_BATCHES[batch_id]["error"] = str(e)
                 
-                # Actualizar job de sesión con error
+                # Actualizar job de sesión con error pero conservando posibles imágenes ya procesadas
+                existing_images = session_manager.get_job_images(batch_job_id)
                 session_manager.update_job(batch_job_id, 
                     status='error', 
                     error=str(e),
-                    current_operation=f'Error: {str(e)}'
+                    current_operation=f'Error: {str(e)}',
+                    # Conservar imágenes ya procesadas si existen
+                    completed_workflows=len(existing_images) if existing_images else 0
                 )
         
         # Iniciar thread

@@ -2551,22 +2551,26 @@
                 imagesToShow = generatedImages.map((imageUrl, index) => {
                     // Extraer información del nombre de archivo
                     const filename = imageUrl.split('/').pop();
-                    const workflowMatch = filename.match(/([^_]+)_.*?_([^_]+)_/);
+                    const workflowMatch = filename.match(/([^_]+)_.*?_([^_]+)_/) || filename.match(/([^_]+)_([^_]+)_/);
                     const workflowId = workflowMatch ? `${workflowMatch[1]}_${workflowMatch[2]}` : `imagen_${index + 1}`;
                     
                     console.log('🔍 DEBUG - Procesando imagen de sesión:', {
                         imageUrl,
                         filename,
-                        workflowId
+                        workflowId,
+                        fullUrl: imageUrl.startsWith('http') ? imageUrl : `${API_BASE_URL}${imageUrl}`
                     });
+                    
+                    // 🔥 ASEGURAR URL COMPLETA
+                    const fullImageUrl = imageUrl.startsWith('http') ? imageUrl : `${API_BASE_URL}${imageUrl}`;
                     
                     return {
                         workflow_id: workflowId,
                         success: true,
                         generated_images: [{
-                            url: imageUrl,
+                            url: fullImageUrl,  // URL completa para compatibilidad
                             filename: filename,
-                            session_url: imageUrl  // Para compatibilidad
+                            session_url: fullImageUrl  // URL de sesión completa
                         }],
                         processing_time: 0,
                         error: null
@@ -2618,7 +2622,7 @@
                         imageUrl = firstImage.url.startsWith('http') ? firstImage.url : `${API_BASE_URL}${firstImage.url}`;
                     } else {
                         console.error('❌ No se pudo determinar URL de imagen:', firstImage);
-                        imageUrl = `${API_BASE_URL}/placeholder.png`;
+                        imageUrl = '/placeholder.png'; // Fallback
                     }
                     
                     console.log('🖼️ URL final construida:', {
@@ -2952,35 +2956,70 @@
                     if (batchTrackingId) {
                         console.log('✅ Lote completado con batch_tracking_id:', batchTrackingId);
                         
-                        // Obtener solo las imágenes generadas (no la original)
-                        const allImages = job.image_urls || [];
-                        const generatedImages = allImages.filter(imageUrl => {
-                            const filename = imageUrl.split('/').pop();
-                            return filename !== 'original.png';
-                        });
+                        // 🔥 MEJORADO: Obtener imágenes desde diferentes fuentes posibles
+                        let allImages = [];
                         
-                        console.log('🔍 DEBUG - Imágenes del job completado:', {
-                            allImages,
-                            generatedImages,
-                            jobStatus: job.status
-                        });
+                        // Prioridad 1: image_urls del job
+                        if (job.image_urls && job.image_urls.length > 0) {
+                            allImages = job.image_urls;
+                            console.log('📸 Usando image_urls del job:', allImages.length, 'imágenes');
+                        }
+                        // Prioridad 2: results del job (si tiene generated_images)
+                        else if (job.results && job.results.length > 0) {
+                            allImages = job.results
+                                .filter(result => result.session_url)
+                                .map(result => result.session_url);
+                            console.log('📸 Usando session_url de results:', allImages.length, 'imágenes');
+                        }
+                        // Prioridad 3: Construir URLs de sesión manualmente
+                        else {
+                            console.warn('⚠️ No se encontraron image_urls ni results, intentando construir URLs...');
+                            // Intentar obtener imágenes del servidor
+                            fetch(`${API_BASE_URL}/session/jobs/${job.id}`)
+                                .then(response => response.json())
+                                .then(jobDetails => {
+                                    if (jobDetails.success && jobDetails.job.image_urls) {
+                                        allImages = jobDetails.job.image_urls;
+                                        console.log('📸 URLs obtenidas del servidor:', allImages.length, 'imágenes');
+                                        processCompletedBatchImages();
+                                    }
+                                })
+                                .catch(err => console.error('❌ Error obteniendo URLs del servidor:', err));
+                            return; // Salir y esperar la respuesta async
+                        }
                         
-                        // Simular datos de batch para mostrar imágenes
-                        const batchData = {
-                            batch_id: batchTrackingId,
-                            status: job.status,
-                            total_workflows: job.total_workflows || 0,
-                            completed_workflows: job.completed_workflows || 0,
-                            all_images: generatedImages  // Solo imágenes generadas
-                        };
+                        processCompletedBatchImages();
                         
-                        console.log('📊 Datos del lote:', batchData.completed_workflows + '/' + batchData.total_workflows, 'workflows,', batchData.all_images.length, 'imágenes');
-                        console.log('🔍 DEBUG - URLs de imágenes:', batchData.all_images);
-                        
-                        // Mostrar imágenes existentes
-                        if (batchData.all_images && batchData.all_images.length > 0) {
-                            console.log('🖼️ Mostrando imágenes existentes...');
-                            displayNewCompletedImages(localBatchId, batchData, 0);
+                        function processCompletedBatchImages() {
+                            // Filtrar solo las imágenes generadas (no la original)
+                            const generatedImages = allImages.filter(imageUrl => {
+                                if (!imageUrl) return false;
+                                const filename = imageUrl.split('/').pop();
+                                return filename !== 'original.png' && filename !== 'original.jpg';
+                            });
+                            
+                            console.log('🔍 DEBUG - Imágenes del job completado:', {
+                                totalAllImages: allImages.length,
+                                generatedImages: generatedImages.length,
+                                jobStatus: job.status,
+                                sampleUrls: generatedImages.slice(0, 3) // Mostrar las primeras 3 para debug
+                            });
+                            
+                            // Simular datos de batch para mostrar imágenes
+                            const batchData = {
+                                batch_id: batchTrackingId,
+                                status: job.status,
+                                total_workflows: job.total_workflows || generatedImages.length,
+                                completed_workflows: job.completed_workflows || generatedImages.length,
+                                all_images: generatedImages  // Solo imágenes generadas
+                            };
+                            
+                            console.log('📊 Datos del lote procesados:', batchData.completed_workflows + '/' + batchData.total_workflows, 'workflows,', batchData.all_images.length, 'imágenes');
+                            
+                            // Mostrar imágenes existentes
+                            if (batchData.all_images && batchData.all_images.length > 0) {
+                                console.log('🖼️ Mostrando', batchData.all_images.length, 'imágenes existentes...');
+                                displayNewCompletedImages(localBatchId, batchData, 0);
                             
                             // 🔥 HABILITAR MODAL AUTOMÁTICAMENTE DESPUÉS DE RESTAURAR
                             setTimeout(() => {
@@ -3036,6 +3075,8 @@
                         
                         showStatus(`📋 Lote restaurado: ${batchTrackingId} (${job.status})`, 
                                  job.status === 'completed' ? 'success' : 'error');
+                        }
+                        
                     } else {
                         console.warn('⚠️ No se encontró batch_tracking_id para el job completado:', job.id);
                         showStatus(`⚠️ Lote completado sin batch_tracking_id válido`, 'warning');
