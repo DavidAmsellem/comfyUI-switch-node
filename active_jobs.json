@@ -1,1 +1,112 @@
-{}
+{
+  "1e05f5e5-f18f-4363-a764-b4f289384f62": {
+    "id": "1e05f5e5-f18f-4363-a764-b4f289384f62",
+    "type": "individual",
+    "status": "completed",
+    "created_at": "2025-11-20T13:00:51.247728",
+    "config": {
+      "workflow": "bathroom/H80x60/cuadro-bathroom-open-H60x8022",
+      "frame_color": "black",
+      "style": "default",
+      "original_filename": "bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250717_121836_001.jpg"
+    },
+    "results": [
+      {
+        "filename": "upscale_bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250717_121836_001_20251120_130234.jpg",
+        "session_url": "/session/images/1e05f5e5-f18f-4363-a764-b4f289384f62/upscale_bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250717_121836_001_20251120_130234.jpg",
+        "image_type": "upscale",
+        "status": "saved"
+      }
+    ],
+    "workflows": [],
+    "current_operation": "Esperando ComfyUI...",
+    "prompt_id": "b35dfea8-e694-42b0-b269-0c2e6884cf18",
+    "response_data": {
+      "success": true,
+      "job_id": "1e05f5e5-f18f-4363-a764-b4f289384f62",
+      "prompt_id": "b35dfea8-e694-42b0-b269-0c2e6884cf18",
+      "final_image": {
+        "filename": "upscale_bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250717_121836_001_20251120_130234.jpg",
+        "session_url": "/session/images/1e05f5e5-f18f-4363-a764-b4f289384f62/upscale_bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250717_121836_001_20251120_130234.jpg",
+        "image_type": "upscale",
+        "status": "saved"
+      },
+      "generated_images": [
+        {
+          "filename": "upscale_bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250717_121836_001_20251120_130234.jpg",
+          "session_url": "/session/images/1e05f5e5-f18f-4363-a764-b4f289384f62/upscale_bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250717_121836_001_20251120_130234.jpg",
+          "image_type": "upscale",
+          "status": "saved"
+        }
+      ]
+    },
+    "completed_at": "2025-11-20T13:02:36.804873"
+  },
+  "d6d47c0e-9df4-47d6-99ac-be20ec0a515e": {
+    "id": "d6d47c0e-9df4-47d6-99ac-be20ec0a515e",
+    "type": "individual",
+    "status": "completed",
+    "created_at": "2025-11-20T13:15:28.866301",
+    "config": {
+      "workflow": "bedroom/H80x60/cuadro-bedroom-elegant-H80x602",
+      "frame_color": "black",
+      "style": "luxury",
+      "original_filename": "bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250717_121836_001.jpg"
+    },
+    "results": [
+      {
+        "filename": "upscale_bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250717_121836_001_20251120_131718.jpg",
+        "session_url": "/session/images/d6d47c0e-9df4-47d6-99ac-be20ec0a515e/upscale_bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250717_121836_001_20251120_131718.jpg",
+        "image_type": "upscale",
+        "status": "saved"
+      }
+    ],
+    "workflows": [],
+    "current_operation": "Esperando ComfyUI...",
+    "prompt_id": "cf846b3b-3388-4d9d-bf94-1b6ee35e83dc",
+    "response_data": {
+      "success": true,
+      "job_id": "d6d47c0e-9df4-47d6-99ac-be20ec0a515e",
+      "prompt_id": "cf846b3b-3388-4d9d-bf94-1b6ee35e83dc",
+      "final_image": {
+        "filename": "upscale_bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250717_121836_001_20251120_131718.jpg",
+        "session_url": "/session/images/d6d47c0e-9df4-47d6-99ac-be20ec0a515e/upscale_bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250717_121836_001_20251120_131718.jpg",
+        "image_type": "upscale",
+        "status": "saved"
+      },
+      "generated_images": [
+        {
+          "filename": "upscale_bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250717_121836_001_20251120_131718.jpg",
+          "session_url": "/session/images/d6d47c0e-9df4-47d6-99ac-be20ec0a515e/upscale_bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250717_121836_001_20251120_131718.jpg",
+          "image_type": "upscale",
+          "status": "saved"
+        }
+      ]
+    },
+    "completed_at": "2025-11-20T13:17:20.613889"
+  },
+  "811eb292-4e9c-4ff9-b876-325c7488ce3e": {
+    "id": "811eb292-4e9c-4ff9-b876-325c7488ce3e",
+    "type": "individual",
+    "status": "completed",
+    "created_at": "2025-11-20T13:25:17.392641",
+    "config": {
+      "workflow": "bathroom/H80x60/cuadro-bathroom-open-H60x802",
+      "frame_color": "none",
+      "style": "default",
+      "original_filename": "bathroom_V60x80_cuadro_bathroom_arquitecture_V60x802_default_20250717_121836_001.jpg"
+    },
+    "results": [],
+    "workflows": [],
+    "current_operation": "Esperando ComfyUI...",
+    "prompt_id": "5e0cb495-a547-4370-8cd8-95d1c006cf6c",
+    "response_data": {
+      "success": true,
+      "job_id": "811eb292-4e9c-4ff9-b876-325c7488ce3e",
+      "prompt_id": "5e0cb495-a547-4370-8cd8-95d1c006cf6c",
+      "final_image": null,
+      "generated_images": []
+    },
+    "completed_at": "2025-11-20T13:27:06.767706"
+  }
+}
