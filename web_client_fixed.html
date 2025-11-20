@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ComfyUI API - Cliente Simple</title>
+    <title>ComfyUI API - Cliente Modular</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
-    
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -46,31 +45,23 @@
                 <div id="individualControls" class="mode-panel active">
                     <div class="section">
                         <h3>🎨 Seleccionar Workflow</h3>
-                        
                         <div style="margin-bottom: 15px;">
                             <label for="roomTypeSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">🏠 Tipo de Habitación:</label>
-                            <select id="roomTypeSelect" class="workflow-select" style="max-height: none;">
+                            <select id="roomTypeSelect" class="workflow-select">
                                 <option value="">Selecciona un tipo...</option>
                             </select>
                         </div>
-                        
                         <div style="margin-bottom: 15px;">
                             <label for="orientationSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">📐 Orientación:</label>
-                            <select id="orientationSelect" class="workflow-select" style="max-height: none;" disabled>
+                            <select id="orientationSelect" class="workflow-select" disabled>
                                 <option value="">Primero selecciona un tipo...</option>
                             </select>
                         </div>
-                        
                         <div style="margin-bottom: 15px;">
                             <label for="workflowSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">🎯 Workflow Específico:</label>
-                            <select id="workflowSelect" class="workflow-select" style="max-height: none;" disabled>
+                            <select id="workflowSelect" class="workflow-select" disabled>
                                 <option value="">Selecciona orientación primero...</option>
                             </select>
-                        </div>
-                        
-                        <div id="workflowInfo" style="display: none; background: #e3f2fd; border-radius: 6px; padding: 10px; font-size: 0.9em; color: #1976d2;">
-                            <strong>✨ Workflow seleccionado:</strong>
-                            <div id="workflowInfoText"></div>
                         </div>
                     </div>
 
@@ -78,21 +69,15 @@
                         <h3>✨ Estilo Visual</h3>
                         <div style="margin-bottom: 15px;">
                             <label for="styleSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">🎨 Selecciona un estilo:</label>
-                            <select id="styleSelect" class="workflow-select" style="max-height: none;">
+                            <select id="styleSelect" class="workflow-select">
                                 <option value="default">🎨 Por defecto</option>
                             </select>
-                            <div id="styleDescription" style="margin-top: 8px; padding: 8px; background: #f0f8ff; border-radius: 4px; font-size: 0.85em; color: #2c5aa0; display: none;"></div>
                         </div>
-                        
-                        <div style="margin-bottom: 15px;" id="styleNodeSection" style="display: none;">
-                            <label for="styleNodeSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">⚙️ Nodo de Estilo (Opcional):</label>
-                            <select id="styleNodeSelect" class="workflow-select" style="max-height: none;">
+                        <div style="margin-bottom: 15px;">
+                             <label for="styleNodeSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">⚙️ Nodo de Estilo (Opcional):</label>
+                            <select id="styleNodeSelect" class="workflow-select">
                                 <option value="">🔧 Auto-detectar (recomendado)</option>
                             </select>
-                            <div style="margin-top: 8px; padding: 8px; background: #fff3cd; border-radius: 4px; font-size: 0.85em; color: #856404;">
-                                💡 <strong>Opcional:</strong> Selecciona un nodo específico donde aplicar el estilo. Si no seleccionas ninguno, se detectará automáticamente el mejor nodo.
-                            </div>
-                            <div id="nodeDescription" style="margin-top: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px; font-size: 0.8em; color: #495057; display: none;"></div>
                         </div>
                     </div>
 
@@ -101,7 +86,7 @@
                         <div class="color-options">
                             <div class="color-option">
                                 <input type="radio" id="color-none" name="frameColor" value="none">
-                                <label for="color-none" style="background: #f8f9fa; color: #333; border: 1px solid #ddd; font-weight: 600;">🚫 Sin Marco</label>
+                                <label for="color-none" style="background: #f8f9fa; border: 1px solid #ddd;">🚫 Sin Marco</label>
                             </div>
                             <div class="color-option">
                                 <input type="radio" id="color-black" name="frameColor" value="black" checked>
@@ -109,179 +94,101 @@
                             </div>
                             <div class="color-option">
                                 <input type="radio" id="color-white" name="frameColor" value="white">
-                                <label for="color-white" style="background: #fff; color: #333; border: 1px solid #ddd;">⚪ Blanco</label>
+                                <label for="color-white" style="background: #fff; border: 1px solid #ddd;">⚪ Blanco</label>
                             </div>
-                            <div class="color-option">
+                             <div class="color-option">
                                 <input type="radio" id="color-brown" name="frameColor" value="brown">
                                 <label for="color-brown" style="background: #8B4513; color: white;">🤎 Marrón</label>
                             </div>
                             <div class="color-option">
                                 <input type="radio" id="color-gold" name="frameColor" value="gold">
-                                <label for="color-gold" style="background: #FFD700; color: #333;">🟡 Dorado</label>
+                                <label for="color-gold" style="background: #FFD700;">🟡 Dorado</label>
                             </div>
                         </div>
                     </div>
 
                     <div class="section">
-                        <h3>📈 Opciones de Resultado</h3>
-                        <div style="margin-bottom: 15px;">
-                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; color: #555;">
-                                <input type="checkbox" id="includeUpscale" checked style="transform: scale(1.2);">
-                                <span>📈 Incluir imagen escalada (upscale) en resultados</span>
-                            </label>
-                            <div style="margin-top: 8px; padding: 8px; background: #e8f5e8; border-radius: 4px; font-size: 0.85em; color: #2e7d32;">
-                                💡 <strong>Tip:</strong> Desmarca para mostrar solo la imagen de composición final, sin la versión escalada
-                            </div>
-                        </div>
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600;">
+                            <input type="checkbox" id="includeUpscale" checked style="transform: scale(1.2);">
+                            <span>📈 Incluir imagen escalada (upscale)</span>
+                        </label>
                     </div>
 
-                    <button class="btn" id="processBtn" disabled>
-                        🚀 Añadir a Cola
-                    </button>
-                    <div style="margin-top: 10px; padding: 8px; background: #f0f8ff; border-radius: 4px; font-size: 0.85em; color: #1976d2;">
-                        💡 <strong>Tip:</strong> Puedes enviar múltiples workflows a la cola sin esperar a que terminen
-                    </div>
+                    <button class="btn" id="processBtn" disabled>🚀 Añadir a Cola</button>
                 </div>
 
                 <div id="batchControls" class="mode-panel">
                     <div class="section">
                         <h3>⚡ Configuración de Lote</h3>
-                        
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                             <div>
-                                <label for="batchRoomTypes" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">🏠 Tipos de Habitación:</label>
-                                <select id="batchRoomTypes" class="workflow-select" multiple style="height: 100px;">
-                                </select>
-                                <div style="font-size: 0.8em; color: #666; margin-top: 5px;">
-                                    ⌃ Ctrl/Cmd para múltiple selección
-                                </div>
+                                <label for="batchRoomTypes" style="font-weight: 600;">🏠 Tipos:</label>
+                                <select id="batchRoomTypes" class="workflow-select" multiple style="height: 100px;"></select>
                             </div>
-                            
                             <div>
-                                <label for="batchOrientations" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">📐 Orientaciones:</label>
-                                <select id="batchOrientations" class="workflow-select" multiple style="height: 100px;">
-                                </select>
-                                <div style="font-size: 0.8em; color: #666; margin-top: 5px;">
-                                     Ctrl/Cmd para múltiple selección
-                                </div>
+                                <label for="batchOrientations" style="font-weight: 600;">📐 Orientaciones:</label>
+                                <select id="batchOrientations" class="workflow-select" multiple style="height: 100px;"></select>
                             </div>
                         </div>
-
-                        <div id="selectedWorkflowsPreview" style="margin-bottom: 15px; padding: 10px; background: #f0f8ff; border-radius: 6px; display: none;">
-                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                                <span style="font-weight: 600; color: #1976d2;">🎯 Workflows seleccionados:</span>
-                                <span id="workflowCount" style="background: #4facfe; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.9em;">0</span>
-                            </div>
-                            <div id="workflowList" style="max-height: 150px; overflow-y: auto; font-size: 0.85em; color: #333;"></div>
-                        </div>
-
-                        <div style="font-size: 0.8em; color: #666; margin-bottom: 15px;">
-                            💡 <strong>Tip:</strong> Deja los filtros vacíos para procesar TODOS los workflows disponibles
+                        <div id="selectedWorkflowsPreview" style="padding: 10px; background: #f0f8ff; border-radius: 6px; display: none;">
+                            <span style="font-weight: 600; color: #1976d2;">🎯 Seleccionados: <span id="workflowCount">0</span></span>
                         </div>
                     </div>
 
                     <div class="section">
-                        <h3>🎨 Configuración Común del Lote</h3>
+                        <h3>🎨 Configuración Común</h3>
                         <div style="margin-bottom: 15px;">
-                            <label for="batchStyleSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">✨ Estilo:</label>
+                            <label for="batchStyleSelect" style="font-weight: 600;">✨ Estilo:</label>
                             <select id="batchStyleSelect" class="workflow-select">
                                 <option value="default">🎨 Por defecto</option>
                             </select>
                         </div>
-                        
-                        <div style="margin-bottom: 15px;" id="batchStyleNodeSection">
-                            <label for="batchStyleNodeSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">⚙️ Nodo de Estilo (Opcional):</label>
-                            <select id="batchStyleNodeSelect" class="workflow-select" style="max-height: none;">
-                                <option value="">🔧 Auto-detectar (recomendado)</option>
+                         <div style="margin-bottom: 15px;">
+                             <label for="batchStyleNodeSelect" style="font-weight: 600;">⚙️ Nodo Estilo:</label>
+                            <select id="batchStyleNodeSelect" class="workflow-select">
+                                <option value="">🔧 Auto-detectar</option>
                             </select>
-                            <div style="margin-top: 8px; padding: 8px; background: #fff3cd; border-radius: 4px; font-size: 0.85em; color: #856404;">
-                                💡 <strong>Opcional:</strong> Selecciona un nodo específico donde aplicar el estilo. Si no seleccionas ninguno, se detectará automáticamente el mejor nodo para cada workflow.
-                            </div>
-                            <div id="batchNodeDescription" style="margin-top: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px; font-size: 0.8em; color: #495057; display: none;"></div>
                         </div>
                         
-                        <div>
-                            <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #555;">🎨 Color del Marco:</label>
-                            <div class="color-options">
-                                <div class="color-option">
-                                    <input type="radio" id="batch-color-none" name="batchFrameColor" value="none">
-                                    <label for="batch-color-none" style="background: #f8f9fa; color: #333; border: 1px solid #ddd; font-weight: 600;">🚫 Sin Marco</label>
-                                </div>
-                                <div class="color-option">
-                                    <input type="radio" id="batch-color-black" name="batchFrameColor" value="black" checked>
-                                    <label for="batch-color-black" style="background: #333; color: white;">⚫ Negro</label>
-                                </div>
-                                <div class="color-option">
-                                    <input type="radio" id="batch-color-white" name="batchFrameColor" value="white">
-                                    <label for="batch-color-white" style="background: #fff; color: #333; border: 1px solid #ddd;">⚪ Blanco</label>
-                                </div>
-                                <div class="color-option">
-                                    <input type="radio" id="batch-color-brown" name="batchFrameColor" value="brown">
-                                    <label for="batch-color-brown" style="background: #8B4513; color: white;">🤎 Marrón</label>
-                                </div>
-                                <div class="color-option">
-                                    <input type="radio" id="batch-color-gold" name="batchFrameColor" value="gold">
-                                    <label for="batch-color-gold" style="background: #FFD700; color: #333;">🟡 Dorado</label>
-                                </div>
-                            </div>
+                        <label style="display: block; margin-bottom: 10px; font-weight: 600;">🎨 Marco:</label>
+                        <div class="color-options">
+                            <div class="color-option"><input type="radio" id="b-c-none" name="batchFrameColor" value="none"><label for="b-c-none" style="background:#f8f9fa; border:1px solid #ddd">🚫</label></div>
+                            <div class="color-option"><input type="radio" id="b-c-black" name="batchFrameColor" value="black" checked><label for="b-c-black" style="background:#333; color:white">⚫</label></div>
+                            <div class="color-option"><input type="radio" id="b-c-white" name="batchFrameColor" value="white"><label for="b-c-white" style="background:#fff; border:1px solid #ddd">⚪</label></div>
+                            <div class="color-option"><input type="radio" id="b-c-brown" name="batchFrameColor" value="brown"><label for="b-c-brown" style="background:#8B4513; color:white">🤎</label></div>
+                            <div class="color-option"><input type="radio" id="b-c-gold" name="batchFrameColor" value="gold"><label for="b-c-gold" style="background:#FFD700">🟡</label></div>
                         </div>
                         
-                        <div style="margin-bottom: 15px;">
-                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; color: #555;">
+                        <div style="margin-top: 15px;">
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600;">
                                 <input type="checkbox" id="batchIncludeUpscale" checked style="transform: scale(1.2);">
-                                <span>📈 Incluir imagen escalada (upscale) en resultados</span>
+                                <span>📈 Incluir upscale en lote</span>
                             </label>
-                            <div style="margin-top: 8px; padding: 8px; background: #e8f5e8; border-radius: 4px; font-size: 0.85em; color: #2e7d32;">
-                                💡 <strong>Tip:</strong> Desmarca para mostrar solo la imagen de composición final en todos los workflows del lote
-                            </div>
                         </div>
                     </div>
 
-                    <button class="btn" id="processBatchBtn" disabled>
-                        ⚡ Procesar Lote
-                    </button>
+                    <button class="btn" id="processBatchBtn" disabled>⚡ Procesar Lote</button>
                 </div>
             </div>
 
             <div class="panel">
                 <div class="section">
-                    <h3>📊 Estado del Procesamiento</h3>
-                    <div style="margin-bottom: 10px; text-align: right; display: flex; gap: 5px; justify-content: flex-end;">
-                        <button id="debugSessionBtn" style="background: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
-                            🔍 Debug Sesión
-                        </button>
-                        <button id="clearSessionBtn" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
-                            🧹 Limpiar Sesión
-                        </button>
-                        <button id="clearStateBtn" style="background: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
-                            🗑️ Limpiar Estado
-                        </button>
-                        <button id="testModalBtn" style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
-                            🧪 Test Modal
-                        </button>
-                        <button id="debugModalBtn" style="background: #007acc; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
-                            🔍 Debug Modal
-                        </button>
-                        <button id="debugBatchBtn" style="background: #ff6b35; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
-                            🔍 Debug Batch
-                        </button>
+                    <h3>📊 Estado y Gestión</h3>
+                    <div style="margin-bottom: 10px; text-align: right; display: flex; gap: 5px; justify-content: flex-end; flex-wrap: wrap;">
+                        <button id="debugSessionBtn" class="mini-btn" style="background: #17a2b8; color: white;">🔍 Debug</button>
+                        <button id="clearSessionBtn" class="mini-btn" style="background: #dc3545; color: white;">🧹 Limpiar Sesión</button>
+                        <button id="clearStateBtn" class="mini-btn" style="background: #6c757d; color: white;">🗑️ Limpiar Estado</button>
                     </div>
                     <div class="status-messages" id="statusMessages"></div>
                 </div>
 
                 <div class="section" id="individualJobsSection" style="display: none;">
                     <h3>🖼️ Galería Individual</h3>
-                    <div id="individualSummary" style="background: #e3f2fd; border-radius: 6px; padding: 10px; margin-bottom: 15px; font-size: 0.9em; color: #1976d2;">
-                        📊 Los resultados de workflows individuales aparecerán aquí conforme se completen. Los más recientes se muestran primero.
-                    </div>
                     <div class="individual-results" id="individualResults"></div>
                 </div>
 
                 <div class="section" id="batchResultsSection" style="display: none;">
                     <h3>🖼️ Galería de Lotes</h3>
-                    <div id="batchSummary" style="background: #e8f5e8; border-radius: 6px; padding: 10px; margin-bottom: 15px; font-size: 0.9em; color: #2d5a2d;">
-                        📊 Los resultados de cada lote aparecerán aquí conforme se completen. Los lotes más recientes se muestran primero.
-                    </div>
                     <div class="batch-results" id="batchResults"></div>
                 </div>
             </div>

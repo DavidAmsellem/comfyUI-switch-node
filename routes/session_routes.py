@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, send_file
+from flask import Blueprint, jsonify, send_file, request
 from job_persistence import session_manager
 import os
 from werkzeug.utils import secure_filename
@@ -7,19 +7,36 @@ session_bp = Blueprint('session_routes', __name__)
 
 @session_bp.route('/session/jobs', methods=['GET'])
 def get_jobs():
-    return jsonify({"success": True, "jobs": session_manager.get_all_active_jobs()})
+    return jsonify({
+        "success": True, 
+        "jobs": session_manager.get_all_active_jobs()
+    })
 
 @session_bp.route('/session/jobs/<jid>', methods=['GET'])
 def get_job(jid):
-    j = session_manager.get_job(jid)
-    if j: return jsonify({"success": True, "job": j})
-    return jsonify({"error": "404"}), 404
+    # Limpiar ID si viene con prefijo
+    clean_id = jid.replace('restored_', '')
+    j = session_manager.get_job(clean_id)
+    
+    if j: 
+        return jsonify(j)
+    return jsonify({"error": "Job not found"}), 404
 
 @session_bp.route('/session/images/<jid>/<fname>', methods=['GET'])
 def get_sess_img(jid, fname):
-    path = os.path.join(session_manager.session_dir, secure_filename(jid), secure_filename(fname))
-    if os.path.exists(path): return send_file(path)
-    return jsonify({"error": "404"}), 404
+    clean_id = jid.replace('restored_', '')
+    path = os.path.join(session_manager.session_dir, secure_filename(clean_id), secure_filename(fname))
+    if os.path.exists(path): 
+        return send_file(path)
+    return jsonify({"error": "Image not found"}), 404
+
+# --- ESTA ES LA RUTA QUE FALTABA (ERROR 404) ---
+@session_bp.route('/session/cleanup', methods=['POST'])
+def cleanup():
+    data = request.json or {}
+    hours = data.get('hours', 24)
+    count = session_manager.cleanup_old_jobs(hours)
+    return jsonify({"success": True, "cleaned_count": count})
 
 @session_bp.route('/session/clear', methods=['POST'])
 def clear():

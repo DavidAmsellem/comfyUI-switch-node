@@ -1,54 +1,38 @@
-// js/main.js
 import { checkHealth, setupImageZoomModal, startSystemMonitoring } from './utils.js';
 import { loadWorkflows, handleRoomTypeChange, handleOrientationChange, handleFileSelect, switchMode } from './ui.js';
 import { processImage } from './individual.js';
 import { processBatch, updateBatchWorkflowPreview } from './batch.js';
-import { loadSessionJobs, saveState, restoreState, clearState, cleanupOldJobs } from './session.js';
+import { loadSessionJobs, saveState, restoreState, clearState, cleanupOldJobs, clearSession } from './session.js';
 
 window.onload = async function() {
-    console.log('🚀 Iniciando Cliente Modular ComfyUI...');
-    
     await checkHealth();
-    startSystemMonitoring(); // Nuevo monitor de estado
+    startSystemMonitoring();
     await loadWorkflows();
-    
     setupEventListeners();
     setupImageZoomModal();
-    
-    // Restauración
     restoreState();
     setTimeout(loadSessionJobs, 1000);
     cleanupOldJobs();
 };
 
 function setupEventListeners() {
-    // Drag & Drop
-    const dropArea = document.getElementById('uploadArea');
-    const fileInput = document.getElementById('fileInput');
+    document.getElementById('uploadArea').onclick = () => document.getElementById('fileInput').click();
+    document.getElementById('fileInput').onchange = (e) => { if(e.target.files.length) handleFileSelect(e.target.files[0]); };
     
-    dropArea.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', (e) => {
-        if(e.target.files.length) handleFileSelect(e.target.files[0]);
-    });
-    // (Agregar eventos dragover/drop aquí...)
+    document.getElementById('processMode').onchange = (e) => switchMode(e.target.value);
+    
+    document.getElementById('roomTypeSelect').onchange = () => { handleRoomTypeChange(); saveState(); };
+    document.getElementById('orientationSelect').onchange = () => { handleOrientationChange(); saveState(); };
+    document.getElementById('workflowSelect').onchange = saveState;
+    document.getElementById('styleSelect').onchange = saveState;
 
-    // Modos
-    document.getElementById('processMode').addEventListener('change', (e) => switchMode(e.target.value));
+    document.getElementById('processBtn').onclick = processImage;
+    document.getElementById('processBatchBtn').onclick = processBatch;
     
-    // Selectores Individuales
-    document.getElementById('roomTypeSelect').addEventListener('change', () => { handleRoomTypeChange(); saveState(); });
-    document.getElementById('orientationSelect').addEventListener('change', () => { handleOrientationChange(); saveState(); });
-    document.getElementById('workflowSelect').addEventListener('change', saveState);
-    document.getElementById('styleSelect').addEventListener('change', saveState);
-    
-    // Botones
-    document.getElementById('processBtn').addEventListener('click', processImage);
-    document.getElementById('processBatchBtn').addEventListener('click', processBatch);
-    
-    // Batch Listeners
-    document.getElementById('batchRoomTypes').addEventListener('change', () => { updateBatchWorkflowPreview(); saveState(); });
-    document.getElementById('batchOrientations').addEventListener('change', () => { updateBatchWorkflowPreview(); saveState(); });
+    document.getElementById('batchRoomTypes').onchange = () => { updateBatchWorkflowPreview(); saveState(); };
+    document.getElementById('batchOrientations').onchange = () => { updateBatchWorkflowPreview(); saveState(); };
 
-    // Debug & Limpieza
-    document.getElementById('clearStateBtn')?.addEventListener('click', clearState);
+    // Botones de Gestión
+    document.getElementById('clearStateBtn').onclick = clearState;
+    document.getElementById('clearSessionBtn').onclick = clearSession;
 }

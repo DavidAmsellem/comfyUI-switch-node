@@ -1,11 +1,9 @@
-// js/state.js
 export const state = {
     API_BASE_URL: window.location.origin,
     selectedFile: null,
     availableWorkflows: [],
     workflowsStructure: {},
     availableStyles: [],
-    currentWorkflowNodes: [],
     
     // Tracking
     activeIndividualJobs: new Map(),
@@ -18,7 +16,6 @@ export const state = {
     restoredBatchJobs: new Set()
 };
 
-// Setter para selectedFile para usarlo desde otros módulos
 export function setSelectedFile(file) {
     state.selectedFile = file;
 }

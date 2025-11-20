@@ -1,71 +1,85 @@
 from flask import Blueprint, request, jsonify, send_file
-# 1. Quitamos verify_image_accessibility de aquí
 from services.file_service import save_uploaded_image, create_output_directory, extract_generated_images, save_images_to_our_output
 from services.workflow_service import load_workflow, update_workflow
-# 2. Y nos aseguramos de que esté aquí
 from services.comfy_service import submit_workflow_to_comfyui, wait_for_completion, verify_image_accessibility
 from utils.helpers import allowed_file
-from utils.logger import log_info
+from utils.logger import log_info, log_error
 from job_persistence import session_manager
 import os
+import threading
 from config import WORKFLOW_CONFIG, OUR_OUTPUT_DIR, COMFYUI_OUTPUT_DIR
 
 job_bp = Blueprint('job_routes', __name__)
+
+def process_job_background(job_id, prompt_id, workflow_name, frame_color, style_id, include_upscale, file_info, output_dir, updated_workflow):
+    try:
+        # 1. Esperar a ComfyUI (Sin callbacks, solo esperar)
+        outputs = wait_for_completion(prompt_id, timeout=600)
+        
+        if not outputs: raise Exception("Sin respuesta de ComfyUI")
+
+        # 2. Procesar imágenes
+        generated_images = extract_generated_images(outputs, file_info['filename'], include_upscale)
+        
+        # Usamos la ruta física del archivo input (clave para que no falle la carga)
+        input_path = file_info['input_path']
+        
+        orig_info, saved_imgs = save_images_to_our_output(
+            output_dir, input_path, generated_images, file_info['filename'], 
+            include_upscale, job_id, workflow_name, style_id
+        )
+        
+        frontend_images = [img for img in saved_imgs if img.get('image_type') == 'composition'] or saved_imgs[:1]
+        
+        # 3. Guardar resultado FINAL (Única escritura de cierre)
+        session_manager.update_job(job_id, 
+            status='completed', 
+            current_operation='Completado', 
+            results=frontend_images
+        )
+
+    except Exception as e:
+        log_error(f"Error background: {e}")
+        session_manager.update_job(job_id, status='error', error=str(e))
 
 @job_bp.route('/process-image', methods=['POST'])
 def process_image():
     try:
         if 'image' not in request.files: return jsonify({"error": "Falta imagen"}), 400
         file = request.files['image']
-        if not allowed_file(file.filename): return jsonify({"error": "Tipo de archivo no permitido"}), 400
-
+        
         workflow_name = request.form.get('workflow', 'default')
         frame_color = request.form.get('frame_color', 'black')
         style_id = request.form.get('style', 'default')
-        # Convertir string 'true'/'false' a booleano
         include_upscale = request.form.get('include_upscale', 'true').lower() == 'true'
-        # Nuevo parámetro opcional para nodo de estilo específico
         style_node_id = request.form.get('style_node', None)
 
+        # Crear job inicial
         job_id = session_manager.create_job(
             job_type='individual', workflow=workflow_name, frame_color=frame_color,
             style=style_id, original_filename=file.filename
         )
-        session_manager.update_job(job_id, status='processing', current_operation='Iniciando...')
 
+        # Guardar archivo físico
         base_name = file.filename.rsplit('.', 1)[0]
         output_dir = create_output_directory(base_name)
-        
         input_path, workflow_filename = save_uploaded_image(file, base_name)
-        
-        # Verificamos accesibilidad usando la función importada de comfy_service
-        if not verify_image_accessibility(workflow_filename):
-            log_info(f"Advertencia: ComfyUI podría no tener acceso a {workflow_filename}")
+        file_info = {'filename': file.filename, 'input_path': input_path}
 
+        # Workflow
         workflow = load_workflow(workflow_name)
-        # Pasamos el style_node_id a update_workflow
         updated_workflow = update_workflow(workflow, workflow_filename, frame_color, style_id, style_node_id, base_name)
-        
         prompt_id = submit_workflow_to_comfyui(updated_workflow)
-        session_manager.update_job(job_id, prompt_id=prompt_id, current_operation='Esperando ComfyUI...')
         
-        outputs = wait_for_completion(prompt_id)
-        generated_images = extract_generated_images(outputs, file.filename, include_upscale)
-        
-        orig_info, saved_imgs = save_images_to_our_output(
-            output_dir, file, generated_images, file.filename, include_upscale, job_id, workflow_name, style_id
-        )
+        # Actualizar con prompt_id
+        session_manager.update_job(job_id, prompt_id=prompt_id)
 
-        frontend_images = [img for img in saved_imgs if img.get('image_type') == 'composition'] or saved_imgs[:1]
-        
-        response = {
-            "success": True, "job_id": job_id, "prompt_id": prompt_id,
-            "final_image": frontend_images[0] if frontend_images else None,
-            "generated_images": frontend_images
-        }
-        
-        session_manager.update_job(job_id, status='completed', results=frontend_images, response_data=response)
-        return jsonify(response)
+        # Lanza hilo
+        thread = threading.Thread(target=process_job_background, args=(job_id, prompt_id, workflow_name, frame_color, style_id, include_upscale, file_info, output_dir, updated_workflow))
+        thread.daemon = True
+        thread.start()
+
+        return jsonify({"success": True, "job_id": job_id})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
