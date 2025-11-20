@@ -5,6 +5,7 @@ import requests
 from config import COMFYUI_URL, WORKFLOW_CONFIG
 from style_presets import get_available_styles
 from services.workflow_service import load_workflow, get_available_workflows
+from services import comfy_service  # Importamos el servicio para el status
 
 general_bp = Blueprint('general_routes', __name__)
 
@@ -15,6 +16,12 @@ def health_check():
         comfyui_status = "ok" if response.status_code == 200 else "error"
     except: comfyui_status = "error"
     return jsonify({"status": "ok", "comfyui_connection": comfyui_status, "timestamp": datetime.now().isoformat()})
+
+@general_bp.route('/system-status', methods=['GET'])
+def system_status():
+    """Devuelve el estado detallado de ComfyUI (Cola, Idle, Offline)"""
+    status = comfy_service.get_system_status()
+    return jsonify(status)
 
 @general_bp.route('/styles', methods=['GET'])
 def list_styles():

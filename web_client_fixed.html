@@ -6,21 +6,22 @@
     <title>ComfyUI API - Cliente Simple</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
     
-    <!-- Cargar Estilos Externos -->
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <div class="health-indicator" id="healthIndicator">Verificando...</div>
+            <div class="status-bar">
+                <div id="healthIndicator" class="indicator">🔌 Conectando API...</div>
+                <div id="comfyStatus" class="indicator status-offline">⏳ Estado ComfyUI...</div>
+            </div>
+            
             <h1>🎨 ComfyUI API Client</h1>
             <p>Procesa imágenes con workflows de ComfyUI</p>
         </div>
 
         <div class="main-content">
-            <!-- Panel Izquierdo: Selector de Modo + Controles -->
             <div class="panel">
-                <!-- Selector de Modo de Procesamiento -->
                 <div class="section">
                     <h3>🎯 Tipo de Procesamiento</h3>
                     <select id="processMode" class="workflow-select">
@@ -29,7 +30,6 @@
                     </select>
                 </div>
 
-                <!-- Sección de Upload (común para ambos modos) -->
                 <div class="section">
                     <h3>📁 Subir Imagen</h3>
                     <div class="upload-area" id="uploadArea">
@@ -43,12 +43,10 @@
                     <img id="previewImage" class="preview-image" alt="Vista previa">
                 </div>
 
-                <!-- Panel de Procesamiento Individual -->
                 <div id="individualControls" class="mode-panel active">
                     <div class="section">
                         <h3>🎨 Seleccionar Workflow</h3>
                         
-                        <!-- Selector de Tipo de Habitación -->
                         <div style="margin-bottom: 15px;">
                             <label for="roomTypeSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">🏠 Tipo de Habitación:</label>
                             <select id="roomTypeSelect" class="workflow-select" style="max-height: none;">
@@ -56,7 +54,6 @@
                             </select>
                         </div>
                         
-                        <!-- Selector de Orientación -->
                         <div style="margin-bottom: 15px;">
                             <label for="orientationSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">📐 Orientación:</label>
                             <select id="orientationSelect" class="workflow-select" style="max-height: none;" disabled>
@@ -64,7 +61,6 @@
                             </select>
                         </div>
                         
-                        <!-- Selector de Workflow Específico -->
                         <div style="margin-bottom: 15px;">
                             <label for="workflowSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">🎯 Workflow Específico:</label>
                             <select id="workflowSelect" class="workflow-select" style="max-height: none;" disabled>
@@ -72,7 +68,6 @@
                             </select>
                         </div>
                         
-                        <!-- Info del workflow seleccionado -->
                         <div id="workflowInfo" style="display: none; background: #e3f2fd; border-radius: 6px; padding: 10px; font-size: 0.9em; color: #1976d2;">
                             <strong>✨ Workflow seleccionado:</strong>
                             <div id="workflowInfoText"></div>
@@ -89,7 +84,6 @@
                             <div id="styleDescription" style="margin-top: 8px; padding: 8px; background: #f0f8ff; border-radius: 4px; font-size: 0.85em; color: #2c5aa0; display: none;"></div>
                         </div>
                         
-                        <!-- Selector de Nodo para Estilo (opcional) -->
                         <div style="margin-bottom: 15px;" id="styleNodeSection" style="display: none;">
                             <label for="styleNodeSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">⚙️ Nodo de Estilo (Opcional):</label>
                             <select id="styleNodeSelect" class="workflow-select" style="max-height: none;">
@@ -149,7 +143,6 @@
                     </div>
                 </div>
 
-                <!-- Panel de Procesamiento por Lotes -->
                 <div id="batchControls" class="mode-panel">
                     <div class="section">
                         <h3>⚡ Configuración de Lote</h3>
@@ -196,7 +189,6 @@
                             </select>
                         </div>
                         
-                        <!-- Selector de Nodo para Estilo (Batch) -->
                         <div style="margin-bottom: 15px;" id="batchStyleNodeSection">
                             <label for="batchStyleNodeSelect" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">⚙️ Nodo de Estilo (Opcional):</label>
                             <select id="batchStyleNodeSelect" class="workflow-select" style="max-height: none;">
@@ -251,7 +243,6 @@
                 </div>
             </div>
 
-            <!-- Panel Derecho: Estado y Resultados -->
             <div class="panel">
                 <div class="section">
                     <h3>📊 Estado del Procesamiento</h3>
@@ -297,7 +288,6 @@
         </div>
     </div>
 
-    <!-- Modal para zoom de imágenes -->
     <div id="imageModal" class="image-modal">
         <div class="image-modal-content">
             <span class="image-modal-close" id="modalClose">&times;</span>
@@ -306,7 +296,6 @@
         </div>
     </div>
 
-    <!-- Cargar Script Externo -->
-    <script src="script.js"></script>
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>

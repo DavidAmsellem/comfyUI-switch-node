@@ -1,6 +1,8 @@
 from flask import Blueprint, request, jsonify, send_file
+# 1. Quitamos verify_image_accessibility de aquí
 from services.file_service import save_uploaded_image, create_output_directory, extract_generated_images, save_images_to_our_output
 from services.workflow_service import load_workflow, update_workflow
+# 2. Y nos aseguramos de que esté aquí
 from services.comfy_service import submit_workflow_to_comfyui, wait_for_completion, verify_image_accessibility
 from utils.helpers import allowed_file
 from utils.logger import log_info
@@ -20,7 +22,10 @@ def process_image():
         workflow_name = request.form.get('workflow', 'default')
         frame_color = request.form.get('frame_color', 'black')
         style_id = request.form.get('style', 'default')
+        # Convertir string 'true'/'false' a booleano
         include_upscale = request.form.get('include_upscale', 'true').lower() == 'true'
+        # Nuevo parámetro opcional para nodo de estilo específico
+        style_node_id = request.form.get('style_node', None)
 
         job_id = session_manager.create_job(
             job_type='individual', workflow=workflow_name, frame_color=frame_color,
@@ -38,7 +43,8 @@ def process_image():
             log_info(f"Advertencia: ComfyUI podría no tener acceso a {workflow_filename}")
 
         workflow = load_workflow(workflow_name)
-        updated_workflow = update_workflow(workflow, workflow_filename, frame_color, style_id, None, base_name)
+        # Pasamos el style_node_id a update_workflow
+        updated_workflow = update_workflow(workflow, workflow_filename, frame_color, style_id, style_node_id, base_name)
         
         prompt_id = submit_workflow_to_comfyui(updated_workflow)
         session_manager.update_job(job_id, prompt_id=prompt_id, current_operation='Esperando ComfyUI...')

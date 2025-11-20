@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from flask import Flask, send_file, jsonify
+from flask import Flask, send_file, jsonify, send_from_directory
 from flask_cors import CORS
 import os
 from config import BASE_DIR
@@ -31,11 +31,16 @@ def serve_fixed():
     return jsonify({"error": "No encontrado"}), 404
 
 # --- RUTA PARA EL SCRIPT JS ---
-@app.route('/script.js')
-def serve_js():
-    path = os.path.join(BASE_DIR, 'script.js')
-    if os.path.exists(path): return send_file(path)
-    return jsonify({"error": "script.js no encontrado"}), 404
+@app.route('/js/<path:filename>')
+def serve_js_modules(filename):
+    # Esto busca los archivos dentro de la carpeta 'js' que está en BASE_DIR
+    js_folder = os.path.join(BASE_DIR, 'js')
+    
+    # Verifica si el archivo existe antes de enviarlo (opcional, send_from_directory maneja 404s)
+    if not os.path.exists(os.path.join(js_folder, filename)):
+        return jsonify({"error": f"Archivo JS {filename} no encontrado"}), 404
+        
+    return send_from_directory(js_folder, filename)
 
 # --- NUEVA RUTA PARA EL CSS (ESTO FALTABA) ---
 @app.route('/styles.css')
