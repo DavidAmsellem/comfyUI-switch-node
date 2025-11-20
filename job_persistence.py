@@ -69,14 +69,15 @@ class SessionManager:
 
     def save_job_image(self, job_id, image_bytes, filename):
         """Guarda la imagen física y devuelve la URL relativa"""
-        # Nota: job_id se usa para referencia, pero guardamos en carpeta plana por nombre base
-        # (La lógica de carpetas ya la maneja file_service, aquí solo ayudamos a persistir la URL)
-        # En tu file_service ya guardas el archivo físico. 
-        # Aquí solo devolvemos la ruta web estandarizada.
-        return f"/get-image/{filename.split('_')[0]}/{filename}" 
-        # Nota: Ajusta esta ruta según tu estructura de carpetas de salida real si usas subcarpetas.
-        # Para simplificar con tu file_service actual:
-        return f"/outputs/{filename}" # Placeholder, el file_service maneja la ruta real.
+        # Extraer el base_name del filename (ej: bedroom_V60x80_xxx -> bedroom)
+        # Si el filename no tiene guión bajo, usar una carpeta por defecto
+        if '_' in filename:
+            base_name = filename.split('_')[0]
+        else:
+            base_name = 'misc'  # carpeta por defecto
+            
+        # Retornar URL compatible con el endpoint /get-image/<base_name>/<filename>
+        return f"/get-image/{base_name}/{filename}"
 
     def cleanup_old_jobs(self, hours=24):
         count = 0

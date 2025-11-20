@@ -193,12 +193,12 @@ function appendImages(localId, results) {
         const imgs = r.generated_images || [r]; 
         
         imgs.forEach(img => {
-            if (!img.session_url && !img.url) return; 
+            if (!img.url && !img.session_url) return;  
 
             const div = document.createElement('div');
             div.className = 'workflow-result-item';
             
-            let url = img.session_url || img.url;
+            let url = img.url || img.session_url;
             if (url && !url.startsWith('http') && !url.startsWith('/')) url = `/${url}`;
             const fullUrl = url.startsWith('http') ? url : `${state.API_BASE_URL}${url}`;
             

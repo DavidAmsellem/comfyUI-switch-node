@@ -75,10 +75,28 @@ def save_images_to_our_output(output_dir, original_file_source, generated_images
         if img:
             buffer = io.BytesIO()
             img.save(buffer, format='JPEG', quality=90, optimize=True)
-            with open(orig_path, 'wb') as f: f.write(buffer.getvalue())
+            with open(orig_path, 'wb') as f: 
+                f.write(buffer.getvalue())
+            
+            # Guardar en sesión y construir URLs
             buffer.seek(0)
-            orig_url = session_manager.save_job_image(job_id, buffer.read(), "original.jpg")
-            original_info = {'filename': "original.jpg", 'session_url': orig_url, 'status': 'saved'}
+            session_url = session_manager.save_job_image(job_id, buffer.read(), "original.jpg")
+            
+            # URL directa para el endpoint
+            base_name = os.path.basename(output_dir)
+            direct_url = f"/get-image/{base_name}/original.jpg"
+            
+            log_info(f"✅ Imagen original guardada: {orig_path}")
+            log_info(f"   🔗 Direct URL: {direct_url}")
+            log_info(f"   💾 Session URL: {session_url}")
+            
+            original_info = {
+                'filename': "original.jpg", 
+                'url': direct_url,
+                'session_url': session_url, 
+                'image_type': 'original',
+                'status': 'saved'
+            }
         else:
             raise Exception("Fuente de imagen inválida")
     except Exception as e:
@@ -97,9 +115,28 @@ def save_images_to_our_output(output_dir, original_file_source, generated_images
         try:
             img_gen = Image.open(src).convert('RGB')
             img_gen.save(dest_path, 'JPEG', quality=90)
+            
+            # Guardar en sesión y obtener URL de sesión
             with open(dest_path, 'rb') as f:
-                s_url = session_manager.save_job_image(job_id, f.read(), dest_name)
-            saved_images.append({'filename': dest_name, 'session_url': s_url, 'image_type': itype, 'status': 'saved'})
+                session_url = session_manager.save_job_image(job_id, f.read(), dest_name)
+            
+            # Construir URL directa para el endpoint /get-image
+            base_name = os.path.basename(output_dir)  # Nombre de la carpeta (ej: bedroom_123456)
+            direct_url = f"/get-image/{base_name}/{dest_name}"
+            
+            log_info(f"✅ Imagen guardada: {dest_path}")
+            log_info(f"   📁 Base dir: {base_name}")
+            log_info(f"   🔗 Direct URL: {direct_url}")
+            log_info(f"   💾 Session URL: {session_url}")
+            
+            saved_images.append({
+                'filename': dest_name, 
+                'url': direct_url,          # URL principal para el frontend
+                'session_url': session_url, # URL de sesión como backup
+                'image_type': itype, 
+                'status': 'saved'
+            })
+            
         except Exception as e:
             log_error(f"Error guardando {dest_name}: {e}")
     return original_info, saved_images

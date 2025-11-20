@@ -101,7 +101,9 @@ function startIndividualPoll(localId, jobId) {
                 if(job.results && job.results.length) {
                     job.results.forEach(img => {
                         const el = document.createElement('img');
-                        const url = img.session_url.startsWith('http') ? img.session_url : `${state.API_BASE_URL}${img.session_url}`;
+                        // Priorizar url sobre session_url
+                        const imageUrl = img.url || img.session_url;
+                        const url = imageUrl.startsWith('http') ? imageUrl : `${state.API_BASE_URL}${imageUrl}`;
                         el.src = url;
                         el.onclick = () => showImageModal(url);
                         imgContainer.appendChild(el);

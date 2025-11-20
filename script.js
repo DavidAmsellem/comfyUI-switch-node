@@ -1191,7 +1191,7 @@ function displayIndividualJobResult(localJobId, resultData) {
     if (resultData.generated_images && resultData.generated_images.length > 0) {
         resultData.generated_images.forEach(image => {
             const img = document.createElement('img');
-            img.src = image.session_url || image.url;
+            img.src = image.url || image.session_url;
             img.alt = image.filename || 'Imagen generada';
             img.title = `Resultado: ${image.filename || 'Imagen generada'}`;
             img.style.width = '100%';
@@ -1771,12 +1771,12 @@ function displayNewCompletedImages(localBatchId, batchStatus, lastCompletedCount
             if (typeof firstImage === 'string') {
                 // Si firstImage es un string directo (URL)
                 imageUrl = firstImage.startsWith('http') ? firstImage : `${API_BASE_URL}${firstImage}`;
-            } else if (firstImage.session_url) {
-                // Usar session_url para imágenes de sesión persistida
-                imageUrl = firstImage.session_url.startsWith('http') ? firstImage.session_url : `${API_BASE_URL}${firstImage.session_url}`;
             } else if (firstImage.url) {
-                // Usar url normal para imágenes activas
+                // Priorizar url directa (más confiable)
                 imageUrl = firstImage.url.startsWith('http') ? firstImage.url : `${API_BASE_URL}${firstImage.url}`;
+            } else if (firstImage.session_url) {
+                // Usar session_url como fallback
+                imageUrl = firstImage.session_url.startsWith('http') ? firstImage.session_url : `${API_BASE_URL}${firstImage.session_url}`;
             } else {
                 console.error('❌ No se pudo determinar URL de imagen:', firstImage);
                 imageUrl = '/placeholder.png'; // Fallback

@@ -86,8 +86,24 @@ def process_image():
 
 @job_bp.route('/get-image/<base_name>/<filename>', methods=['GET'])
 def get_image(base_name, filename):
+    # Log para debug
+    log_info(f"🔍 Buscando imagen: {base_name}/{filename}")
+    
+    # Ruta 1: Nuestro directorio de salida
     path1 = os.path.join(OUR_OUTPUT_DIR, base_name, filename)
-    if os.path.exists(path1): return send_file(path1)
+    log_info(f"   📁 Ruta 1: {path1}")
+    
+    if os.path.exists(path1):
+        log_info(f"   ✅ Encontrada en ruta 1, sirviendo archivo")
+        return send_file(path1, mimetype='image/jpeg' if filename.lower().endswith(('.jpg', '.jpeg')) else None)
+    
+    # Ruta 2: Directorio de ComfyUI
     path2 = os.path.join(COMFYUI_OUTPUT_DIR, base_name, filename)
-    if os.path.exists(path2): return send_file(path2)
-    return jsonify({"error": "No encontrado"}), 404
+    log_info(f"   📁 Ruta 2: {path2}")
+    
+    if os.path.exists(path2):
+        log_info(f"   ✅ Encontrada en ruta 2, sirviendo archivo")
+        return send_file(path2, mimetype='image/jpeg' if filename.lower().endswith(('.jpg', '.jpeg')) else None)
+    
+    log_error(f"   ❌ Archivo NO encontrado en ninguna ruta: {base_name}/{filename}")
+    return jsonify({"error": "Imagen no encontrada"}), 404
