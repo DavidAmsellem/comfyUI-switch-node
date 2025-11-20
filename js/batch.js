@@ -1,10 +1,7 @@
 import { state } from './state.js';
 import { showStatus, showImageModal } from './utils.js';
 
-// --- FUNCIÓN QUE FALTABA ---
-export async function loadWorkflowNodesForBatch(wfId) {
-    // Se mantiene vacía para evitar errores de importación
-}
+export async function loadWorkflowNodesForBatch(wfId) {}
 
 export function updateBatchWorkflowPreview() {
     const rooms = Array.from(document.getElementById('batchRoomTypes').selectedOptions);
@@ -40,7 +37,6 @@ export async function processBatch() {
         include_upscale: document.getElementById('batchIncludeUpscale').checked
     };
 
-    // Crear UI inmediatamente
     createBatchContainer(localId, "Conectando...", "Calculando...");
 
     try {
@@ -54,7 +50,6 @@ export async function processBatch() {
         if(data.success) {
             showStatus(`🚀 Lote #${localId} iniciado`, 'info');
             updateBatchHeader(localId, data.batch_id);
-            // Pasamos AMBOS IDs: el de tracking (memoria) y el de sesión (disco)
             startBatchPoll(localId, data.batch_id, data.session_job_id);
         } else {
             markBatchError(localId, data.error);
@@ -64,16 +59,19 @@ export async function processBatch() {
     }
 }
 
-// --- Funciones Internas ---
-
 function createBatchContainer(localId, serverId, totalText) {
     const div = document.createElement('div');
     div.className = 'batch-container'; 
     div.id = `batch-${localId}`;
     div.innerHTML = `
-        <div class="batch-header">
-            <strong>📦 Lote #${localId}</strong>
-            <small style="color:#666; font-size:0.8em" id="bid-disp-${localId}">${serverId}</small>
+        <div class="batch-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <strong>📦 Lote #${localId}</strong>
+                <br><small style="color:#666; font-size:0.8em" id="bid-disp-${localId}">${serverId}</small>
+            </div>
+            <button onclick="window.cancelBatch('${serverId}', '${localId}')" class="mini-btn" style="background:#dc3545; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">
+                🛑 Cancelar
+            </button>
         </div>
         <div style="margin: 10px 0;">
             Estado: <span id="b-status-${localId}" class="indicator status-processing">Iniciando</span> 
@@ -102,64 +100,60 @@ function markBatchError(localId, errorMsg) {
     showStatus(`❌ Error en Lote #${localId}: ${errorMsg}`, 'error');
 }
 
-// --- POLL ROBUSTO (PLAN A: Memoria, PLAN B: Disco) ---
 function startBatchPoll(localId, batchId, sessionJobId) {
     let lastLen = 0;
-    let useFallback = false; // Bandera para saber si el servidor perdió la memoria
+    let useFallback = false; 
 
     const interval = setInterval(async () => {
         try {
             let st = null;
 
-            // 1. INTENTO PLAN A: Memoria RAM (Rápido y con detalles de progreso)
+            // Plan A: Memoria
             if (!useFallback) {
                 const res = await fetch(`${state.API_BASE_URL}/batch-status/${batchId}`);
                 if (res.ok) {
                     st = await res.json();
                 } else {
-                    // Si da 404, el servidor se reinició. Cambiamos a Plan B.
                     useFallback = true;
-                    // Si no tenemos sessionJobId (casos antiguos), usamos batchId como fallback
                     if (!sessionJobId) sessionJobId = batchId; 
                 }
             }
 
-            // 2. INTENTO PLAN B: Disco (Persistencia)
+            // Plan B: Disco
             if (useFallback) {
                 const res = await fetch(`${state.API_BASE_URL}/session/jobs/${sessionJobId}`);
                 if (res.ok) {
                     const diskData = await res.json();
-                    // Convertimos el formato de disco al formato que espera la UI
                     st = {
                         status: diskData.status,
-                        // Calculamos completados contando las imágenes guardadas
                         completed_workflows: diskData.results ? diskData.results.length : 0,
                         total_workflows: diskData.total_workflows || '?',
                         results: diskData.results || [],
                         successful: diskData.results ? diskData.results.length : 0,
-                        failed: 0 // En disco no solemos guardar fallos detallados
                     };
                 }
             }
 
-            // Si no conseguimos datos de ningún lado, salimos de este ciclo
             if (!st) return;
             
-            // 3. ACTUALIZAR UI
             const statusEl = document.getElementById(`b-status-${localId}`);
             const statsEl = document.getElementById(`b-stats-${localId}`);
             
             if(statusEl) {
-                statusEl.textContent = st.status === 'processing' ? 'Procesando' : st.status;
-                // Si estamos en fallback y status es 'processing', probablemente sea un zombie (servidor reiniciado)
-                if(useFallback && st.status === 'processing') {
-                     statusEl.textContent = 'Interrumpido'; // O "Zombie"
-                     statusEl.className = 'indicator status-error';
-                     // Detenemos el poll porque si el server reinició, este trabajo no avanzará más
-                     clearInterval(interval);
+                if(st.status === 'cancelled') {
+                    statusEl.textContent = 'Cancelado';
+                    statusEl.className = 'indicator status-error';
                 } else {
-                    statusEl.className = `indicator status-${st.status === 'completed' ? 'idle' : 'processing'}`;
-                    if(st.status === 'completed') statusEl.className = 'indicator health-ok';
+                    statusEl.textContent = st.status === 'processing' ? 'Procesando' : st.status;
+                    
+                    if(useFallback && st.status === 'processing') {
+                         statusEl.textContent = 'Interrumpido'; 
+                         statusEl.className = 'indicator status-error';
+                         clearInterval(interval);
+                    } else {
+                        statusEl.className = `indicator status-${st.status === 'completed' ? 'idle' : 'processing'}`;
+                        if(st.status === 'completed') statusEl.className = 'indicator health-ok';
+                    }
                 }
             }
 
@@ -170,15 +164,21 @@ function startBatchPoll(localId, batchId, sessionJobId) {
                 statsEl.textContent = `✅ ${done} | ⏳ Faltan: ${remain}`;
             }
             
-            // Renderizar nuevas imágenes
             if(st.results && st.results.length > lastLen) {
                 appendImages(localId, st.results.slice(lastLen));
                 lastLen = st.results.length;
             }
             
-            if(st.status === 'completed' || st.status === 'error') {
+            if(st.status === 'completed' || st.status === 'error' || st.status === 'cancelled') {
                 clearInterval(interval);
                 if(st.status === 'completed') showStatus(`✅ Lote #${localId} finalizado`, 'success');
+                if(st.status === 'cancelled') {
+                    // Limpieza visual extra por si acaso
+                    const imgContainer = document.getElementById(`b-imgs-${localId}`);
+                    if(imgContainer && imgContainer.children.length > 0) {
+                        imgContainer.innerHTML = '<div style="color:#999; font-style:italic; padding:10px;">🗑️ Limpieza automática completada.</div>';
+                    }
+                }
             }
 
         } catch(e) { console.error(e); }
@@ -190,11 +190,10 @@ function appendImages(localId, results) {
     if(!container) return;
 
     results.forEach(r => {
-        // A veces viene 'generated_images' (memoria), a veces es el objeto directo (disco)
         const imgs = r.generated_images || [r]; 
         
         imgs.forEach(img => {
-            if (!img.session_url && !img.url) return; // Protección
+            if (!img.session_url && !img.url) return; 
 
             const div = document.createElement('div');
             div.className = 'workflow-result-item';
@@ -203,7 +202,6 @@ function appendImages(localId, results) {
             if (url && !url.startsWith('http') && !url.startsWith('/')) url = `/${url}`;
             const fullUrl = url.startsWith('http') ? url : `${state.API_BASE_URL}${url}`;
             
-            // Intentar sacar nombre del workflow o usar ID
             const label = r.workflow ? r.workflow.split('/').pop() : (img.filename ? 'Img' : 'Res');
 
             div.innerHTML = `
@@ -219,18 +217,40 @@ function appendImages(localId, results) {
 export function restoreBatchJob(job) {
     state.batchCounter++;
     const localId = state.batchCounter;
-    
-    // Usamos tracking_id si existe, si no, el id normal
     const serverId = job.batch_tracking_id || job.id;
     
     createBatchContainer(localId, serverId, "Restaurado");
     
-    // Restaurar imágenes ya existentes
     if (job.results && Array.isArray(job.results)) {
          appendImages(localId, job.results);
     }
     
-    // SIEMPRE iniciamos el poll, pero le pasamos el ID de sesión para que use el Plan B si hace falta
-    // job.id es el sessionJobId
     startBatchPoll(localId, serverId, job.id);
 }
+
+// Función Global para el botón de cancelar en el HTML
+window.cancelBatch = async function(serverId, localId) {
+    if(!confirm('⚠️ ¿Seguro? Se detendrá el proceso y se BORRARÁN las imágenes generadas.')) return;
+    
+    try {
+        const res = await fetch(`/cancel-batch/${serverId}`, { method: 'POST' });
+        const data = await res.json();
+        
+        if(data.success) {
+            const st = document.getElementById(`b-status-${localId}`);
+            if(st) {
+                st.textContent = "Cancelado y Limpiado";
+                st.className = "indicator status-error";
+            }
+            
+            const imgContainer = document.getElementById(`b-imgs-${localId}`);
+            if(imgContainer) {
+                imgContainer.innerHTML = '<div style="color:#999; font-style:italic; padding:10px;">🗑️ Imágenes eliminadas del disco.</div>';
+            }
+
+            showStatus("🧹 Lote cancelado y archivos eliminados.", "success");
+        } else {
+            showStatus("❌ Error cancelando: " + data.error, "error");
+        }
+    } catch(e) { console.error(e); }
+};
