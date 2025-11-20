@@ -117,3 +117,36 @@ function startIndividualPoll(localId, jobId) {
         } catch (e) { console.error(e); }
     }, 2000);
 }
+
+export function restoreIndividualJob(job) {
+    // Incrementar contador y crear container
+    state.individualCounter++;
+    const localId = state.individualCounter;
+    
+    createIndividualContainer(localId);
+    
+    // Determinar el estado del trabajo
+    if (job.status === 'completed' && job.results && job.results.length > 0) {
+        // Trabajo completado - mostrar resultados
+        updateIndividualStatus(localId, 'completed', 'Generación completada (restaurado)');
+        
+        // Mostrar imágenes
+        const imgContainer = document.getElementById(`job-imgs-${localId}`);
+        job.results.forEach(img => {
+            const el = document.createElement('img');
+            // Priorizar url sobre session_url
+            const imageUrl = img.url || img.session_url;
+            const url = imageUrl.startsWith('http') ? imageUrl : `${state.API_BASE_URL}${imageUrl}`;
+            el.src = url;
+            el.onclick = () => showImageModal(url);
+            imgContainer.appendChild(el);
+        });
+    } else if (job.status === 'error') {
+        // Trabajo con error
+        updateIndividualStatus(localId, 'error', job.error || 'Error en trabajo anterior');
+    } else {
+        // Trabajo en progreso - reiniciar polling
+        updateIndividualStatus(localId, 'processing', 'Restaurando trabajo en progreso...');
+        startIndividualPoll(localId, job.id);
+    }
+}

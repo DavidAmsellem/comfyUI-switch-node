@@ -1,0 +1,12 @@
+{
+  "id": "d8ce4700-33ea-4360-9a71-56c687df6a2e",
+  "type": "individual",
+  "status": "pending",
+  "created_at": 1763681684.888879,
+  "updated_at": 1763681688.9254398,
+  "workflow": "bedroom/V60x80/cuadro-bedroom-old-V60x802",
+  "frame_color": "none",
+  "style": "default",
+  "original_filename": "2.png",
+  "prompt_id": "2232e3b0-2055-4193-89b8-99a1ef8e86f9"
+}

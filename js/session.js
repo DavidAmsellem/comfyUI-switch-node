@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { restoreBatchJob } from './batch.js'; 
-// Importamos processImage para referencia si hiciera falta restaurar individuales
+import { restoreIndividualJob } from './individual.js';
 
 export function saveState() {
     const uiState = {
@@ -50,8 +50,8 @@ export async function loadSessionJobs() {
             data.jobs.forEach(job => {
                 if (job.type === 'batch') {
                     restoreBatchJob(job);
-                } else {
-                    // Aquí podrías llamar a una función restoreIndividualJob(job) similar a batch
+                } else if (job.type === 'individual') {
+                    restoreIndividualJob(job);
                 }
             });
         }
