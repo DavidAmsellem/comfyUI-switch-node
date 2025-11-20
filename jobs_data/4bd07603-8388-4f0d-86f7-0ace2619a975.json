@@ -1,0 +1,20 @@
+{
+  "id": "4bd07603-8388-4f0d-86f7-0ace2619a975",
+  "type": "batch",
+  "status": "pending",
+  "created_at": 1763656792.5717478,
+  "updated_at": 1763656792.582626,
+  "batch_config": {
+    "room_types": [
+      "salon"
+    ],
+    "orientations": [
+      "V60x80"
+    ],
+    "frame_color": "none",
+    "style": "luxury",
+    "include_upscale": false
+  },
+  "batch_tracking_id": "1763656792_9c43",
+  "total_workflows": 12
+}

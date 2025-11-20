@@ -1,6 +1,7 @@
 import { state, setSelectedFile } from './state.js';
 import { showStatus } from './utils.js';
-import { saveState } from './session.js';
+// import { saveState } from './session.js'; // Descomenta si usas persistencia de UI
+// Asegúrate que la ruta coincida
 import { loadWorkflowNodesForBatch, updateBatchWorkflowPreview } from './batch.js';
 
 export async function loadWorkflows() {
@@ -12,9 +13,18 @@ export async function loadWorkflows() {
         state.availableStyles = data.available_styles || [];
 
         populateSelectors();
-        if (state.availableWorkflows.length > 0) loadWorkflowNodesForBatch(state.availableWorkflows[0].id);
+        
+        // AQUÍ LLAMAMOS A LA FUNCIÓN QUE DABA ERROR
+        // Como ahora existe en batch.js, funcionará.
+        if (state.availableWorkflows.length > 0) {
+            loadWorkflowNodesForBatch(state.availableWorkflows[0].id);
+        }
+        
         showStatus(`✅ ${data.total} workflows cargados`, 'success');
-    } catch (error) { showStatus('❌ Error cargando workflows', 'error'); }
+    } catch (error) { 
+        console.error(error);
+        showStatus('❌ Error cargando workflows', 'error'); 
+    }
 }
 
 function populateSelectors() {
@@ -22,20 +32,21 @@ function populateSelectors() {
     const batchRoom = document.getElementById('batchRoomTypes');
     const styleSels = [document.getElementById('styleSelect'), document.getElementById('batchStyleSelect')];
     
-    roomSel.innerHTML = '<option value="">Selecciona...</option>';
+    if(roomSel) roomSel.innerHTML = '<option value="">Selecciona...</option>';
     if(batchRoom) batchRoom.innerHTML = '';
     
     Object.keys(state.workflowsStructure).forEach(type => {
-        roomSel.add(new Option(`🏠 ${type}`, type));
+        if(roomSel) roomSel.add(new Option(`🏠 ${type}`, type));
         if(batchRoom) batchRoom.add(new Option(`🏠 ${type}`, type));
     });
 
     styleSels.forEach(sel => {
-        sel.innerHTML = '';
-        state.availableStyles.forEach(s => sel.add(new Option(s.name, s.id)));
+        if (sel) {
+            sel.innerHTML = '';
+            state.availableStyles.forEach(s => sel.add(new Option(s.name, s.id)));
+        }
     });
     
-    // Batch Orientations
     const batchOrient = document.getElementById('batchOrientations');
     if(batchOrient) {
         const orients = new Set();
@@ -50,6 +61,8 @@ export function handleRoomTypeChange() {
     const orientSel = document.getElementById('orientationSelect');
     const wfSel = document.getElementById('workflowSelect');
     
+    if(!orientSel || !wfSel) return;
+
     orientSel.innerHTML = '<option value="">Selecciona...</option>';
     wfSel.innerHTML = '<option value="">...</option>';
     wfSel.disabled = true;
@@ -65,6 +78,8 @@ export function handleOrientationChange() {
     const orient = document.getElementById('orientationSelect').value;
     const wfSel = document.getElementById('workflowSelect');
     
+    if(!wfSel) return;
+
     wfSel.innerHTML = '<option value="">Selecciona workflow...</option>';
     if (type && orient && state.workflowsStructure[type][orient]) {
         wfSel.disabled = false;
@@ -77,16 +92,37 @@ export function handleFileSelect(file) {
     setSelectedFile(file);
     const reader = new FileReader();
     reader.onload = (e) => {
-        document.getElementById('previewImage').src = e.target.result;
-        document.getElementById('previewSection').style.display = 'block';
+        const img = document.getElementById('previewImage');
+        const section = document.getElementById('previewSection');
+        if(img && section) {
+            img.src = e.target.result;
+            section.style.display = 'block';
+        }
     };
     reader.readAsDataURL(file);
-    document.getElementById('processBtn').disabled = false;
-    document.getElementById('processBatchBtn').disabled = false;
+    
+    const btn1 = document.getElementById('processBtn');
+    const btn2 = document.getElementById('processBatchBtn');
+    if(btn1) btn1.disabled = false;
+    if(btn2) btn2.disabled = false;
 }
 
 export function switchMode(mode) {
     document.querySelectorAll('.mode-panel').forEach(p => p.classList.remove('active'));
-    if (mode === 'individual') document.getElementById('individualControls').classList.add('active');
-    if (mode === 'batch') document.getElementById('batchControls').classList.add('active');
+    
+    const indPanel = document.getElementById('individualControls');
+    const batchPanel = document.getElementById('batchControls');
+    const indRes = document.getElementById('individualJobsSection');
+    const batchRes = document.getElementById('batchResultsSection');
+
+    if (mode === 'individual') {
+        if(indPanel) indPanel.classList.add('active');
+        if(indRes) indRes.style.display = 'block';
+        if(batchRes) batchRes.style.display = 'none';
+    }
+    if (mode === 'batch') {
+        if(batchPanel) batchPanel.classList.add('active');
+        if(indRes) indRes.style.display = 'none';
+        if(batchRes) batchRes.style.display = 'block';
+    }
 }

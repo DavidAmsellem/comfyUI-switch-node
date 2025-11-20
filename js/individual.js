@@ -2,122 +2,116 @@ import { state } from './state.js';
 import { showStatus, showImageModal } from './utils.js';
 
 export async function processImage() {
-    if (!state.selectedFile) return showStatus('❌ Sin imagen', 'error');
-    const wfId = document.getElementById('workflowSelect').value;
-    if (!wfId) return showStatus('❌ Sin workflow', 'error');
+    if (!state.selectedFile) return showStatus('❌ Selecciona una imagen primero', 'status-error');
 
-    state.individualJobCounter++;
-    const localId = `indiv_${state.individualJobCounter}`;
+    const workflow = document.getElementById('workflowSelect').value;
+    if (!workflow) return showStatus('⚠️ Selecciona un workflow específico', 'status-error');
+
+    // UI Updates
+    const btn = document.getElementById('processBtn');
+    btn.disabled = true;
     
-    // Crear tarjeta simple en la UI
-    const div = document.createElement('div');
-    div.className = 'individual-job-result processing';
-    div.id = `job-${localId}`;
-    div.innerHTML = `
-        <div class="individual-job-header">🎯 Trabajo #${state.individualJobCounter}</div>
-        <div>Estado: <strong id="status-${localId}">Enviando...</strong></div>
-        <div id="imgs-${localId}" class="individual-job-images"></div>
-    `;
-    document.getElementById('individualResults').prepend(div);
-    document.getElementById('individualJobsSection').style.display = 'block';
+    state.individualJobCounter++;
+    const localId = state.individualJobCounter;
+
+    // Crear tarjeta visual
+    createIndividualContainer(localId);
 
     try {
         const formData = new FormData();
         formData.append('image', state.selectedFile);
-        formData.append('workflow', wfId);
-        formData.append('frame_color', document.querySelector('input[name="frameColor"]:checked')?.value || 'black');
+        formData.append('workflow', workflow);
         formData.append('style', document.getElementById('styleSelect').value);
+        formData.append('frame_color', document.querySelector('input[name="frameColor"]:checked').value);
         formData.append('include_upscale', document.getElementById('includeUpscale').checked);
         
-        // Añadir nodo de estilo si existe
-        const styleNodeVal = document.getElementById('styleNodeSelect')?.value;
-        if(styleNodeVal) formData.append('style_node', styleNodeVal);
+        // Opcional: Style Node
+        const sn = document.getElementById('styleNodeSelect').value;
+        if(sn) formData.append('style_node', sn);
 
         const res = await fetch(`${state.API_BASE_URL}/process-image`, { method: 'POST', body: formData });
         const data = await res.json();
 
         if (data.success) {
-            document.getElementById(`status-${localId}`).textContent = "Procesando en segundo plano...";
-            // Iniciar polling simple
-            startSimplePolling(localId, data.job_id);
-        } else throw new Error(data.error);
-    } catch (e) {
-        document.getElementById(`status-${localId}`).textContent = "Error al enviar";
-        showStatus(`❌ Error: ${e.message}`, 'error');
+            updateIndividualStatus(localId, 'processing', 'Procesando en servidor...');
+            startIndividualPoll(localId, data.job_id);
+        } else {
+            throw new Error(data.error);
+        }
+
+    } catch (error) {
+        updateIndividualStatus(localId, 'error', error.message);
+        btn.disabled = false;
     }
 }
 
-function startSimplePolling(localId, serverId) {
-    // Consultar cada 2 segundos
+function createIndividualContainer(id) {
+    const container = document.getElementById('individualResults');
+    const div = document.createElement('div');
+    div.className = 'individual-job-result processing'; // Clase CSS
+    div.id = `job-card-${id}`;
+    div.innerHTML = `
+        <div class="individual-job-header">
+            <span>Trabajo #${id}</span>
+            <span class="indicator status-processing" id="job-status-badge-${id}">Iniciando</span>
+        </div>
+        <div class="job-status-text" id="job-text-${id}">Subiendo...</div>
+        <div class="individual-job-images" id="job-imgs-${id}"></div>
+    `;
+    container.prepend(div);
+    // Asegurar que la sección es visible
+    document.getElementById('individualJobsSection').style.display = 'block';
+}
+
+function updateIndividualStatus(id, status, text) {
+    const badge = document.getElementById(`job-status-badge-${id}`);
+    const txt = document.getElementById(`job-text-${id}`);
+    const card = document.getElementById(`job-card-${id}`);
+
+    if(badge) {
+        if(status === 'completed') {
+            badge.className = 'indicator health-ok';
+            badge.textContent = 'Completado';
+            if(card) card.className = 'individual-job-result completed';
+        } else if (status === 'error') {
+            badge.className = 'indicator status-error';
+            badge.textContent = 'Error';
+            if(card) card.className = 'individual-job-result error';
+        } else {
+            badge.className = 'indicator status-processing';
+        }
+    }
+    if(txt) txt.textContent = text;
+}
+
+function startIndividualPoll(localId, jobId) {
     const interval = setInterval(async () => {
         try {
-            // Usar timestamp para evitar caché del navegador
-            const t = new Date().getTime();
-            const res = await fetch(`${state.API_BASE_URL}/session/jobs/${serverId}?t=${t}`);
-            
-            if(res.ok) {
-                const job = await res.json();
-                const el = document.getElementById(`status-${localId}`);
-                const box = document.getElementById(`job-${localId}`);
-                
-                if (job.status === 'processing') {
-                    el.textContent = "Procesando... (Espere)";
-                } 
-                else if (job.status === 'completed') {
-                    el.textContent = "✅ Completado";
-                    box.className = 'individual-job-result completed';
-                    
-                    // Mostrar imágenes
-                    if(job.results && job.results.length) {
-                        const c = document.getElementById(`imgs-${localId}`);
-                        c.innerHTML = '';
-                        job.results.forEach(img => {
-                            const i = document.createElement('img');
-                            const url = img.session_url || img.url;
-                            // Asegurar URL absoluta
-                            i.src = url.startsWith('http') ? url : `${state.API_BASE_URL}${url}`;
-                            i.onclick = () => showImageModal(i.src);
-                            c.appendChild(i);
-                        });
-                    }
-                    clearInterval(interval); // Detener polling
-                    showStatus('🎉 Imagen generada correctamente', 'success');
-                } 
-                else if (job.status === 'error') {
-                    el.textContent = `❌ Error: ${job.error || 'Desconocido'}`;
-                    box.className = 'individual-job-result error';
-                    clearInterval(interval);
-                }
-            }
-        } catch(e) { console.error("Error polling:", e); }
-    }, 2000);
-    
-    // Guardar intervalo para poder limpiarlo si se limpia la sesión
-    state.individualPollingIntervals.set(localId, interval);
-}
+            const res = await fetch(`${state.API_BASE_URL}/session/jobs/${jobId}`);
+            if(!res.ok) return;
+            const job = await res.json();
 
-export function restoreIndividualJob(job) {
-    // Función simple para restaurar visualmente
-    state.individualJobCounter++;
-    const localId = `restored_${job.id}`;
-    const div = document.createElement('div');
-    div.className = `individual-job-result ${job.status}`;
-    div.id = `job-${localId}`;
-    div.innerHTML = `
-        <div class="individual-job-header">🎯 Trabajo Restaurado</div>
-        <div>Estado: <strong id="status-${localId}">${job.status}</strong></div>
-        <div id="imgs-${localId}" class="individual-job-images"></div>
-    `;
-    document.getElementById('individualResults').appendChild(div);
-    
-    if(job.results && job.results.length) {
-        const c = document.getElementById(`imgs-${localId}`);
-        job.results.forEach(img => {
-            const i = document.createElement('img');
-            const url = img.session_url || img.url;
-            i.src = url.startsWith('http') ? url : `${state.API_BASE_URL}${url}`;
-            i.onclick = () => showImageModal(i.src);
-            c.appendChild(i);
-        });
-    }
+            if (job.status === 'completed') {
+                clearInterval(interval);
+                updateIndividualStatus(localId, 'completed', 'Generación finalizada');
+                document.getElementById('processBtn').disabled = false;
+                
+                // Renderizar imágenes
+                const imgContainer = document.getElementById(`job-imgs-${localId}`);
+                if(job.results && job.results.length) {
+                    job.results.forEach(img => {
+                        const el = document.createElement('img');
+                        const url = img.session_url.startsWith('http') ? img.session_url : `${state.API_BASE_URL}${img.session_url}`;
+                        el.src = url;
+                        el.onclick = () => showImageModal(url);
+                        imgContainer.appendChild(el);
+                    });
+                }
+            } else if (job.status === 'error') {
+                clearInterval(interval);
+                updateIndividualStatus(localId, 'error', job.error || 'Error desconocido');
+                document.getElementById('processBtn').disabled = false;
+            }
+        } catch (e) { console.error(e); }
+    }, 2000);
 }
