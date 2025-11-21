@@ -1,0 +1,63 @@
+{
+  "id": "7a5cd9a3-2080-47aa-84a5-03bf1d275c59",
+  "type": "batch",
+  "status": "processing",
+  "created_at": 1763685850.797176,
+  "updated_at": 1763686622.5792742,
+  "batch_config": {
+    "room_types": [
+      "bedroom"
+    ],
+    "orientations": [
+      "V60x80"
+    ],
+    "frame_color": "black",
+    "style": "default",
+    "include_upscale": false,
+    "original_filename": "2.png"
+  },
+  "batch_tracking_id": "1763685850_27a2",
+  "total_workflows": 13,
+  "results": [
+    {
+      "workflow": "bedroom/V60x80/cuadro-bedroom-alternative-V60x802",
+      "generated_images": [
+        {
+          "filename": "bedroom_V60x80_cuadro-bedroom-alternative-V60x802_902113.jpg",
+          "session_url": "/get-image/2/bedroom_V60x80_cuadro-bedroom-alternative-V60x802_902113.jpg",
+          "url": "/get-image/2/bedroom_V60x80_cuadro-bedroom-alternative-V60x802_902113.jpg"
+        }
+      ]
+    },
+    {
+      "workflow": "bedroom/V60x80/cuadro-bedroom-arquitecture-V60x802",
+      "generated_images": [
+        {
+          "filename": "bedroom_V60x80_cuadro-bedroom-arquitecture-V60x802_9bc295.jpg",
+          "session_url": "/get-image/2/bedroom_V60x80_cuadro-bedroom-arquitecture-V60x802_9bc295.jpg",
+          "url": "/get-image/2/bedroom_V60x80_cuadro-bedroom-arquitecture-V60x802_9bc295.jpg"
+        }
+      ]
+    },
+    {
+      "workflow": "bedroom/V60x80/cuadro-bedroom-artistic-V60x802",
+      "generated_images": [
+        {
+          "filename": "bedroom_V60x80_cuadro-bedroom-artistic-V60x802_932a20.jpg",
+          "session_url": "/get-image/2/bedroom_V60x80_cuadro-bedroom-artistic-V60x802_932a20.jpg",
+          "url": "/get-image/2/bedroom_V60x80_cuadro-bedroom-artistic-V60x802_932a20.jpg"
+        }
+      ]
+    },
+    {
+      "workflow": "bedroom/V60x80/cuadro-bedroom-bohemian-V60x802",
+      "generated_images": [
+        {
+          "filename": "bedroom_V60x80_cuadro-bedroom-bohemian-V60x802_4d954b.jpg",
+          "session_url": "/get-image/2/bedroom_V60x80_cuadro-bedroom-bohemian-V60x802_4d954b.jpg",
+          "url": "/get-image/2/bedroom_V60x80_cuadro-bedroom-bohemian-V60x802_4d954b.jpg"
+        }
+      ]
+    }
+  ]
+}

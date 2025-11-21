@@ -51,22 +51,37 @@ def delete_queue_items(prompt_ids):
         log_error(f"Error borrando items de cola: {e}")
         return False
 
+def get_current_executing_prompt():
+    """Obtiene el prompt_id que está siendo ejecutado actualmente en ComfyUI"""
+    try:
+        status_response = requests.get(f"{COMFYUI_URL}/prompt", timeout=5)
+        if status_response.status_code == 200:
+            queue_data = status_response.json()
+            # El job que está ejecutándose estará en queue_running[0] si existe
+            queue_running = queue_data.get('queue_running', [])
+            if queue_running and len(queue_running) > 0:
+                return queue_running[0][1]  # [priority, prompt_id, ...]
+        return None
+    except:
+        return None
+
 def wait_for_completion(prompt_id, timeout=600, callback=None, workflow_data=None):
     """
-    Espera a que ComfyUI complete el procesamiento usando polling simple
+    Espera a que ComfyUI complete el procesamiento usando polling optimizado
+    Solo hace polling cuando el job está siendo ejecutado activamente
     Retorna: outputs del workflow
     """
     from utils.logger import log_info, log_warning, log_error
     
-    log_info(f"🔌 [WAIT {prompt_id[:8]}] Iniciando wait_for_completion con polling simple...")
+    log_info(f"🔌 [WAIT {prompt_id[:8]}] Iniciando wait_for_completion con polling optimizado...")
     
     # Verificar estado de la cola antes de comenzar
     try:
         status_response = requests.get(f"{COMFYUI_URL}/prompt", timeout=5)
         if status_response.status_code == 200:
             queue_data = status_response.json()
-            queue_running = queue_data.get('exec_info', {}).get('queue_remaining', 0)
-            log_info(f"📊 [WAIT {prompt_id[:8]}] Cola de ComfyUI: {queue_running} trabajos pendientes")
+            queue_remaining = queue_data.get('exec_info', {}).get('queue_remaining', 0)
+            log_info(f"📊 [WAIT {prompt_id[:8]}] Cola de ComfyUI: {queue_remaining} trabajos pendientes")
         else:
             log_warning(f"⚠️ [WAIT {prompt_id[:8]}] No se pudo consultar estado de cola")
     except Exception as e:
@@ -74,6 +89,22 @@ def wait_for_completion(prompt_id, timeout=600, callback=None, workflow_data=Non
     
     start_time = time.time()
     
+    # Fase 1: Esperar hasta que nuestro job esté siendo ejecutado
+    log_info(f"⏳ [WAIT {prompt_id[:8]}] Esperando turno en cola...")
+    while time.time() - start_time < timeout:
+        current_executing = get_current_executing_prompt()
+        if current_executing == prompt_id:
+            log_info(f"🎯 [WAIT {prompt_id[:8]}] ¡Nuestro job está siendo ejecutado!")
+            break
+        
+        # Si hay algo ejecutándose pero no es nuestro job, esperar más tiempo
+        if current_executing:
+            log_info(f"⌛ [WAIT {prompt_id[:8]}] Esperando... (ejecutándose: {current_executing[:8]})")
+            time.sleep(5)  # Esperar más tiempo cuando no es nuestro turno
+        else:
+            time.sleep(2)  # Polling más frecuente si no hay nada ejecutándose
+    
+    # Fase 2: Polling activo del historial una vez que estamos ejecutando
     log_info(f"🔄 [WAIT {prompt_id[:8]}] Iniciando polling del historial...")
     
     for i in range(timeout):
@@ -105,21 +136,27 @@ def wait_for_completion(prompt_id, timeout=600, callback=None, workflow_data=Non
             else:
                 log_warning(f"⚠️ [WAIT {prompt_id[:8]}] Status code: {response.status_code}")
             
-            # Log de progreso cada 10 segundos
-            if i % 10 == 0 and i > 0:
-                elapsed = time.time() - start_time
-                log_info(f"⏰ [WAIT {prompt_id[:8]}] Esperando... {i}/{timeout}s (elapsed: {elapsed:.1f}s)")
-            
-            time.sleep(1)
-            
         except requests.exceptions.RequestException as e:
             log_warning(f"⚠️ [WAIT {prompt_id[:8]}] Request error: {e}, continuando...")
-            time.sleep(1)
-            continue
         except Exception as e:
             log_error(f"❌ [WAIT {prompt_id[:8]}] Error inesperado: {e}")
-            time.sleep(1)
-            continue
+            
+        # Polling adaptativo basado en quien está ejecutando:
+        current_executing = get_current_executing_prompt()
+        if current_executing == prompt_id:
+            # Es nuestro turno: polling frecuente
+            time.sleep(2)
+        elif current_executing:
+            # Otro job ejecutándose: esperar más tiempo
+            time.sleep(5) 
+        else:
+            # Nada ejecutándose: polling medio
+            time.sleep(3)
+            
+        # Log de progreso cada 30 segundos
+        if i % 30 == 0 and i > 0:
+            elapsed = time.time() - start_time
+            log_info(f"⏰ [WAIT {prompt_id[:8]}] Esperando... {i}/{timeout}s (elapsed: {elapsed:.1f}s)")
     
     elapsed = time.time() - start_time
     log_error(f"⏰ [WAIT {prompt_id[:8]}] Timeout después de {timeout} segundos (elapsed: {elapsed:.1f}s)")
@@ -135,3 +172,40 @@ def get_system_status():
             return {"online": True, "status": "idle", "message": "Listo"}
     except: pass
     return {"online": False, "status": "offline", "message": "Offline"}
+
+def wait_for_completion_simple(prompt_id, timeout=300):
+    """
+    Función simple de wait_for_completion como en app_new.py - SOLO para batch processing
+    Retorna: outputs del workflow
+    """
+    from utils.logger import log_info, log_error
+    
+    log_info(f"⏳ [BATCH SIMPLE] Esperando completion del prompt: {prompt_id[:8]}")
+    
+    for i in range(timeout):
+        try:
+            response = requests.get(f"{COMFYUI_URL}/history/{prompt_id}", timeout=30)
+            
+            if response.status_code == 200:
+                history = response.json()
+                
+                if prompt_id in history:
+                    prompt_history = history[prompt_id]
+                    
+                    # Verificar si hay outputs
+                    if 'outputs' in prompt_history:
+                        log_info(f"✅ [BATCH SIMPLE] Procesamiento completado para {prompt_id[:8]}")
+                        return prompt_history['outputs']
+                    
+                    # Verificar errores
+                    if 'status' in prompt_history and 'error' in prompt_history['status']:
+                        error_msg = prompt_history['status']['error']
+                        log_error(f"❌ [BATCH SIMPLE] Error en ComfyUI para {prompt_id[:8]}: {error_msg}")
+                        raise Exception(f"Error en ComfyUI: {error_msg}")
+                        
+        except requests.exceptions.RequestException:
+            log_info(f"⚠️ [BATCH SIMPLE] Request timeout, reintentando... ({i}/{timeout})")
+            
+        time.sleep(1)  # Polling simple cada segundo
+    
+    raise TimeoutError(f"Timeout esperando completion después de {timeout} segundos")

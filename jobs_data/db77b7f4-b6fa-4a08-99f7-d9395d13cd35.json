@@ -1,0 +1,12 @@
+{
+  "id": "db77b7f4-b6fa-4a08-99f7-d9395d13cd35",
+  "type": "individual",
+  "status": "pending",
+  "created_at": 1763686529.944844,
+  "updated_at": 1763686534.2913468,
+  "workflow": "bathroom/V60x80/cuadro-bathroom-modern-V60x802",
+  "frame_color": "black",
+  "style": "default",
+  "original_filename": "2.png",
+  "prompt_id": "af75b4f1-e7f7-429e-8b96-09d335796a6e"
+}

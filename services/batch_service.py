@@ -3,14 +3,13 @@ import time
 import uuid
 import io
 import os
-import concurrent.futures
 from PIL import Image
 from datetime import datetime
 from werkzeug.utils import secure_filename
 
 from config import COMFYUI_INPUT_DIR, OUR_OUTPUT_DIR
 from utils.logger import log_info, log_error
-from services.comfy_service import submit_workflow_to_comfyui, wait_for_completion, interrupt_current_processing, delete_queue_items
+from services.comfy_service import submit_workflow_to_comfyui, wait_for_completion_simple, interrupt_current_processing, delete_queue_items
 from services.workflow_service import load_workflow, update_workflow
 from services.file_service import create_output_directory, extract_generated_images, find_image_file
 from job_persistence import session_manager
@@ -134,29 +133,33 @@ def process_all_workflows_simultaneously_with_tracking(image_data, workflows, co
             ACTIVE_BATCHES[batch_id]['comfy_pids'] = comfy_pids
             ACTIVE_BATCHES[batch_id]["status"] = "processing"
     
-    # 2. Recoger resultados
-    def _wait(pid, data):
-        # --- CHEQUEO DE CANCELACIÓN ---
-        with BATCH_LOCK:
-            if ACTIVE_BATCHES.get(batch_id, {}).get('is_cancelled', False):
-                return {'success': False, 'error': 'Cancelled by user'}
-        # ------------------------------
-
+    # 2. Esperar resultados usando approach simple como app_new.py
+    log_info(f"🔄 [BATCH {batch_id}] Esperando {len(submitted)} workflows con approach simple...")
+    
+    # Función simple de espera por cada job (como en app_new.py)
+    def _wait_for_job(pid, data):
+        """Esperar un job individual - approach simple"""
         try:
-            outs = wait_for_completion(pid, timeout=60000)
+            # Chequeo de cancelación
+            with BATCH_LOCK:
+                if ACTIVE_BATCHES.get(batch_id, {}).get('is_cancelled', False):
+                    return {'success': False, 'error': 'Cancelled by user'}
+                    
+            # Esperar completion simple
+            outputs = wait_for_completion_simple(pid, timeout=60000)
             
-            if not outs:
-                # Si se canceló mientras esperábamos, no es error, es normal
+            if not outputs:
                 with BATCH_LOCK:
                     if ACTIVE_BATCHES.get(batch_id, {}).get('is_cancelled', False):
                         return {'success': False, 'error': 'Cancelled'}
                 raise Exception("ComfyUI devolvió respuesta vacía")
 
+            # Procesar imágenes (igual que antes)
             orig_name = common_params.get('original_filename', 'batch_output')
             base_name = secure_filename(orig_name.rsplit('.', 1)[0]) 
             out_dir = create_output_directory(base_name) 
             
-            imgs = extract_generated_images(outs, orig_name)
+            imgs = extract_generated_images(outputs, orig_name)
             saved = []
             
             for im in imgs:
@@ -182,11 +185,12 @@ def process_all_workflows_simultaneously_with_tracking(image_data, workflows, co
                         saved.append({'filename': new_name, 'session_url': final_url, 'url': final_url})
                         
                     except Exception as e_save:
-                        print(f"      ❌ ERROR ESCRITURA: {e_save}")
+                        log_error(f"❌ [BATCH] Error guardando imagen: {e_save}")
 
             with BATCH_LOCK:
-                # Doble chequeo antes de actualizar contadores
-                if ACTIVE_BATCHES.get(batch_id, {}).get('is_cancelled', False): return {'success': False, 'error': 'Cancelled'}
+                # Chequeo final de cancelación antes de actualizar contadores
+                if ACTIVE_BATCHES.get(batch_id, {}).get('is_cancelled', False): 
+                    return {'success': False, 'error': 'Cancelled'}
 
                 if len(saved) > 0:
                     ACTIVE_BATCHES[batch_id]['successful'] += 1
@@ -198,25 +202,34 @@ def process_all_workflows_simultaneously_with_tracking(image_data, workflows, co
                     
                 ACTIVE_BATCHES[batch_id]['completed_workflows'] += 1
 
-            session_manager.update_job(session_job_id, 
-                results=ACTIVE_BATCHES[batch_id]['results'],
-                status='processing'
-            )
-                
+                # Actualizar job de sesión con progreso
+                session_manager.update_job(session_job_id, 
+                    results=ACTIVE_BATCHES[batch_id]['results'],
+                    status='processing'
+                )
+                    
             return {'success': True, 'generated_images': saved, 'workflow': data['wf']['id']}
             
         except Exception as e:
+            log_error(f"❌ [BATCH] Error procesando workflow {data['wf']['id']}: {e}")
             with BATCH_LOCK:
                 if not ACTIVE_BATCHES.get(batch_id, {}).get('is_cancelled', False):
                     ACTIVE_BATCHES[batch_id]['completed_workflows'] += 1
                     ACTIVE_BATCHES[batch_id]['failed'] += 1
             return {'success': False, 'error': str(e)}
 
+    # Usar ThreadPoolExecutor simple (como en app_new.py original)
+    import concurrent.futures
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as ex:
-        futs = {ex.submit(_wait, pid, data): pid for pid, data in submitted.items()}
+        futs = {ex.submit(_wait_for_job, pid, data): pid for pid, data in submitted.items()}
         for f in concurrent.futures.as_completed(futs):
-            try: results.append(f.result())
-            except: pass
+            try: 
+                result = f.result()
+                results.append(result)
+                log_info(f"📈 [BATCH {batch_id}] Job completado: {len(results)}/{len(submitted)}")
+            except Exception as e:
+                log_error(f"❌ [BATCH] Error obteniendo resultado: {e}")
+                results.append({'success': False, 'error': str(e)})
 
     # Estado final
     with BATCH_LOCK:
