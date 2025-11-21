@@ -21,6 +21,24 @@ export function updateBatchWorkflowPreview() {
 export async function processBatch() {
     if (!state.selectedFile) return showStatus('❌ Selecciona una imagen primero', 'error');
     
+    // 1. Verificar estado del sistema antes de procesar
+    try {
+        const systemRes = await fetch(`${state.API_BASE_URL}/batch-system-status`);
+        const systemData = await systemRes.json();
+        
+        if (systemData.sending_prompts) {
+            showStatus(`⏳ Otro batch está enviando prompts: ${systemData.current_sending_batch}. Intenta en unos segundos.`, 'warning');
+            return;
+        }
+        
+        // Mostrar información de batches activos si los hay
+        if (systemData.active_batches_count > 0) {
+            showStatus(`ℹ️ Hay ${systemData.processing_batches_count} batch(es) procesándose en ComfyUI.`, 'info');
+        }
+    } catch (err) {
+        console.warn('No se pudo verificar estado del sistema:', err);
+    }
+    
     const roomTypes = Array.from(document.getElementById('batchRoomTypes').selectedOptions).map(o=>o.value);
     const orientations = Array.from(document.getElementById('batchOrientations').selectedOptions).map(o=>o.value);
     
@@ -52,10 +70,17 @@ export async function processBatch() {
             updateBatchHeader(localId, data.batch_id);
             startBatchPoll(localId, data.batch_id, data.session_job_id);
         } else {
+            // Manejar específicamente error de batch ya procesándose
+            if (res.status === 409) {
+                showStatus(`⏳ ${data.error}`, 'warning');
+            } else {
+                showStatus(`❌ Error: ${data.error}`, 'error');
+            }
             markBatchError(localId, data.error);
         }
     } catch(e) { 
         markBatchError(localId, e.message);
+        showStatus(`❌ Error de conexión: ${e.message}`, 'error');
     }
 }
 

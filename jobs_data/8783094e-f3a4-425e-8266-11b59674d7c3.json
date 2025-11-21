@@ -1,0 +1,123 @@
+{
+  "id": "8783094e-f3a4-425e-8266-11b59674d7c3",
+  "type": "batch",
+  "status": "completed",
+  "created_at": 1763688031.0788727,
+  "updated_at": 1763694874.717563,
+  "batch_config": {
+    "room_types": [
+      "office"
+    ],
+    "orientations": [
+      "V60x80"
+    ],
+    "frame_color": "black",
+    "style": "default",
+    "include_upscale": true,
+    "original_filename": "2.png"
+  },
+  "batch_tracking_id": "1763688031_d8d0",
+  "total_workflows": 10,
+  "results": [
+    {
+      "workflow": "office/V60x80/cuadro-office-bohemian-V60x802",
+      "generated_images": [
+        {
+          "filename": "office_V60x80_cuadro-office-bohemian-V60x802_152fd5.jpg",
+          "session_url": "/get-image/2/office_V60x80_cuadro-office-bohemian-V60x802_152fd5.jpg",
+          "url": "/get-image/2/office_V60x80_cuadro-office-bohemian-V60x802_152fd5.jpg"
+        }
+      ]
+    },
+    {
+      "workflow": "office/V60x80/cuadro-office-close-V60x802",
+      "generated_images": [
+        {
+          "filename": "office_V60x80_cuadro-office-close-V60x802_10a57e.jpg",
+          "session_url": "/get-image/2/office_V60x80_cuadro-office-close-V60x802_10a57e.jpg",
+          "url": "/get-image/2/office_V60x80_cuadro-office-close-V60x802_10a57e.jpg"
+        }
+      ]
+    },
+    {
+      "workflow": "office/V60x80/cuadro-office-coffe-V60x802",
+      "generated_images": [
+        {
+          "filename": "office_V60x80_cuadro-office-coffe-V60x802_e6d685.jpg",
+          "session_url": "/get-image/2/office_V60x80_cuadro-office-coffe-V60x802_e6d685.jpg",
+          "url": "/get-image/2/office_V60x80_cuadro-office-coffe-V60x802_e6d685.jpg"
+        }
+      ]
+    },
+    {
+      "workflow": "office/V60x80/cuadro-office-desk-V60x802",
+      "generated_images": [
+        {
+          "filename": "office_V60x80_cuadro-office-desk-V60x802_4e72e3.jpg",
+          "session_url": "/get-image/2/office_V60x80_cuadro-office-desk-V60x802_4e72e3.jpg",
+          "url": "/get-image/2/office_V60x80_cuadro-office-desk-V60x802_4e72e3.jpg"
+        }
+      ]
+    },
+    {
+      "workflow": "office/V60x80/cuadro-office-home-V60x802",
+      "generated_images": [
+        {
+          "filename": "office_V60x80_cuadro-office-home-V60x802_78f8ad.jpg",
+          "session_url": "/get-image/2/office_V60x80_cuadro-office-home-V60x802_78f8ad.jpg",
+          "url": "/get-image/2/office_V60x80_cuadro-office-home-V60x802_78f8ad.jpg"
+        }
+      ]
+    },
+    {
+      "workflow": "office/V60x80/cuadro-office-minilamp-V60x802",
+      "generated_images": [
+        {
+          "filename": "office_V60x80_cuadro-office-minilamp-V60x802_685f9c.jpg",
+          "session_url": "/get-image/2/office_V60x80_cuadro-office-minilamp-V60x802_685f9c.jpg",
+          "url": "/get-image/2/office_V60x80_cuadro-office-minilamp-V60x802_685f9c.jpg"
+        }
+      ]
+    },
+    {
+      "workflow": "office/V60x80/cuadro-office-open-V60x802",
+      "generated_images": [
+        {
+          "filename": "office_V60x80_cuadro-office-open-V60x802_cc2810.jpg",
+          "session_url": "/get-image/2/office_V60x80_cuadro-office-open-V60x802_cc2810.jpg",
+          "url": "/get-image/2/office_V60x80_cuadro-office-open-V60x802_cc2810.jpg"
+        }
+      ]
+    },
+    {
+      "workflow": "office/V60x80/cuadro-office-profesional-V60x802",
+      "generated_images": [
+        {
+          "filename": "office_V60x80_cuadro-office-profesional-V60x802_9c5711.jpg",
+          "session_url": "/get-image/2/office_V60x80_cuadro-office-profesional-V60x802_9c5711.jpg",
+          "url": "/get-image/2/office_V60x80_cuadro-office-profesional-V60x802_9c5711.jpg"
+        }
+      ]
+    },
+    {
+      "workflow": "office/V60x80/cuadro-office-simple-V60x802",
+      "generated_images": [
+        {
+          "filename": "office_V60x80_cuadro-office-simple-V60x802_e17004.jpg",
+          "session_url": "/get-image/2/office_V60x80_cuadro-office-simple-V60x802_e17004.jpg",
+          "url": "/get-image/2/office_V60x80_cuadro-office-simple-V60x802_e17004.jpg"
+        }
+      ]
+    },
+    {
+      "workflow": "office/V60x80/cuadro-office-student-V60x802",
+      "generated_images": [
+        {
+          "filename": "office_V60x80_cuadro-office-student-V60x802_9bd001.jpg",
+          "session_url": "/get-image/2/office_V60x80_cuadro-office-student-V60x802_9bd001.jpg",
+          "url": "/get-image/2/office_V60x80_cuadro-office-student-V60x802_9bd001.jpg"
+        }
+      ]
+    }
+  ]
+}
