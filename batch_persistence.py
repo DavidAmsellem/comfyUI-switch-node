@@ -4,19 +4,19 @@ import time
 import uuid
 from config import BASE_DIR, OUR_OUTPUT_DIR
 
-# Directorio donde se guardan los JSON de estado PARA TRABAJOS INDIVIDUALES
-INDIVIDUAL_JOBS_DIR = os.path.join(BASE_DIR, 'individual_jobs_data')
-os.makedirs(INDIVIDUAL_JOBS_DIR, exist_ok=True)
+# Directorio donde se guardan los JSON de estado PARA BATCHES
+BATCH_JOBS_DIR = os.path.join(BASE_DIR, 'batch_jobs_data')
+os.makedirs(BATCH_JOBS_DIR, exist_ok=True)
 
-class IndividualSessionManager:
+class BatchSessionManager:
     """
-    Gestor de persistencia específico para trabajos individuales
-    Maneja un solo workflow por job
+    Gestor de persistencia específico para trabajos por lotes (batch)
+    Maneja múltiples workflows procesándose simultáneamente
     """
     def __init__(self):
         self.session_dir = OUR_OUTPUT_DIR
 
-    def create_job(self, job_type='individual', **kwargs):
+    def create_job(self, job_type='batch', **kwargs):
         job_id = str(uuid.uuid4())
         job_data = {
             "id": job_id,
@@ -34,8 +34,9 @@ class IndividualSessionManager:
         if data:
             data.update(kwargs)
             data['updated_at'] = time.time()
-            # Para jobs individuales, sobrescribimos results (solo 1 imagen generalmente)
+            # Si se pasan resultados, asegurar que se anexan o sobrescriben según lógica
             if 'results' in kwargs and kwargs['results']:
+                # En batch, a veces queremos acumular, pero por simplicidad aquí actualizamos
                 data['results'] = kwargs['results']
             
             self._save_job(job_id, data)
@@ -43,7 +44,7 @@ class IndividualSessionManager:
         return False
 
     def get_job(self, job_id):
-        path = os.path.join(INDIVIDUAL_JOBS_DIR, f"{job_id}.json")
+        path = os.path.join(BATCH_JOBS_DIR, f"{job_id}.json")
         if os.path.exists(path):
             try:
                 with open(path, 'r') as f:
@@ -53,11 +54,11 @@ class IndividualSessionManager:
         return None
 
     def get_all_active_jobs(self, limit=50):
-        """Recupera los últimos trabajos individuales para el historial"""
+        """Recupera los últimos trabajos batch para el historial"""
         jobs = []
         try:
             files = sorted(
-                [os.path.join(INDIVIDUAL_JOBS_DIR, f) for f in os.listdir(INDIVIDUAL_JOBS_DIR) if f.endswith('.json')],
+                [os.path.join(BATCH_JOBS_DIR, f) for f in os.listdir(BATCH_JOBS_DIR) if f.endswith('.json')],
                 key=os.path.getmtime,
                 reverse=True
             )
@@ -83,12 +84,13 @@ class IndividualSessionManager:
         return f"/get-image/{base_name}/{filename}"
 
     def cleanup_old_jobs(self, hours=24):
+        """Limpia trabajos batch antiguos"""
         count = 0
         now = time.time()
         cutoff = now - (hours * 3600)
-        for f in os.listdir(INDIVIDUAL_JOBS_DIR):
+        for f in os.listdir(BATCH_JOBS_DIR):
             if f.endswith('.json'):
-                path = os.path.join(INDIVIDUAL_JOBS_DIR, f)
+                path = os.path.join(BATCH_JOBS_DIR, f)
                 if os.path.getmtime(path) < cutoff:
                     try:
                         os.remove(path)
@@ -97,16 +99,16 @@ class IndividualSessionManager:
         return count
 
     def clear_all_session(self):
-        # Borra todos los json de jobs individuales
-        for f in os.listdir(INDIVIDUAL_JOBS_DIR):
+        """Borra todos los trabajos batch"""
+        for f in os.listdir(BATCH_JOBS_DIR):
             if f.endswith('.json'):
-                try: os.remove(os.path.join(INDIVIDUAL_JOBS_DIR, f))
+                try: os.remove(os.path.join(BATCH_JOBS_DIR, f))
                 except: pass
         return {"success": True}
 
     def _save_job(self, job_id, data):
-        path = os.path.join(INDIVIDUAL_JOBS_DIR, f"{job_id}.json")
+        path = os.path.join(BATCH_JOBS_DIR, f"{job_id}.json")
         with open(path, 'w') as f:
             json.dump(data, f, indent=2)
 
-individual_session_manager = IndividualSessionManager()
+batch_session_manager = BatchSessionManager()

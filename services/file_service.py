@@ -6,7 +6,7 @@ from PIL import Image
 from werkzeug.utils import secure_filename
 from config import COMFYUI_INPUT_DIR, COMFYUI_OUTPUT_DIR, WORKFLOW_CONFIG, OUR_OUTPUT_DIR
 from utils.logger import log_info, log_error
-from job_persistence import session_manager
+from job_persistence import individual_session_manager
 from datetime import datetime
 
 def save_uploaded_image(file, base_name=None):
@@ -80,7 +80,7 @@ def save_images_to_our_output(output_dir, original_file_source, generated_images
             
             # Guardar en sesión y construir URLs
             buffer.seek(0)
-            session_url = session_manager.save_job_image(job_id, buffer.read(), "original.jpg")
+            session_url = individual_session_manager.save_job_image(job_id, buffer.read(), "original.jpg")
             
             # URL directa para el endpoint
             base_name = os.path.basename(output_dir)
@@ -118,7 +118,7 @@ def save_images_to_our_output(output_dir, original_file_source, generated_images
             
             # Guardar en sesión y obtener URL de sesión
             with open(dest_path, 'rb') as f:
-                session_url = session_manager.save_job_image(job_id, f.read(), dest_name)
+                session_url = individual_session_manager.save_job_image(job_id, f.read(), dest_name)
             
             # Construir URL directa para el endpoint /get-image
             base_name = os.path.basename(output_dir)  # Nombre de la carpeta (ej: bedroom_123456)

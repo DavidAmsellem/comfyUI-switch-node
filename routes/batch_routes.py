@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from services.batch_service import ACTIVE_BATCHES, BATCH_LOCK, enforce_batch_throttle, process_all_workflows_simultaneously_with_tracking, cancel_batch_job, is_batch_processing, get_current_processing_batch
 from services.workflow_service import get_available_workflows, filter_workflows_for_batch
-from job_persistence import session_manager
+from batch_persistence import batch_session_manager
 import json, threading, time, uuid
 from io import BytesIO
 
@@ -32,7 +32,7 @@ def process_batch():
         
         if not filtered: return jsonify({"error": "No hay workflows coincidentes"}), 400
 
-        jid = session_manager.create_job(job_type='batch', batch_config=conf)
+        jid = batch_session_manager.create_job(job_type='batch', batch_config=conf)
         bid = f"{int(time.time())}_{str(uuid.uuid4())[:4]}"
         
         with BATCH_LOCK:
@@ -48,7 +48,7 @@ def process_batch():
                 "is_cancelled": False
             }
         
-        session_manager.update_job(jid, batch_tracking_id=bid, total_workflows=len(filtered))
+        batch_session_manager.update_job(jid, batch_tracking_id=bid, total_workflows=len(filtered))
 
         enforce_batch_throttle(len(filtered))
         img_data = BytesIO(img.read())

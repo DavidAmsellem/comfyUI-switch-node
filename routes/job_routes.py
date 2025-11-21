@@ -4,7 +4,7 @@ from services.workflow_service import load_workflow, update_workflow
 from services.comfy_service import submit_workflow_to_comfyui, wait_for_completion, verify_image_accessibility
 from utils.helpers import allowed_file
 from utils.logger import log_info, log_error
-from job_persistence import session_manager
+from job_persistence import individual_session_manager
 import os
 import threading
 from config import WORKFLOW_CONFIG, OUR_OUTPUT_DIR, COMFYUI_OUTPUT_DIR
@@ -49,7 +49,7 @@ def process_job_background(job_id, prompt_id, workflow_name, frame_color, style_
         
         # 3. Guardar resultado FINAL (Única escritura de cierre)
         log_info(f"💾 [BACKGROUND {job_id[:8]}] Actualizando job como completado...")
-        session_manager.update_job(job_id, 
+        individual_session_manager.update_job(job_id, 
             status='completed', 
             current_operation='Completado', 
             results=frontend_images
@@ -61,7 +61,7 @@ def process_job_background(job_id, prompt_id, workflow_name, frame_color, style_
         log_error(f"💥 [BACKGROUND {job_id[:8]}] Error background: {e}")
         log_error(f"💥 [BACKGROUND {job_id[:8]}] Error type: {type(e)}")
         log_error(f"💥 [BACKGROUND {job_id[:8]}] Error args: {e.args}")
-        session_manager.update_job(job_id, status='error', error=str(e))
+        individual_session_manager.update_job(job_id, status='error', error=str(e))
 
 @job_bp.route('/process-image', methods=['POST'])
 def process_image():
@@ -76,7 +76,7 @@ def process_image():
         style_node_id = request.form.get('style_node', None)
 
         # Crear job inicial
-        job_id = session_manager.create_job(
+        job_id = individual_session_manager.create_job(
             job_type='individual', workflow=workflow_name, frame_color=frame_color,
             style=style_id, original_filename=file.filename
         )
@@ -111,7 +111,7 @@ def process_image():
         
         # Actualizar con prompt_id
         log_info(f"💾 [JOB {job_id[:8]}] Actualizando job con prompt_id...")
-        session_manager.update_job(job_id, prompt_id=prompt_id)
+        individual_session_manager.update_job(job_id, prompt_id=prompt_id)
 
         log_info(f"🧵 [JOB {job_id[:8]}] Creando thread de procesamiento background...")
         

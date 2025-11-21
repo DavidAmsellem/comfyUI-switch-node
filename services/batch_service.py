@@ -12,7 +12,7 @@ from utils.logger import log_info, log_error, log_warning
 from services.comfy_service import submit_workflow_to_comfyui, wait_for_completion_simple, interrupt_current_processing, delete_queue_items
 from services.workflow_service import load_workflow, update_workflow
 from services.file_service import create_output_directory, extract_generated_images, find_image_file
-from job_persistence import session_manager
+from batch_persistence import batch_session_manager
 
 ACTIVE_BATCHES = {}
 BATCH_LOCK = threading.Lock()
@@ -103,7 +103,7 @@ def cancel_batch_job(batch_id):
 
     # 6. Actualizar persistencia (JSON)
     # Marcamos como cancelado y borramos resultados del JSON también
-    session_manager.update_job(batch['session_job_id'], status='cancelled', results=[])
+    batch_session_manager.update_job(batch['session_job_id'], status='cancelled', results=[])
     
     return True, f"Cancelado y {deleted_count} imágenes eliminadas."
 
@@ -229,7 +229,7 @@ def process_all_workflows_simultaneously_with_tracking(image_data, workflows, co
                             final_url = f"/get-image/{base_name}/{new_name}"
                             
                             with open(dest, 'rb') as f:
-                                 _ = session_manager.save_job_image(session_job_id or batch_id, f.read(), new_name)
+                                 _ = batch_session_manager.save_job_image(session_job_id or batch_id, f.read(), new_name)
                             
                             saved.append({'filename': new_name, 'session_url': final_url, 'url': final_url})
                             
@@ -252,7 +252,7 @@ def process_all_workflows_simultaneously_with_tracking(image_data, workflows, co
                     ACTIVE_BATCHES[batch_id]['completed_workflows'] += 1
 
                     # Actualizar job de sesión con progreso
-                    session_manager.update_job(session_job_id, 
+                    batch_session_manager.update_job(session_job_id, 
                         results=ACTIVE_BATCHES[batch_id]['results'],
                         status='processing'
                     )
@@ -285,7 +285,7 @@ def process_all_workflows_simultaneously_with_tracking(image_data, workflows, co
             # Si fue cancelado, no cambiamos el status a 'completed' para no confundir
             if not ACTIVE_BATCHES[batch_id].get('is_cancelled', False):
                  ACTIVE_BATCHES[batch_id]["status"] = "completed"
-                 session_manager.update_job(session_job_id, status='completed', results=ACTIVE_BATCHES[batch_id]['results'])
+                 batch_session_manager.update_job(session_job_id, status='completed', results=ACTIVE_BATCHES[batch_id]['results'])
                  print(f"🏁 [BATCH END] Lote {batch_id} finalizado correctamente.")
             else:
                  print(f"🛑 [BATCH END] Lote {batch_id} se detuvo por cancelación.")
