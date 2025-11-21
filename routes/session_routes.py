@@ -16,10 +16,17 @@ def get_jobs():
 def get_job(jid):
     # Limpiar ID si viene con prefijo
     clean_id = jid.replace('restored_', '')
+    
+    from utils.logger import log_info
+    log_info(f"🔍 [GET_JOB] Consultando estado del job: {clean_id[:8]}")
+    
     j = session_manager.get_job(clean_id)
     
     if j: 
+        log_info(f"📋 [GET_JOB] Job {clean_id[:8]} encontrado - Status: {j.get('status')} - Results: {len(j.get('results', []))}")
         return jsonify(j)
+    
+    log_info(f"❌ [GET_JOB] Job {clean_id[:8]} no encontrado")
     return jsonify({"error": "Job not found"}), 404
 
 @session_bp.route('/session/images/<jid>/<fname>', methods=['GET'])

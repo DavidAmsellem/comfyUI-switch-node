@@ -3,7 +3,6 @@ import uuid
 import time
 import os
 import json
-import websocket 
 from config import COMFYUI_URL, COMFYUI_INPUT_DIR, COMFYUI_HOST, COMFYUI_PORT
 from utils.logger import log_info, log_error, log_warning
 
@@ -54,66 +53,77 @@ def delete_queue_items(prompt_ids):
 
 def wait_for_completion(prompt_id, timeout=600, callback=None, workflow_data=None):
     """
-    Espera resultados de forma robusta: WebSocket + Polling Fallback
+    Espera a que ComfyUI complete el procesamiento usando polling simple
+    Retorna: outputs del workflow
     """
+    from utils.logger import log_info, log_warning, log_error
+    
+    log_info(f"🔌 [WAIT {prompt_id[:8]}] Iniciando wait_for_completion con polling simple...")
+    
+    # Verificar estado de la cola antes de comenzar
+    try:
+        status_response = requests.get(f"{COMFYUI_URL}/prompt", timeout=5)
+        if status_response.status_code == 200:
+            queue_data = status_response.json()
+            queue_running = queue_data.get('exec_info', {}).get('queue_remaining', 0)
+            log_info(f"📊 [WAIT {prompt_id[:8]}] Cola de ComfyUI: {queue_running} trabajos pendientes")
+        else:
+            log_warning(f"⚠️ [WAIT {prompt_id[:8]}] No se pudo consultar estado de cola")
+    except Exception as e:
+        log_warning(f"⚠️ [WAIT {prompt_id[:8]}] Error consultando cola: {e}")
+    
     start_time = time.time()
     
-    # 1. Intentar vía WebSocket
-    ws = websocket.WebSocket()
-    try:
-        url = f"ws://{COMFYUI_HOST}:{COMFYUI_PORT}/ws?clientId={CLIENT_ID}"
-        ws.connect(url)
-        
-        while True:
-            if time.time() - start_time > timeout: break
-            
-            try:
-                out = ws.recv()
-                if not isinstance(out, str): continue
-                message = json.loads(out)
-                
-                if message['type'] == 'executing':
-                    data = message['data']
-                    if data['node'] is None and data['prompt_id'] == prompt_id:
-                        break 
-                
-                if message['type'] == 'execution_success' and message['data']['prompt_id'] == prompt_id:
-                    break 
-                    
-            except Exception:
-                break 
-                
-    except Exception as e:
-        log_warning(f"⚠️ WebSocket inestable ({e}), cambiando a Polling...")
-    finally:
-        try: ws.close()
-        except: pass
-
-    # 2. PLAN B: Polling al Historial
-    polling_attempts = 0
-    max_polling_time = 30 
+    log_info(f"🔄 [WAIT {prompt_id[:8]}] Iniciando polling del historial...")
     
-    while polling_attempts < max_polling_time:
-        history = _get_history_direct(prompt_id)
-        if history:
-            return history
-        
-        time.sleep(1)
-        polling_attempts += 1
-        if time.time() - start_time > timeout:
-            raise TimeoutError("Timeout global esperando a ComfyUI")
-
-    return None
-
-def _get_history_direct(prompt_id):
-    try:
-        res = requests.get(f"{COMFYUI_URL}/history/{prompt_id}", timeout=5)
-        if res.status_code == 200:
-            hist = res.json()
-            if prompt_id in hist:
-                return hist[prompt_id]['outputs']
-    except: pass
-    return None
+    for i in range(timeout):
+        try:
+            log_info(f"📊 [WAIT {prompt_id[:8]}] Polling attempt #{i + 1}/{timeout}")
+            
+            response = requests.get(f"{COMFYUI_URL}/history/{prompt_id}", timeout=30)
+            
+            if response.status_code == 200:
+                history = response.json()
+                log_info(f"� [WAIT {prompt_id[:8]}] Historia recibida, keys: {list(history.keys())}")
+                
+                if prompt_id in history:
+                    prompt_history = history[prompt_id]
+                    log_info(f"🎯 [WAIT {prompt_id[:8]}] Prompt encontrado en historial!")
+                    
+                    # Verificar si hay outputs
+                    if 'outputs' in prompt_history:
+                        log_info(f"� [WAIT {prompt_id[:8]}] ¡Procesamiento completado con éxito!")
+                        return prompt_history['outputs']
+                    
+                    # Verificar errores
+                    if 'status' in prompt_history and 'error' in prompt_history['status']:
+                        error_msg = prompt_history['status']['error']
+                        log_error(f"❌ [WAIT {prompt_id[:8]}] Error en ComfyUI: {error_msg}")
+                        raise Exception(f"Error en ComfyUI: {error_msg}")
+                else:
+                    log_info(f"⏳ [WAIT {prompt_id[:8]}] Prompt aún no está en historial, esperando...")
+            else:
+                log_warning(f"⚠️ [WAIT {prompt_id[:8]}] Status code: {response.status_code}")
+            
+            # Log de progreso cada 10 segundos
+            if i % 10 == 0 and i > 0:
+                elapsed = time.time() - start_time
+                log_info(f"⏰ [WAIT {prompt_id[:8]}] Esperando... {i}/{timeout}s (elapsed: {elapsed:.1f}s)")
+            
+            time.sleep(1)
+            
+        except requests.exceptions.RequestException as e:
+            log_warning(f"⚠️ [WAIT {prompt_id[:8]}] Request error: {e}, continuando...")
+            time.sleep(1)
+            continue
+        except Exception as e:
+            log_error(f"❌ [WAIT {prompt_id[:8]}] Error inesperado: {e}")
+            time.sleep(1)
+            continue
+    
+    elapsed = time.time() - start_time
+    log_error(f"⏰ [WAIT {prompt_id[:8]}] Timeout después de {timeout} segundos (elapsed: {elapsed:.1f}s)")
+    raise TimeoutError(f"Timeout esperando completion después de {timeout} segundos")
 
 def get_system_status():
     try:

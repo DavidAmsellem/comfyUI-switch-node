@@ -1,0 +1,22 @@
+{
+  "id": "0fc57626-4d56-4941-874f-53dd16b6acda",
+  "type": "individual",
+  "status": "completed",
+  "created_at": 1763683377.8883762,
+  "updated_at": 1763683867.248618,
+  "workflow": "bedroom/V60x80/cuadro-bedroom-elegant-V60x802",
+  "frame_color": "none",
+  "style": "default",
+  "original_filename": "s.png",
+  "prompt_id": "45aaebb1-7532-4c16-9d50-f68cf9c16444",
+  "current_operation": "Completado",
+  "results": [
+    {
+      "filename": "bedroom_V60x80_cuadro-bedroom-elegant-V60x802_default_s_20251121_011107.jpg",
+      "url": "/get-image/s/bedroom_V60x80_cuadro-bedroom-elegant-V60x802_default_s_20251121_011107.jpg",
+      "session_url": "/get-image/bedroom/bedroom_V60x80_cuadro-bedroom-elegant-V60x802_default_s_20251121_011107.jpg",
+      "image_type": "composition",
+      "status": "saved"
+    }
+  ]
+}
