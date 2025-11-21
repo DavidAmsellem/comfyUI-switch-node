@@ -9,6 +9,72 @@ from utils.logger import log_info, log_error
 from job_persistence import individual_session_manager
 from datetime import datetime
 
+def save_single_image_incremental(output_dir, image_info, original_filename, job_id, workflow_name=None, style_id=None):
+    """
+    Guarda una sola imagen de forma incremental (similar a batch)
+    Retorna la información de la imagen para actualizar el job inmediatamente
+    """
+    from utils.logger import log_info, log_error
+    
+    log_info(f"🔍 [INCREMENTAL {job_id[:8]}] Iniciando guardado incremental")
+    log_info(f"🔍 [INCREMENTAL {job_id[:8]}] image_info: {image_info}")
+    log_info(f"🔍 [INCREMENTAL {job_id[:8]}] output_dir: {output_dir}")
+    
+    src = find_image_file(image_info['filename'], image_info['subfolder'])
+    if not src:
+        log_error(f"❌ [INCREMENTAL {job_id[:8]}] No se encontró archivo fuente: {image_info['filename']}")
+        return None
+    
+    log_info(f"🔍 [INCREMENTAL {job_id[:8]}] Archivo fuente encontrado: {src}")
+    
+    # Construir nombre de archivo
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    itype = image_info.get('image_type', 'gen')
+    wflow = workflow_name.replace('/', '_') if workflow_name else 'workflow'
+    base = secure_filename(original_filename.rsplit('.', 1)[0])
+    
+    if itype == 'composition': 
+        dest_name = f"{wflow}_{style_id or 'ns'}_{base}_{timestamp}.jpg"
+    else: 
+        dest_name = f"upscale_{base}_{timestamp}.jpg"
+    
+    dest_path = os.path.join(output_dir, dest_name)
+    log_info(f"🔍 [INCREMENTAL {job_id[:8]}] Destino: {dest_path}")
+    
+    try:
+        # Guardar físicamente
+        log_info(f"🔍 [INCREMENTAL {job_id[:8]}] Abriendo imagen...")
+        img_gen = Image.open(src).convert('RGB')
+        log_info(f"🔍 [INCREMENTAL {job_id[:8]}] Guardando en disco...")
+        img_gen.save(dest_path, 'JPEG', quality=90)
+        
+        # Guardar en sesión
+        log_info(f"🔍 [INCREMENTAL {job_id[:8]}] Guardando en sesión...")
+        with open(dest_path, 'rb') as f:
+            session_url = individual_session_manager.save_job_image(job_id, f.read(), dest_name)
+        
+        # Construir URLs
+        base_name = os.path.basename(output_dir)
+        direct_url = f"/get-image/{base_name}/{dest_name}"
+        log_info(f"🔍 [INCREMENTAL {job_id[:8]}] URLs: direct={direct_url}, session={session_url}")
+        
+        result = {
+            'filename': dest_name, 
+            'url': direct_url,
+            'session_url': session_url, 
+            'image_type': itype, 
+            'status': 'saved'
+        }
+        
+        log_info(f"✅ [INCREMENTAL {job_id[:8]}] Guardado exitoso: {dest_name}")
+        return result
+        
+    except Exception as e:
+        log_error(f"❌ [INCREMENTAL {job_id[:8]}] Error guardando {dest_name}: {e}")
+        import traceback
+        log_error(f"❌ [INCREMENTAL {job_id[:8]}] Traceback: {traceback.format_exc()}")
+        return None
+
 def save_uploaded_image(file, base_name=None):
     if not base_name:
         base_name = secure_filename(file.filename.rsplit('.', 1)[0] if '.' in file.filename else 'image')
@@ -50,6 +116,41 @@ def extract_generated_images(outputs, original_filename=None, include_upscale=Tr
             if 'images' in outputs[node_id]:
                 for img in outputs[node_id]['images']:
                     fname = img.get('filename', '')
+                    if node_id == '704' or 'comfyui' in fname.lower(): itype = 'composition'
+                    elif node_id == '696' or 'upscale' in fname.lower(): itype = 'upscale'
+                    else: itype = 'output'
+                    if itype == 'upscale' and not include_upscale: continue
+                    final_images.append({'filename': fname, 'subfolder': img.get('subfolder', ''), 'type': img.get('type', 'output'), 'node_id': node_id, 'image_type': itype})
+    return final_images
+
+def extract_generated_images_individual(outputs, original_filename=None, include_upscale=True):
+    """
+    Versión específica para individual jobs con filtrado de archivos temporales
+    """
+    final_images = []
+    save_node_ids = ['704', WORKFLOW_CONFIG.get('save_image_node_id', '704'), '696']
+    for node_id in outputs:
+        if node_id in save_node_ids or 'images' in outputs[node_id]:
+            if 'images' in outputs[node_id]:
+                for img in outputs[node_id]['images']:
+                    fname = img.get('filename', '')
+                    
+                    # 🔥 FILTRO DE ARCHIVOS TEMPORALES (solo para individual)
+                    fname_lower = fname.lower()
+                    temporal_patterns = ['tmp_', 'temp_', '_temp']
+                    is_temporal = any(pattern in fname_lower for pattern in temporal_patterns)
+                    
+                    if is_temporal:
+                        from utils.logger import log_info
+                        log_info(f"🗑️ [INDIVIDUAL-FILTER] Descartando archivo temporal: {fname}")
+                        continue  # Saltar archivos temporales
+                    
+                    # 🔥 FILTRO DE TIPO 'temp' (solo para individual)
+                    if img.get('type', 'output') == 'temp':
+                        from utils.logger import log_info
+                        log_info(f"🗑️ [INDIVIDUAL-FILTER] Descartando archivo tipo temp: {fname}")
+                        continue  # Saltar archivos tipo temp
+                    
                     if node_id == '704' or 'comfyui' in fname.lower(): itype = 'composition'
                     elif node_id == '696' or 'upscale' in fname.lower(): itype = 'upscale'
                     else: itype = 'output'

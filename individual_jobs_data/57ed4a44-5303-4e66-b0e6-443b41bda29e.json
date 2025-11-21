@@ -1,0 +1,29 @@
+{
+  "id": "57ed4a44-5303-4e66-b0e6-443b41bda29e",
+  "type": "individual",
+  "status": "completed",
+  "created_at": 1763737971.2069101,
+  "updated_at": 1763738169.7744477,
+  "workflow": "bathroom/V60x80/cuadro-bathroom-old-V60x802",
+  "frame_color": "none",
+  "style": "default",
+  "original_filename": "2.png",
+  "prompt_id": "2066f3c2-ec31-43e2-949d-5f2ac02b4e47",
+  "current_operation": "Completado",
+  "results": [
+    {
+      "filename": "original.jpg",
+      "url": "/get-image/2/original.jpg",
+      "session_url": "/get-image/misc/original.jpg",
+      "image_type": "original",
+      "status": "saved"
+    },
+    {
+      "filename": "bathroom_V60x80_cuadro-bathroom-old-V60x802_default_2_20251121_161608.jpg",
+      "url": "/get-image/2/bathroom_V60x80_cuadro-bathroom-old-V60x802_default_2_20251121_161608.jpg",
+      "session_url": "/get-image/bathroom/bathroom_V60x80_cuadro-bathroom-old-V60x802_default_2_20251121_161608.jpg",
+      "image_type": "composition",
+      "status": "saved"
+    }
+  ]
+}

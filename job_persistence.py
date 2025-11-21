@@ -32,9 +32,11 @@ class IndividualSessionManager:
     def update_job(self, job_id, **kwargs):
         data = self.get_job(job_id)
         if data:
+            # Actualización simple como batch - sin logs excesivos ni lógica compleja
             data.update(kwargs)
             data['updated_at'] = time.time()
-            # Para jobs individuales, sobrescribimos results (solo 1 imagen generalmente)
+            
+            # Manejar resultados de forma simple
             if 'results' in kwargs and kwargs['results']:
                 data['results'] = kwargs['results']
             
@@ -110,3 +112,6 @@ class IndividualSessionManager:
             json.dump(data, f, indent=2)
 
 individual_session_manager = IndividualSessionManager()
+
+# Mantener compatibilidad con app_new.py (archivo antiguo)
+session_manager = individual_session_manager

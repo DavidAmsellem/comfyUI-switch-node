@@ -1,12 +1,16 @@
 from flask import Blueprint, request, jsonify, send_file
-from services.file_service import save_uploaded_image, create_output_directory, extract_generated_images, save_images_to_our_output
+from services.file_service import save_uploaded_image, create_output_directory, extract_generated_images_individual, save_images_to_our_output, save_single_image_incremental
 from services.workflow_service import load_workflow, update_workflow
-from services.comfy_service import submit_workflow_to_comfyui, wait_for_completion, verify_image_accessibility
+from services.comfy_service import submit_workflow_to_comfyui, verify_image_accessibility
+from services.comfy_service_simple import wait_for_completion_simple as wait_for_completion
 from utils.helpers import allowed_file
 from utils.logger import log_info, log_error
 from job_persistence import individual_session_manager
 import os
 import threading
+import io
+from datetime import datetime
+from PIL import Image
 from config import WORKFLOW_CONFIG, OUR_OUTPUT_DIR, COMFYUI_OUTPUT_DIR
 
 job_bp = Blueprint('job_routes', __name__)
@@ -18,6 +22,15 @@ def process_job_background(job_id, prompt_id, workflow_name, frame_color, style_
         log_info(f"🔥 [BACKGROUND {job_id[:8]}] Iniciando procesamiento background")
         log_info(f"🔥 [BACKGROUND {job_id[:8]}] PromptID: {prompt_id}")
         
+        # 🔥 ACTUALIZAR ESTADO INMEDIATAMENTE A PROCESSING
+        log_info(f"📝 [BACKGROUND {job_id[:8]}] Actualizando estado a 'processing'...")
+        individual_session_manager.update_job(job_id, 
+            status='processing',
+            current_operation='Esperando respuesta de ComfyUI...',
+            prompt_id=prompt_id
+        )
+        log_info(f"✅ [BACKGROUND {job_id[:8]}] Estado actualizado a 'processing'")
+        
         # 1. Esperar a ComfyUI (Sin callbacks, solo esperar)
         log_info(f"⏳ [BACKGROUND {job_id[:8]}] Esperando a ComfyUI...")
         outputs = wait_for_completion(prompt_id, timeout=600)
@@ -28,40 +41,108 @@ def process_job_background(job_id, prompt_id, workflow_name, frame_color, style_
 
         log_info(f"✅ [BACKGROUND {job_id[:8]}] ComfyUI completado, procesando imágenes...")
         
-        # 2. Procesar imágenes
-        generated_images = extract_generated_images(outputs, file_info['filename'], include_upscale)
+        # 2. Procesar imágenes INCREMENTALMENTE
+        generated_images = extract_generated_images_individual(outputs, file_info['filename'], include_upscale)
         log_info(f"📷 [BACKGROUND {job_id[:8]}] Imágenes extraídas: {len(generated_images)}")
         
-        # Usamos la ruta física del archivo input (clave para que no falle la carga)
-        input_path = file_info['input_path']
+        # 2a. Primero guardar imagen original
+        input_path = file_info['input_path']  # Usar la ruta del archivo físico
+        log_info(f"🔍 [BACKGROUND {job_id[:8]}] Guardando imagen original desde: {input_path}")
+        log_info(f"🔍 [BACKGROUND {job_id[:8]}] Output dir: {output_dir}")
         
-        orig_info, saved_imgs = save_images_to_our_output(
-            output_dir, input_path, generated_images, file_info['filename'], 
-            include_upscale, job_id, workflow_name, style_id
-        )
+        orig_path = os.path.join(output_dir, "original.jpg")
+        try:
+            log_info(f"🔍 [BACKGROUND {job_id[:8]}] Abriendo imagen...")
+            img = Image.open(input_path).convert('RGB')
+            
+            log_info(f"🔍 [BACKGROUND {job_id[:8]}] Creando buffer...")
+            buffer = io.BytesIO()
+            img.save(buffer, format='JPEG', quality=90, optimize=True)
+            
+            log_info(f"🔍 [BACKGROUND {job_id[:8]}] Guardando en disco: {orig_path}")
+            with open(orig_path, 'wb') as f: 
+                f.write(buffer.getvalue())
+            
+            log_info(f"🔍 [BACKGROUND {job_id[:8]}] Guardando en sesión...")
+            buffer.seek(0)
+            session_url = individual_session_manager.save_job_image(job_id, buffer.read(), "original.jpg")
+            base_name = os.path.basename(output_dir)
+            direct_url = f"/get-image/{base_name}/original.jpg"
+            
+            log_info(f"🔍 [BACKGROUND {job_id[:8]}] URLs creadas - Direct: {direct_url}, Session: {session_url}")
+            
+            original_result = {
+                'filename': "original.jpg", 
+                'url': direct_url,
+                'session_url': session_url, 
+                'image_type': 'original',
+                'status': 'saved'
+            }
+            
+            log_info(f"🔍 [BACKGROUND {job_id[:8]}] Actualizando job con imagen original...")
+            # Actualizar job con imagen original
+            update_success = individual_session_manager.update_job(job_id, 
+                status='processing',
+                current_operation='Imagen original guardada...',
+                results=[original_result]
+            )
+            log_info(f"✅ [BACKGROUND {job_id[:8]}] Imagen original guardada y job actualizado: {update_success}")
+            
+        except Exception as e:
+            log_error(f"❌ [BACKGROUND {job_id[:8]}] Error guardando original: {e}")
+            import traceback
+            log_error(f"❌ [BACKGROUND {job_id[:8]}] Traceback: {traceback.format_exc()}")
         
-        frontend_images = [img for img in saved_imgs if img.get('image_type') == 'composition'] or saved_imgs[:1]
+        # 2b. Procesar y guardar cada imagen generada incrementalmente
+        all_results = [original_result] if 'original_result' in locals() else []
+        
+        for i, img_info in enumerate(generated_images):
+            log_info(f"💾 [BACKGROUND {job_id[:8]}] Guardando imagen {i+1}/{len(generated_images)}: {img_info['filename']}")
+            
+            saved_img = save_single_image_incremental(
+                output_dir, img_info, file_info['filename'], 
+                job_id, workflow_name, style_id
+            )
+            
+            if saved_img:
+                all_results.append(saved_img)
+                
+                # Actualizar job inmediatamente con la nueva imagen
+                individual_session_manager.update_job(job_id, 
+                    status='processing',
+                    current_operation=f'Guardando imagen {i+1}/{len(generated_images)}...',
+                    results=all_results
+                )
+                log_info(f"✅ [BACKGROUND {job_id[:8]}] Imagen {i+1} guardada y job actualizado - Total: {len(all_results)}")
+            else:
+                log_error(f"❌ [BACKGROUND {job_id[:8]}] Error guardando imagen {i+1}")
+        
+        # 3. Filtrar para frontend (solo composición)
+        frontend_images = [img for img in all_results if img.get('image_type') == 'composition'] or all_results[:1]
         log_info(f"🖼️ [BACKGROUND {job_id[:8]}] Imágenes para frontend: {len(frontend_images)}")
         
-        # Log de cada imagen que se va a enviar al frontend
-        for i, img in enumerate(frontend_images):
-            log_info(f"   🖼️ Imagen {i+1}: {img.get('filename')} - URL: {img.get('url')} - Type: {img.get('image_type')}")
-        
-        # 3. Guardar resultado FINAL (Única escritura de cierre)
-        log_info(f"💾 [BACKGROUND {job_id[:8]}] Actualizando job como completado...")
+        # 4. Actualización FINAL
         individual_session_manager.update_job(job_id, 
             status='completed', 
             current_operation='Completado', 
-            results=frontend_images
+            results=all_results  # Todas las imágenes incluyendo original
         )
         
         log_info(f"🎉 [BACKGROUND {job_id[:8]}] Procesamiento completado exitosamente!")
 
     except Exception as e:
+        import traceback
         log_error(f"💥 [BACKGROUND {job_id[:8]}] Error background: {e}")
-        log_error(f"💥 [BACKGROUND {job_id[:8]}] Error type: {type(e)}")
-        log_error(f"💥 [BACKGROUND {job_id[:8]}] Error args: {e.args}")
-        individual_session_manager.update_job(job_id, status='error', error=str(e))
+        log_error(f"💥 [BACKGROUND {job_id[:8]}] Error type: {type(e).__name__}")
+        log_error(f"💥 [BACKGROUND {job_id[:8]}] Traceback completo:")
+        log_error(traceback.format_exc())
+        
+        # Actualizar job con error
+        individual_session_manager.update_job(job_id, 
+            status='error', 
+            error=str(e),
+            current_operation=f'Error: {str(e)}'
+        )
 
 @job_bp.route('/process-image', methods=['POST'])
 def process_image():
@@ -124,6 +205,16 @@ def process_image():
             thread.start()
             
             log_info(f"✅ [JOB {job_id[:8]}] Thread iniciado exitosamente - Thread alive: {thread.is_alive()}")
+            
+            # 🔥 ESPERAR UN MOMENTO Y VERIFICAR QUE EL THREAD SIGUE VIVO
+            import time
+            time.sleep(0.5)  # Esperar medio segundo
+            
+            if thread.is_alive():
+                log_info(f"✅ [JOB {job_id[:8]}] Thread confirmado activo después de 0.5s")
+            else:
+                log_error(f"❌ [JOB {job_id[:8]}] ¡WARNING! Thread murió inmediatamente después de iniciarse!")
+                
         except Exception as thread_error:
             log_error(f"💥 [JOB {job_id[:8]}] Error creando/iniciando thread: {thread_error}")
             raise Exception(f"Error iniciando procesamiento: {thread_error}")

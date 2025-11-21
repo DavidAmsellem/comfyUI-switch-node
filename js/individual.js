@@ -110,10 +110,11 @@ function startIndividualPoll(localId, jobId) {
         clearInterval(state.individualPollingIntervals.get(localId));
     }
     
+    // Contador para tracking incremental (como batch)
+    let lastResultsCount = 0;
+    
     const interval = setInterval(async () => {
         try {
-            console.log(`🔍 [INDIVIDUAL #${localId}] Consultando estado del JobID: ${jobId}`);
-            
             const res = await fetch(`${state.API_BASE_URL}/session/jobs/${jobId}`);
             if(!res.ok) {
                 console.warn(`⚠️ [INDIVIDUAL #${localId}] Response not ok: ${res.status}`);
@@ -121,59 +122,53 @@ function startIndividualPoll(localId, jobId) {
             }
             const job = await res.json();
             
-            console.log(`📋 [INDIVIDUAL #${localId}] Estado recibido:`, job.status, `- Results:`, job.results?.length || 0);
+            console.log(`📋 [INDIVIDUAL #${localId}] Status: ${job.status}, Results: ${job.results?.length || 0}`);
 
-            if (job.status === 'completed') {
-                console.log(`🎉 [INDIVIDUAL #${localId}] Trabajo completado! Procesando resultados...`);
+            // ⭐ MOSTRAR IMÁGENES INCREMENTALMENTE (igual que batch)
+            if (job.results && job.results.length > lastResultsCount) {
+                console.log(`�️ [INDIVIDUAL #${localId}] Nuevas imágenes: ${job.results.length - lastResultsCount}`);
                 
-                clearInterval(interval);
-                state.individualPollingIntervals.delete(localId);
-                state.activeIndividualJobs.delete(localId);
-                
-                updateIndividualStatus(localId, 'completed', 'Generación finalizada');
-                
-                // Solo reactivar botón si no hay más trabajos activos
-                if (state.activeIndividualJobs.size === 0) {
-                    console.log(`✅ [INDIVIDUAL] Todos los trabajos completados, reactivando botón`);
-                    document.getElementById('processBtn').disabled = false;
-                } else {
-                    console.log(`⏳ [INDIVIDUAL] Aún quedan ${state.activeIndividualJobs.size} trabajos activos`);
-                }
-                
-                // Renderizar imágenes
                 const imgContainer = document.getElementById(`job-imgs-${localId}`);
-                if(!imgContainer) {
-                    console.error(`❌ [INDIVIDUAL #${localId}] No se encontró contenedor job-imgs-${localId}`);
-                    return;
-                }
-                
-                if(job.results && job.results.length) {
-                    console.log(`🖼️ [INDIVIDUAL #${localId}] Renderizando ${job.results.length} imágenes`);
-                    
-                    job.results.forEach((img, index) => {
-                        console.log(`🖼️ [INDIVIDUAL #${localId}] Imagen ${index + 1}:`, {
-                            url: img.url, 
-                            session_url: img.session_url,
-                            filename: img.filename
-                        });
+                if (imgContainer) {
+                    // Mostrar solo las imágenes nuevas
+                    const newResults = job.results.slice(lastResultsCount);
+                    newResults.forEach((img, index) => {
+                        const globalIndex = lastResultsCount + index + 1;
+                        console.log(`🖼️ [INDIVIDUAL #${localId}] Imagen ${globalIndex}:`, img.filename);
                         
                         const el = document.createElement('img');
-                        // Priorizar url sobre session_url
                         const imageUrl = img.url || img.session_url;
                         const url = imageUrl.startsWith('http') ? imageUrl : `${state.API_BASE_URL}${imageUrl}`;
-                        
-                        console.log(`🔗 [INDIVIDUAL #${localId}] URL final imagen ${index + 1}: ${url}`);
                         
                         el.src = url;
                         el.onclick = () => showImageModal(url);
                         imgContainer.appendChild(el);
                     });
-                } else {
-                    console.warn(`⚠️ [INDIVIDUAL #${localId}] No hay resultados para mostrar`);
+                    
+                    lastResultsCount = job.results.length;
+                    
+                    // Actualizar estado visual con progreso
+                    updateIndividualStatus(localId, 'processing', `Generando... (${job.results.length} imágenes)`);
+                }
+            }
+
+            if (job.status === 'completed') {
+                console.log(`🎉 [INDIVIDUAL #${localId}] Trabajo completado!`);
+                
+                clearInterval(interval);
+                state.individualPollingIntervals.delete(localId);
+                state.activeIndividualJobs.delete(localId);
+                
+                updateIndividualStatus(localId, 'completed', `Completado (${job.results?.length || 0} imágenes)`);
+                
+                // Solo reactivar botón si no hay más trabajos activos
+                if (state.activeIndividualJobs.size === 0) {
+                    console.log(`✅ [INDIVIDUAL] Todos completados, reactivando botón`);
+                    document.getElementById('processBtn').disabled = false;
                 }
                 
             } else if (job.status === 'error') {
-                console.error(`❌ [INDIVIDUAL #${localId}] Trabajo falló:`, job.error);
+                console.error(`❌ [INDIVIDUAL #${localId}] Error:`, job.error);
                 
                 clearInterval(interval);
                 state.individualPollingIntervals.delete(localId);
@@ -181,7 +176,6 @@ function startIndividualPoll(localId, jobId) {
                 
                 updateIndividualStatus(localId, 'error', job.error || 'Error desconocido');
                 
-                // Solo reactivar botón si no hay más trabajos activos
                 if (state.activeIndividualJobs.size === 0) {
                     document.getElementById('processBtn').disabled = false;
                 }
@@ -193,63 +187,62 @@ function startIndividualPoll(localId, jobId) {
     
     // Registrar el interval
     state.individualPollingIntervals.set(localId, interval);
-    console.log(`📝 [INDIVIDUAL #${localId}] Polling registrado, intervals activos: ${state.individualPollingIntervals.size}`);
+    console.log(`📝 [INDIVIDUAL #${localId}] Polling registrado`);
 }
 
 export function restoreIndividualJob(job) {
-    // Incrementar contador y crear container
-    state.individualJobCounter++;  // FIX: Usar el contador correcto, no individualCounter
+    state.individualJobCounter++;
     const localId = state.individualJobCounter;
     
     console.log(`🔄 [RESTORE] Restaurando trabajo individual #${localId} - JobID: ${job.id}`);
-    console.log(`📋 [RESTORE] Estado del trabajo:`, job.status, `- Results:`, job.results?.length || 0);
-    
     createIndividualContainer(localId);
     
-    // Determinar el estado del trabajo
     if (job.status === 'completed' && job.results && job.results.length > 0) {
-        console.log(`✅ [RESTORE #${localId}] Trabajo completado - mostrando resultados`);
+        console.log(`✅ [RESTORE #${localId}] Trabajo completado - mostrando ${job.results.length} imágenes`);
         
-        // Trabajo completado - mostrar resultados
-        updateIndividualStatus(localId, 'completed', 'Generación completada (restaurado)');
+        updateIndividualStatus(localId, 'completed', `Completado (${job.results.length} imágenes)`);
         
-        // Mostrar imágenes
+        // Mostrar todas las imágenes
         const imgContainer = document.getElementById(`job-imgs-${localId}`);
-        if (!imgContainer) {
-            console.error(`❌ [RESTORE #${localId}] No se encontró contenedor job-imgs-${localId}`);
-            return;
-        }
-        
-        job.results.forEach((img, index) => {
-            console.log(`🖼️ [RESTORE #${localId}] Imagen ${index + 1}:`, {
-                url: img.url, 
-                session_url: img.session_url,
-                filename: img.filename
+        if (imgContainer) {
+            job.results.forEach((img, index) => {
+                const el = document.createElement('img');
+                const imageUrl = img.url || img.session_url;
+                const url = imageUrl.startsWith('http') ? imageUrl : `${state.API_BASE_URL}${imageUrl}`;
+                
+                el.src = url;
+                el.onclick = () => showImageModal(url);
+                imgContainer.appendChild(el);
             });
-            
-            const el = document.createElement('img');
-            // Priorizar url sobre session_url
-            const imageUrl = img.url || img.session_url;
-            const url = imageUrl.startsWith('http') ? imageUrl : `${state.API_BASE_URL}${imageUrl}`;
-            
-            console.log(`🔗 [RESTORE #${localId}] URL final imagen ${index + 1}: ${url}`);
-            
-            el.src = url;
-            el.onclick = () => showImageModal(url);
-            imgContainer.appendChild(el);
-        });
+        }
         
     } else if (job.status === 'error') {
         console.log(`❌ [RESTORE #${localId}] Trabajo con error: ${job.error}`);
-        // Trabajo con error
         updateIndividualStatus(localId, 'error', job.error || 'Error en trabajo anterior');
         
     } else {
         console.log(`⏳ [RESTORE #${localId}] Trabajo en progreso - reiniciando polling`);
-        // Trabajo en progreso - reiniciar polling
-        updateIndividualStatus(localId, 'processing', 'Restaurando trabajo en progreso...');
         
-        // Registrar como trabajo activo
+        const existingCount = job.results ? job.results.length : 0;
+        updateIndividualStatus(localId, 'processing', `Restaurando... (${existingCount} imágenes)`);
+        
+        // Mostrar imágenes ya existentes
+        if (existingCount > 0) {
+            const imgContainer = document.getElementById(`job-imgs-${localId}`);
+            if (imgContainer) {
+                job.results.forEach((img) => {
+                    const el = document.createElement('img');
+                    const imageUrl = img.url || img.session_url;
+                    const url = imageUrl.startsWith('http') ? imageUrl : `${state.API_BASE_URL}${imageUrl}`;
+                    
+                    el.src = url;
+                    el.onclick = () => showImageModal(url);
+                    imgContainer.appendChild(el);
+                });
+            }
+        }
+        
+        // Registrar como trabajo activo y continuar polling
         state.activeIndividualJobs.set(localId, {
             jobId: job.id,
             localId: localId,

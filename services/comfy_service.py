@@ -54,15 +54,27 @@ def delete_queue_items(prompt_ids):
 def get_current_executing_prompt():
     """Obtiene el prompt_id que está siendo ejecutado actualmente en ComfyUI"""
     try:
+        log_info("🔍 [QUEUE] Consultando cola de ComfyUI...")
         status_response = requests.get(f"{COMFYUI_URL}/prompt", timeout=5)
+        log_info(f"🔍 [QUEUE] Status code: {status_response.status_code}")
+        
         if status_response.status_code == 200:
             queue_data = status_response.json()
+            log_info(f"🔍 [QUEUE] Queue data keys: {list(queue_data.keys())}")
+            
             # El job que está ejecutándose estará en queue_running[0] si existe
             queue_running = queue_data.get('queue_running', [])
+            log_info(f"🔍 [QUEUE] Queue running: {queue_running}")
+            
             if queue_running and len(queue_running) > 0:
-                return queue_running[0][1]  # [priority, prompt_id, ...]
+                current_prompt = queue_running[0][1] if len(queue_running[0]) > 1 else None  # [priority, prompt_id, ...]
+                log_info(f"🔍 [QUEUE] Ejecutándose: {current_prompt}")
+                return current_prompt
+        
+        log_info(f"🔍 [QUEUE] No hay jobs ejecutándose actualmente")
         return None
-    except:
+    except Exception as e:
+        log_error(f"❌ [QUEUE] Error consultando cola: {e}")
         return None
 
 def wait_for_completion(prompt_id, timeout=600, callback=None, workflow_data=None):
